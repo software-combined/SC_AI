@@ -11,6 +11,7 @@ from unittest import mock
 
 from tests import test_publish_feed as feed_fixtures
 from tests.test_native_setup import module
+from tests.test_native_stage import _archive
 
 ROOT = Path(__file__).resolve().parents[1]
 spec = importlib.util.spec_from_file_location('native_resources_publish', ROOT / 'tools/native_resources_publish.py')
@@ -24,10 +25,19 @@ class ResourcesPublicationTests(unittest.TestCase):
         for target in publisher.stage.TARGETS:
             name = 'scg-router-resources-1.3.0.9-' + target.replace('/', '-') + '.tar.gz'
             data = ('validated ' + target).encode()
+            evidence = {}
+            if target == 'windows/x86_64':
+                menu = b'signed menu fixture'
+                sha = hashlib.sha256(menu).hexdigest()
+                evidence['signing'] = dict(sha256=sha, timestamped=True, publisher_sha256='a' * 64)
+                metadata = dict(target=target, version=latest['version'], sha256=core,
+                                menu_sha256=sha, menu_signature=evidence['signing'])
+                data = _archive({'Resources/control/scg-router-menu.exe': menu,
+                                 'Resources/installer.json': json.dumps(metadata).encode()})
             (root / name).write_bytes(data)
             (root / (name + '.resources.json')).write_text(json.dumps(dict(
                 file=name, target=target, version=latest['version'], bundle_sha256=latest['sha256'],
-                sha256=hashlib.sha256(data).hexdigest(), size=len(data))))
+                sha256=hashlib.sha256(data).hexdigest(), size=len(data), **evidence)))
         return latest
 
     def test_five_exact_archives_become_public_descriptors(self):
@@ -92,6 +102,17 @@ class ResourcesPublicationTests(unittest.TestCase):
             self.assertTrue(all(i < pointer for i, _ in uploads))
             self.assertEqual({key for _, key in uploads}, {'bundles/' + name} |
                              {'bundles/' + row['url'].rsplit('/', 1)[1] for row in rows.values()})
+
+    def test_windows_sidecar_cannot_describe_a_different_signed_menu(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            latest = self.fixture(root)
+            receipt = next(root.glob('*windows*.resources.json'))
+            doc = json.loads(receipt.read_text())
+            doc['signing']['sha256'] = 'b' * 64
+            receipt.write_text(json.dumps(doc))
+            with self.assertRaisesRegex(ValueError, 'signing evidence'):
+                publisher.records(root, latest)
 
     def test_missing_native_target_aborts_publication_before_any_remote_write(self):
         with tempfile.TemporaryDirectory() as temporary:

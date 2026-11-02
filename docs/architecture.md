@@ -41,6 +41,9 @@ installer without adding inference rules. `native_payload` retains disposable
 downloads. `native_setup` owns the graphical flow and uses the existing client,
 service and key-window owners. Repair uses the canonical `--repair` path;
 explicit assistant additions use the existing client-selection path.
+`native_signing` verifies Windows signatures and unchanged staged inputs.
+`tools/windows_signing.py` packages and exports only after verification;
+the shared Windows signing action owns the external signing calls.
 `repair_ui` owns explicit maintenance's graceful assistant-close prompt.
 Scheduled updates never call it. Public bootstrap scripts retain the saved
 channel and working runtime; repair never starts key setup.

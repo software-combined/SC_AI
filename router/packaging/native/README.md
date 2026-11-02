@@ -17,11 +17,30 @@ Its descriptor binds the target, version, size and checksum to the exact core bu
 The embedded local feed remains core-only, avoiding an archive checksum cycle.
 `--stage-only` does not compile helpers or require native build tools.
 
-Native installers are **unsigned**. The build writes `native_signature:
-"unsigned"` in `installer.json` and an artifact receipt beside each output.
-The receipt records SHA-256 checksums for review. A checksum alone does not
-prove who made a download. The router's existing signed update feed remains
-the authority for later online updates.
+Local builds, macOS and Linux remain unsigned. Windows release publication
+requires timestamped Authenticode signatures from the configured publisher.
+The shared Windows action stages and compiles the menu, signs and verifies it,
+then refreshes its checksum before Inno Setup packages it. It signs and verifies
+the outer installer before exporting Resources or writing final receipts.
+Only the owned menu and installer are signed. Pinned third-party runtime files
+retain their original bytes and signatures. Inno Setup creates no uninstaller.
+The router's signed update feed remains the authority for online updates.
+
+Configure the `AZURE_SIGNING_` repository secrets named in the release workflow:
+`CLIENT_ID`, `TENANT_ID`, `SUBSCRIPTION_ID`, `ENDPOINT`, `ACCOUNT`, `PROFILE`,
+and `PUBLISHER_SUBJECT`. The subject must match the validated certificate exactly.
+Use a dedicated federated identity with the certificate-profile signer role
+scoped to that profile. No client password or certificate is used.
+Restrict federation to this repository's immutable identity and release tags.
+Do not add a GitHub environment without updating the existing publisher trust.
+
+Complete organisation validation and create a Public Trust profile before use.
+The manual Windows signing canary uses the same action and publishes nothing.
+GitHub requires its workflow on the default branch before manual dispatch.
+That source promotion is a separate approval gate, before any release tag.
+Run it only on a reviewed branch with a separately authorised exact-branch
+federation rule. A successful canary does not establish staff-device acceptance
+or SmartScreen reputation. See [Microsoft's action guide](https://github.com/Azure/artifact-signing-action).
 
 Run the normal build on the target operating system. macOS needs `hdiutil`,
 `sips`, and `iconutil`. Windows needs Inno Setup's `ISCC.exe`. Linux needs a

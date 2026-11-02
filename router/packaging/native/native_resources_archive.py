@@ -17,5 +17,7 @@ def export(resources, out, metadata):
         digest = hashlib.file_digest(stream, 'sha256').hexdigest()
     doc = dict(file=name, target=metadata['target'], version=metadata['version'],
                sha256=digest, size=archive.stat().st_size, bundle_sha256=metadata['sha256'])
+    if metadata.get('menu_signature'):
+        doc['signing'] = metadata['menu_signature']
     archive.with_suffix('.resources.json').write_text(json.dumps(doc, indent=2) + '\n')
     return archive

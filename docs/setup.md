@@ -28,8 +28,9 @@ assistant settings and adds a background service and automatic update jobs.
 Download SCG Router from `https://hub.softwarecombined.com/install` and choose
 your computer. Open the DMG on macOS, EXE on Windows, or AppImage on Ubuntu.
 Ubuntu may require allowing execution in the file's Properties window.
-No separate FUSE installation is needed. These packages have no paid publisher
-certificate. Device policy can still block them; contact IT if that happens.
+No separate FUSE installation is needed. New Windows releases require publisher
+signing; macOS and Ubuntu packages remain unsigned. Device policy can still
+block a package; contact IT if that happens.
 
 The SCG Router app saves setup in your user account. After setup, you can
 delete the download or eject the disk image. Reopen SCG Router to check setup,

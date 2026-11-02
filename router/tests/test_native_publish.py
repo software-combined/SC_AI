@@ -17,10 +17,15 @@ def artifacts(directory):
         name = 'SCG-Router-Installer-1.2.3.4-' + str(index) + '.dmg'
         body = ('native package ' + target).encode()
         (directory / name).write_bytes(body)
-        (directory / (name + '.json')).write_text(json.dumps({
+        receipt = {
             'artifact': name, 'target': target, 'version': '1.2.3.4', 'channel': 'stable',
             'native_signature': 'unsigned', 'sha256': 'a' * 64,
-            'artifact_sha256': hashlib.sha256(body).hexdigest()}))
+            'artifact_sha256': hashlib.sha256(body).hexdigest()}
+        if target == 'windows/x86_64':
+            receipt.update(native_signature='authenticode', menu_sha256='b' * 64,
+                signing=dict(sha256=receipt['artifact_sha256'], timestamped=True, publisher_sha256='c' * 64),
+                menu_signature=dict(sha256='b' * 64, timestamped=True, publisher_sha256='c' * 64))
+        (directory / (name + '.json')).write_text(json.dumps(receipt))
 
 
 def distribution(protected=False):
@@ -36,6 +41,21 @@ def distribution(protected=False):
 
 
 class NativePublishTests(unittest.TestCase):
+    def test_windows_publication_requires_bound_timestamped_signatures(self):
+        for defect in ('unsigned', 'hash', 'publisher', 'timestamp'):
+            with self.subTest(defect=defect), tempfile.TemporaryDirectory() as temporary:
+                root = Path(temporary)
+                artifacts(root)
+                path = next(p for p in root.glob('*.json') if json.loads(p.read_text())['target'] == 'windows/x86_64')
+                doc = json.loads(path.read_text())
+                if defect == 'unsigned': doc['native_signature'] = 'unsigned'
+                if defect == 'hash': doc['signing']['sha256'] = 'd' * 64
+                if defect == 'publisher': doc['menu_signature']['publisher_sha256'] = 'd' * 64
+                if defect == 'timestamp': doc['signing']['timestamped'] = False
+                path.write_text(json.dumps(doc))
+                with self.assertRaisesRegex(ValueError, 'signing evidence'):
+                    publish.packages(root, 'stable')
+
     def test_unaccepted_builds_cannot_be_downloaded_through_cloudfront(self):
         template = (publish.ROOT / 'infra/feed.yaml').read_text()
         deny = template.split('Sid: NativeBuildsNeverThroughCloudFront', 1)[1].split('- Sid:', 1)[0]

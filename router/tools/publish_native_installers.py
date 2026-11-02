@@ -22,6 +22,7 @@ def load(name, path):
 
 publisher = load('native_feed_publisher', ROOT / 'tools/publish_feed.py')
 verify = load('native_feed_signatures', ROOT / 'packaging/feed_verify.py')
+signing = load('native_package_signing', ROOT / 'packaging/native/native_signing.py')
 
 
 def packages(directory, channel):
@@ -36,8 +37,17 @@ def packages(directory, channel):
                 not re.fullmatch(r'SCG-Router-Installer-[A-Za-z0-9._-]+', name) or
                 target not in TARGETS or target in records or
                 not re.fullmatch(r'\d+(?:\.\d+){2,3}', str(doc.get('version', ''))) or
-                doc.get('channel') != channel or doc.get('native_signature') != 'unsigned'):
+                doc.get('channel') != channel):
             raise ValueError('invalid or duplicate native package receipt')
+        if target == 'windows/x86_64':
+            outer, menu = doc.get('signing'), doc.get('menu_signature')
+            if (doc.get('native_signature') != 'authenticode'
+                    or not signing.valid(outer, doc.get('artifact_sha256'))
+                    or not signing.valid(menu, doc.get('menu_sha256'))
+                    or outer['publisher_sha256'] != menu['publisher_sha256']):
+                raise ValueError('Windows package signing evidence is missing or invalid')
+        elif doc.get('native_signature') != 'unsigned':
+            raise ValueError('invalid native package signature status')
         artifact = Path(directory) / name
         if artifact.is_symlink():
             raise ValueError('unsafe native package link')

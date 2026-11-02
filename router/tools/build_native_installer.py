@@ -16,6 +16,7 @@ import native_linux_gui  # noqa: E402
 import native_stage  # noqa: E402
 import native_menu_build  # noqa: E402
 import native_resources_archive  # noqa: E402
+import native_signing  # noqa: E402
 
 
 def _parser():
@@ -29,6 +30,8 @@ def _parser():
                         help='public tenant and download exchange settings JSON')
     parser.add_argument('--stage-only', action='store_true',
                         help='validate and stage Resources without platform tools')
+    parser.add_argument('--prepare-windows-signing', action='store_true')
+    parser.add_argument('--stage-dir', type=Path)
     parser.add_argument('--linux-zenity', type=Path,
                         help='Zenity executable to bundle with Linux artifacts')
     parser.add_argument('--linux-appimagetool', type=Path)
@@ -90,13 +93,19 @@ def main(argv=None):
     _build_requirements(parser, args)
     args.out = args.out.resolve()
     args.out.mkdir(parents=True, exist_ok=True)
-    if args.stage_only:
-        destination = args.out / 'stage'
+    if args.prepare_windows_signing and (args.target != 'windows/x86_64' or not args.stage_dir):
+        parser.error('Windows signing preparation requires its target and --stage-dir')
+    if args.stage_only or args.prepare_windows_signing:
+        destination = (args.stage_dir if args.prepare_windows_signing else args.out / 'stage').resolve()
         if destination.exists() or destination.is_symlink():
             parser.error('stage already exists: ' + str(destination))
-        tmp = Path(tempfile.mkdtemp(prefix='.native-stage-', dir=args.out))
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        tmp = Path(tempfile.mkdtemp(prefix='.native-stage-', dir=destination.parent))
         try:
             metadata = _stage(args, tmp / 'Resources')
+            if args.prepare_windows_signing:
+                native_menu_build.build(tmp / 'Resources', args.target)
+                native_signing.capture(tmp / 'Resources', tmp / 'signing-inputs.json')
             os.replace(tmp, destination)
         except BaseException:
             shutil.rmtree(tmp, ignore_errors=True)

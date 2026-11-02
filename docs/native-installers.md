@@ -1,7 +1,8 @@
 # Native installer delivery
 
-The native packages are unsigned at the owner's request. Existing signed feeds,
-manifest checks, SHA-256 checksums and feed replay protection remain required.
+Windows publication requires verified, timestamped Authenticode signatures on
+the menu helper and outer installer. macOS and Linux packages remain unsigned.
+Existing signed feeds, manifest checks, SHA-256 checksums and feed replay protection remain required.
 This implementation does not establish staff acceptance or authorise closing
 the existing public update path.
 
@@ -12,6 +13,10 @@ macOS, Windows and Ubuntu runners. Each build verifies its pinned Python archive
 Linux bundles Zenity and GTK dependencies from Ubuntu 24.04, plus a pinned
 AppImage runtime with automatic extraction when FUSE is unavailable.
 See [builder details](../router/packaging/native/README.md).
+
+Windows signing configuration and a successful private canary are required
+before release. Source tests alone do not establish a usable signing service,
+device-policy approval or SmartScreen reputation.
 
 Each build also exports its existing staged `Resources` directory for installed hosts.
 The signed update document includes an optional `native_resources` map.

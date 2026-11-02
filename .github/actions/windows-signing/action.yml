@@ -1,0 +1,77 @@
+name: Windows package signing
+description: Sign owned PE files before final hashes and private delivery.
+inputs:
+  client-id:
+    description: Federated signing application ID
+    required: true
+  tenant-id:
+    description: Signing directory ID
+    required: true
+  subscription-id:
+    description: Signing subscription ID
+    required: true
+  endpoint:
+    description: Artifact Signing endpoint
+    required: true
+  account:
+    description: Artifact Signing account
+    required: true
+  profile:
+    description: Public Trust certificate profile
+    required: true
+  publisher:
+    description: Expected certificate subject
+    required: true
+runs:
+  using: composite
+  steps:
+    - name: Prepare Windows signing inputs
+      shell: pwsh
+      working-directory: ${{ github.workspace }}/router
+      run: python tools/build_release_installer.py --target windows/x86_64 --prepare-windows-signing --stage-dir "$env:RUNNER_TEMP/scg-router-signing"
+    - name: Azure signing login
+      uses: Azure/login@a641126d1b8aa4d1fa005f4f92df94a3a4c4c906 # v3
+      with:
+        client-id: ${{ inputs.client-id }}
+        tenant-id: ${{ inputs.tenant-id }}
+        subscription-id: ${{ inputs.subscription-id }}
+    - name: Sign Windows menu
+      uses: Azure/artifact-signing-action@c7ab2a863ab5f9a846ddb8265964877ef296ee82 # v2
+      with:
+        endpoint: ${{ inputs.endpoint }}
+        signing-account-name: ${{ inputs.account }}
+        certificate-profile-name: ${{ inputs.profile }}
+        files: ${{ runner.temp }}\scg-router-signing\Resources\control\scg-router-menu.exe
+        file-digest: SHA256
+        timestamp-rfc3161: http://timestamp.acs.microsoft.com
+        timestamp-digest: SHA256
+        exclude-environment-credential: true
+        exclude-workload-identity-credential: true
+        exclude-azure-cli-credential: false
+    - name: Verify menu and package Windows installer
+      shell: pwsh
+      working-directory: ${{ github.workspace }}/router
+      env:
+        SCG_EXPECTED_PUBLISHER: ${{ inputs.publisher }}
+      run: python tools/windows_signing.py package --resources "$env:RUNNER_TEMP/scg-router-signing/Resources"
+    - name: Sign Windows installer
+      uses: Azure/artifact-signing-action@c7ab2a863ab5f9a846ddb8265964877ef296ee82 # v2
+      with:
+        endpoint: ${{ inputs.endpoint }}
+        signing-account-name: ${{ inputs.account }}
+        certificate-profile-name: ${{ inputs.profile }}
+        files-folder: ${{ github.workspace }}\router\native-artifacts
+        files-folder-filter: exe
+        files-folder-recurse: false
+        file-digest: SHA256
+        timestamp-rfc3161: http://timestamp.acs.microsoft.com
+        timestamp-digest: SHA256
+        exclude-environment-credential: true
+        exclude-workload-identity-credential: true
+        exclude-azure-cli-credential: false
+    - name: Verify and finalize signed Windows artifacts
+      shell: pwsh
+      working-directory: ${{ github.workspace }}/router
+      env:
+        SCG_EXPECTED_PUBLISHER: ${{ inputs.publisher }}
+      run: python tools/windows_signing.py finalize --resources "$env:RUNNER_TEMP/scg-router-signing/Resources"

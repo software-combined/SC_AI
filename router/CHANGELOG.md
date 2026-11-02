@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Require verified publisher signatures on the Windows menu and installer
+  before release publication. Keep final checksums bound to signed bytes.
+
 ## 1.3.34
 
 - Bundle Factory 0.3.0 with its offline project progress page and retain the

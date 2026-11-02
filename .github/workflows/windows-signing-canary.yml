@@ -1,0 +1,32 @@
+name: Windows signing canary
+on: workflow_dispatch
+permissions:
+  contents: read
+jobs:
+  signing:
+    if: ${{ contains(fromJSON('["SC-Cyril", "BrentJMaxwell"]'), github.actor) && contains(fromJSON('["SC-Cyril", "BrentJMaxwell"]'), github.triggering_actor) }}
+    runs-on: windows-2025
+    timeout-minutes: 25
+    permissions:
+      contents: read
+      id-token: write
+    defaults:
+      run:
+        working-directory: router
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+      - name: Build local canary bundle
+        shell: pwsh
+        run: python packaging/release.py --out dist --channel beta --build 0 --sha "$env:GITHUB_SHA"
+      - uses: ./.github/actions/windows-signing
+        with:
+          client-id: ${{ secrets.AZURE_SIGNING_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_SIGNING_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SIGNING_SUBSCRIPTION_ID }}
+          endpoint: ${{ secrets.AZURE_SIGNING_ENDPOINT }}
+          account: ${{ secrets.AZURE_SIGNING_ACCOUNT }}
+          profile: ${{ secrets.AZURE_SIGNING_PROFILE }}
+          publisher: ${{ secrets.AZURE_SIGNING_PUBLISHER_SUBJECT }}

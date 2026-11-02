@@ -136,7 +136,19 @@ jobs:
       - name: Native packaging contracts
         run: python -m unittest tests.test_native_stage tests.test_native_packages tests.test_native_setup tests.test_native_readiness tests.test_native_menu_build
       - name: Build native package
+        if: runner.os != 'Windows'
         run: python tools/build_release_installer.py --target ${{ matrix.target }}
+      - name: Build and sign Windows package
+        if: runner.os == 'Windows'
+        uses: ./.github/actions/windows-signing
+        with:
+          client-id: ${{ secrets.AZURE_SIGNING_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_SIGNING_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SIGNING_SUBSCRIPTION_ID }}
+          endpoint: ${{ secrets.AZURE_SIGNING_ENDPOINT }}
+          account: ${{ secrets.AZURE_SIGNING_ACCOUNT }}
+          profile: ${{ secrets.AZURE_SIGNING_PROFILE }}
+          publisher: ${{ secrets.AZURE_SIGNING_PUBLISHER_SUBJECT }}
       - name: Verify disk image
         if: runner.os == 'macOS'
         run: hdiutil verify native-artifacts/*.dmg

@@ -57,6 +57,21 @@ class NativeReleaseWorkflowTests(unittest.TestCase):
         self.assertIn('/native-builds/', native)
         self.assertIn('role-session-name: router-native-build', native)
 
+    def test_signing_precedes_private_delivery_and_canary_cannot_publish(self):
+        native = WORKFLOW.read_text().split('  native:', 1)[1].split('  publish:', 1)[0]
+        self.assertLess(native.index('uses: ./.github/actions/windows-signing'),
+                        native.index('role-session-name: router-native-build'))
+        action = (WORKFLOW.parents[1] / 'actions/windows-signing/action.yml').read_text()
+        steps = ('Prepare Windows signing inputs', 'Azure signing login', 'Sign Windows menu',
+                 'Verify menu and package Windows installer', 'Sign Windows installer',
+                 'Verify and finalize signed Windows artifacts')
+        self.assertEqual(sorted(steps, key=action.index), list(steps))
+        canary = WORKFLOW.with_name('windows-signing-canary.yml').read_text()
+        self.assertIn('on: workflow_dispatch', canary)
+        self.assertIn('uses: ./.github/actions/windows-signing', canary)
+        for capability in ('aws-actions/', 'actions/upload-artifact', 'publish_feed', 'publish_native', 'FEED_SIGNING'):
+            self.assertNotIn(capability, canary)
+
     def test_native_pilot_does_not_suppress_normal_update_publication(self):
         text = WORKFLOW.read_text()
         self.assertNotIn('PILOT_ONLY', text)

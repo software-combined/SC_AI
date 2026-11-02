@@ -37,6 +37,8 @@ def main(argv=None):
     parser.add_argument('--dist', type=Path, default=Path('dist'))
     parser.add_argument('--out', type=Path, default=Path('native-artifacts'))
     parser.add_argument('--download-config', type=Path)
+    parser.add_argument('--prepare-windows-signing', action='store_true')
+    parser.add_argument('--stage-dir', type=Path)
     args = parser.parse_args(argv)
     latest = json.loads((args.dist / 'latest.json').read_text())
     if args.download_config:
@@ -59,6 +61,10 @@ def main(argv=None):
         if system == 'windows':
             compiler = Path(os.environ.get('ProgramFiles(x86)', 'C:/Program Files (x86)')) / 'Inno Setup 6/ISCC.exe'
             command += ['--windows-iscc', str(compiler)]
+        if args.prepare_windows_signing:
+            if args.target != 'windows/x86_64' or not args.stage_dir:
+                parser.error('Windows signing preparation requires its target and --stage-dir')
+            command += ['--prepare-windows-signing', '--stage-dir', str(args.stage_dir)]
         if system == 'linux':
             tools = json.loads((ROOT / 'packaging/native/build-tools.json').read_text())[args.target]
             command += ['--linux-zenity', shutil.which('zenity') or '/usr/bin/zenity']
