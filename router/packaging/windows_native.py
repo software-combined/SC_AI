@@ -1,12 +1,38 @@
 """Small Win32 process/package primitives. Inert on import; Python 3.9+."""
 import contextlib
 import ctypes as C
+import ntpath
+import os
 import re
 
 U32, PTR, BOOL = C.c_uint32, C.c_void_p, C.c_int
 P32 = C.POINTER(U32)
 ENUM = getattr(C, 'WINFUNCTYPE', C.CFUNCTYPE)(BOOL, PTR, C.c_ssize_t)
 APPS_FOLDER = 'shell:AppsFolder\\'
+
+
+def open_lock(path, *, api=None, crt=None):
+    """Open a lock with delete sharing so its containing profile can be retained."""
+    if api is None:
+        api = C.WinDLL('kernel32', use_last_error=True)
+        api.CreateFileW.restype = PTR
+        api.CreateFileW.argtypes = (C.c_wchar_p, U32, U32, PTR, U32, U32, PTR)
+        api.CloseHandle.argtypes = (PTR,)
+        api.CloseHandle.restype = BOOL
+    if crt is None:
+        import msvcrt
+        crt = msvcrt
+    path = ntpath.abspath(str(path))
+    if not path.startswith('\\\\?\\'):
+        path = '\\\\?\\UNC\\' + path[2:] if path.startswith('\\\\') else '\\\\?\\' + path
+    handle = api.CreateFileW(path, 0xc0000000, 7, None, 4, 0x80, None)
+    if handle == C.c_void_p(-1).value:
+        raise OSError(C.get_last_error(), 'Windows lock could not be opened')
+    try:
+        return crt.open_osfhandle(handle, os.O_RDWR | getattr(os, 'O_BINARY', 0))
+    except BaseException:
+        api.CloseHandle(handle)
+        raise
 
 
 class NativeError(OSError):

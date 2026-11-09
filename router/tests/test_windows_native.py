@@ -1,7 +1,9 @@
 """Win32 bindings preserve pointer widths, process identity and handle ownership."""
 import ctypes as C
 import os
+import tempfile
 import unittest
+from pathlib import Path
 from unittest import mock
 
 from tests.test_native_setup import module
@@ -19,6 +21,37 @@ class NativeApiTests(unittest.TestCase):
         self.api.CloseHandle = mock.Mock()
         self.api.LocalFree = mock.Mock()
         self.enterContext(mock.patch.object(C, 'get_last_error', return_value=122, create=True))
+
+    def test_lock_handle_shares_deletion_and_transfers_ownership_to_the_crt(self):
+        api, crt = mock.Mock(), mock.Mock()
+        api.CreateFileW.return_value, crt.open_osfhandle.return_value = 123, 9
+        self.assertEqual(native.open_lock(r'C:\synthetic\profile\lock', api=api, crt=crt), 9)
+        self.assertEqual(api.CreateFileW.call_args.args,
+            ('\\\\?\\C:\\synthetic\\profile\\lock', 0xc0000000, 7, None, 4, 0x80, None))
+        crt.open_osfhandle.assert_called_once_with(123, os.O_RDWR | getattr(os, 'O_BINARY', 0))
+        api.CloseHandle.assert_not_called()
+
+    def test_lock_handle_is_closed_if_crt_adoption_fails(self):
+        api, crt = mock.Mock(), mock.Mock()
+        api.CreateFileW.return_value = 123
+        crt.open_osfhandle.side_effect = OSError('synthetic descriptor limit')
+        with self.assertRaises(OSError):
+            native.open_lock(r'C:\synthetic\lock', api=api, crt=crt)
+        api.CloseHandle.assert_called_once_with(123)
+
+    @unittest.skipUnless(os.name == 'nt', 'Windows rename and byte-range lock contract')
+    def test_profile_rename_keeps_the_same_exclusive_lock_until_close(self):
+        service = module('service')
+        with tempfile.TemporaryDirectory() as temp:
+            root, moved = Path(temp) / 'profile', Path(temp) / 'retained'
+            root.mkdir()
+            with service.install_lock(root, '.claude-profile-sync.lock') as held:
+                self.assertTrue(held)
+                root.rename(moved)
+                with service.install_lock(moved, '.claude-profile-sync.lock') as competing:
+                    self.assertFalse(competing)
+            with service.install_lock(moved, '.claude-profile-sync.lock') as available:
+                self.assertTrue(available)
 
     def test_apps_folder_activation_uses_backslash_and_balances_com(self):
         self.api.CoInitializeEx = mock.Mock(return_value=0)

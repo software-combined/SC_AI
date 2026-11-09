@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Keep Windows profile locks held while retaining a Claude profile, without
+  preventing its rename. Keep Mac launcher execution tests on supported hosts.
+
 - Switch Claude safely after an account change. Keep the complete earlier
   OpenRouter profile, tasks and recovery settings in a private archive, then
   prepare a separate profile for the current account after restart consent.

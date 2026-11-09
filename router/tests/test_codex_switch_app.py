@@ -228,6 +228,7 @@ class LauncherTests(unittest.TestCase):
         self.assertEqual(json.loads(record.read_text()),
                          [str(helper), '--home', str(self.home), '--to', 'switched'])
 
+    @unix_only
     def test_generated_shortcut_forwards_the_offer_destination(self):
         record = self.home / 'argv.json'
         self.release('1.0.0', 'import json, sys\nopen(%r, "w").write(json.dumps(sys.argv))\n'
