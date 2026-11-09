@@ -681,8 +681,13 @@ credential kind and full loopback URL. Duplicate JSON keys, changed routes,
 bootstrap settings and invalid modes refuse. Repeated opaque attachment keeps
 the entry and receipt bytes unchanged. Classification and every switch recheck
 use this proof; it proves routing ownership, never decrypted plaintext.
-`client_removal.json_plan` and `owned_json` retain strict restoration checks.
-An opaque value therefore still blocks detach and all-client removal preflight.
+`client_removal.json_plan` restores an opaque field only after this route proof
+passes and an exact private entry copy is retained under Router home. The
+opaque plaintext is never inferred. Saved state and selected-entry metadata
+remain comparison guards until publication finishes. Changed proof inputs keep
+the receipt and service available for a safe retry. A failed current-version
+pointer cleanup reports incomplete removal, while retained releases stay.
+Linux retry does not disable units already removed by the earlier attempt.
 `desktop_windows.py` resolves the current user's registered Claude Store
 package and its virtualized roaming profile; the gateway profile stays separate.
 `windows_native.py` binds package, process, token and window APIs with explicit
@@ -700,13 +705,17 @@ job to close workers before remaining verified survivors are ended.
 and progress. The helper owns presentation; Python owns consent and configuration.
 `claude_desktop_switch.py` owns the switch lifecycle. After Claude exits normally,
 it shares the current account's local tasks and changes the mode only when all
-required copies succeed. Open and Switch share one transition lock, held before
-reading the mode through reopening, so overlapping requests cannot use a stale
-source profile. The switch rechecks the attachment, managed policy and stopped
-app before changing the mode. The mode write also compares the exact settings
+required copies succeed. `claude_profile_accounts.py` checks the current native
+account before restart consent and again after shutdown. A changed account
+retains the complete old gateway profile through `claude_profile_rotation.py`
+instead of reassigning its task-sharing binding. Open and Switch share one
+transition lock, held before reading the mode through reopening, so overlapping
+requests cannot use a stale source profile. The switch rechecks the attachment,
+managed policy and stopped app before changing the mode. The mode write compares the exact settings
 bytes to preserve concurrent edits. When setup recorded no Claude subscription,
 it refuses a move to the subscription before asking or closing Claude, and the
-menu disables that choice. Open Claude leaves histories alone. The stable
+menu disables that choice. Open Claude does not share tasks, but checks account
+ownership before opening an existing OpenRouter profile. The stable
 `claude_profile_launch.py` follows the installed release pointer so both actions
 survive updates and release pruning. After a rollback to a release without task
 sharing it runs that release's plain switch, opens Claude for Open Claude and
@@ -749,6 +758,23 @@ A private router-local hash binds the account pair so a later sign-in cannot
 inherit the previous account's copied tasks; the same hash keys the shared-task
 ledger. The coordinator must hold both profile locks before creating that
 binding; this helper does not start a copy.
+
+`claude_profile_rotation.py` is a closed-app retention primitive. The caller owns
+consent, account decisions and both profile locks. It retains the complete old
+profile and control before-images before preparing a clean same-root profile.
+A private pending marker requires explicit recovery before either profile opens.
+Receipt publication stays with `codex_config.replace_receipt`, which compares
+the exact generation. Unknown account pairs stop sync before any task effects.
+The native permission leaf rejects macOS extended allow rules on the archive
+parent; Windows uses the existing owner-only ACL check. Shared parents refuse
+before creating recovery state. Control copies and final markers use local
+publication and removal, so separate home mounts do not require a rename.
+Rotation and recovery also validate Router home's access before publishing private
+files. Recovery preserves live update-status fields while requiring all connection
+and unknown settings to match the saved configuration. It publishes the subscription
+selection before clearing pending work; rollback refuses until recovery finishes.
+Setup and repair refuse before shared receipts or client choices can change while
+Claude recovery is pending.
 
 `claude_profile_publish.py` and `claude_profile_transaction.py` share the record
 and bundle publication contract. They validate file generations before exclusive
@@ -846,14 +872,16 @@ It never copies history, and uninstall preserves unrelated user hooks. The
 callback runs Python with `-P`, so a file in the session's project folder can
 never stand in for a module it imports.
 
-`packaging/codex_switch_config.py` owns the three managed Codex blocks. The
+`packaging/codex_switch_config.py` owns the four managed Codex blocks. The
 default is `codex_config.build_block` unchanged, so a never-switched install
 and older Codex builds see nothing new. `switched` is root keys only: Codex's
 active provider becomes `scg_router`, which needs no OpenAI sign-in, sends
 `x-scg-codex-route` and reads `routed-models.json`, and
 `approvals_reviewer = "user"` stays, as in every managed block, because
 attach moves the owner's own line into the receipt and this route refuses
-ChatGPT's reviewer. `switched_back` is the default plus `scg_router` with
+ChatGPT's reviewer. `switched_signed_in` keeps the same routed-only connection
+with ChatGPT sign-in for normal use, preserving account projects and setup
+state. `switched_back` is the default plus `scg_router` with
 sign-in on, so threads started while switched still resume. The Codex receipt
 entry records the variant (`variant`, absent until the first switch), and
 `client_choice.attach_codex` rebuilds it on every install and update.
@@ -885,13 +913,15 @@ Settings remain pending until proof and a visible reopened package window succee
 Cold reopening has a separate thirty-second bound.
 Failure restores the previous owned settings and attempts fresh-package reopening.
 
-`switched` is strict. It needs `codex_route.ready`, a subscription install
+Both OpenRouter variants are strict. They need `codex_route.ready`, a subscription install
 (no-subscription mode already runs without sign-in), exactly one ChatGPT app
 (Codex) with its bundled CLI at the verified platform installation, and a verified
 exit. It then writes a pending marker, calls `codex_switch_config.switch` and
 proves the result with `codex_config_proof`: that CLI, started as an app
 server on `~/.codex`, must load the config and report no managed
-`model_provider` and no account. Any doubt refuses before the dialog; a failed
+`model_provider` and the variant's account state. Normal use requires the
+ChatGPT account; the active-limit fallback requires no account. Any doubt
+refuses before the dialog; a failed
 proof puts back the previous receipt entry and the block exactly as
 config.toml held it, the owner's latest model pick included, through
 `codex_switch_config.restore`, and reopens the app.
@@ -914,11 +944,12 @@ included, and swallows anything it raises. It reads the router's
 `codex-usage-limit.json` itself, because the router's reader needs Python
 3.14, so its parsing and five-hour rule are copies that a test pins to
 `ai_router/usage_episodes.py`. On macOS, for a Codex install in subscription
-mode that has `APP`, it offers Switch Codex once per episode from an affected
-desktop build, and the way back once Codex is switched and the episode has
-ended or the installed ChatGPT app is at or above `FIXED_IN`. The dialog is
-only the offer: its action opens Switch Codex, which asks before it changes
-anything. `APP` is the one place the Switch Codex app's location is named.
+mode that has `APP`, it offers the signed-out fallback once per episode from
+an affected desktop build. It offers the way back only while that fallback is
+active and the episode has ended or the installed ChatGPT app is at or above
+`FIXED_IN`. The offer passes an explicit destination through the launcher.
+Switch Codex still asks before it changes anything. `APP` is the one place
+the Switch Codex app's location is named.
 
 `packaging/codex_switch_app.py` owns that app. Every Codex attach and update
 builds or refreshes it on a Mac when Codex is attached in subscription mode

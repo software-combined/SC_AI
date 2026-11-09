@@ -176,10 +176,14 @@ A minimal HTTP request can pass because it does not request encrypted output.
 
 ## Codex Send button is greyed out or ChatGPT subscription access is unavailable
 
-From 1.3, open **SCG Router → Codex → OpenRouter only** and confirm the restart.
+From 1.3.41, open **SCG Router → Codex → OpenRouter for usage limits** and confirm the restart.
 Choose **ChatGPT + OpenRouter** to return. The [desktop menu](desktop-menu.md)
 preserves the saved-chat connections. The commands below remain recovery steps
 for installations without the menu and have their stated history limits.
+
+From 1.3.41, normal OpenRouter-only use keeps your ChatGPT sign-in, projects
+and setup choices. The active-limit fallback signs Codex out to keep Send
+available. Projects and setup choices stay separate until you switch back.
 
 Affected Codex desktop versions disable **Send** when the ChatGPT allowance runs out,
 including when you select an OpenRouter model. The router cannot fix a disabled
@@ -232,8 +236,10 @@ can take the key-window repair path without applying the client connection.
 
 ### macOS
 
-If Codex already uses your ChatGPT subscription, open **Switch Codex** from
-your user's Applications folder, or choose **Open Switch Codex** in the router notice.
+If the menu is unavailable, run [setup and repair](recovery.md) to restore
+the current controls and shortcut first. Then choose **OpenRouter for usage
+limits** in the repaired menu. Do not rely on an outdated shortcut.
+You can also choose **Open Switch Codex** in the Router usage-limit notice.
 Confirm the restart. Select an OpenRouter model and check that it replies.
 When subscription access returns, open **Switch Codex** again, confirm, and
 choose a subscription model after Codex reopens.
@@ -304,6 +310,16 @@ follow its message; keep your original tasks in place.
 
 Mac Code-task sharing has passed recorded round trips. Cowork tasks and cloud chats
 remain separate. See [Claude desktop setup and limits](claude-code.md#claude-desktop-app).
+
+If your Claude account changed, choosing OpenRouter offers a separate profile.
+Confirm the restart to keep the previous profile and tasks in a private archive
+and start clean. Nothing from that earlier profile is shared into the new one.
+You can also return to your subscription without sharing the earlier tasks.
+If Claude asks you to open a Code task first, do that on your subscription so
+the current account can be verified. Do not delete account bindings or history.
+If recovery was interrupted, choose Claude in SCG Router again. Recovery asks
+before restarting and returns to your subscription. A conflict retains the
+saved data and leaves Claude closed; contact IT rather than forcing it open.
 
 ## I have no Claude subscription access
 

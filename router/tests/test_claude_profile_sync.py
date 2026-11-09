@@ -1,11 +1,36 @@
 """End-to-end synthetic contract for two-way Claude profile sync."""
 import json
+import os
+import unittest
+from unittest import mock
 
 from tests import claude_profile_sync_fixtures as fixtures
 from tests.claude_profile_sync_fixtures import SyncFixture, sync
 
 
 class ProfileSyncTests(SyncFixture):
+    @unittest.skipIf(os.name == 'nt' or os.geteuid() == 0, 'POSIX directory write permissions')
+    def test_read_only_parent_refuses_before_changing_profiles_or_home(self):
+        roots = (self.first, self.third, self.home)
+        before = tuple(fixtures.fingerprint(root) for root in roots)
+        mode = self.root.stat().st_mode
+        try:
+            self.root.chmod(0o555)
+            with self.assertRaises(PermissionError):
+                self.sync()
+            self.assertEqual(before, tuple(fixtures.fingerprint(root) for root in roots))
+        finally:
+            self.root.chmod(mode)
+
+    def test_normal_sync_uses_the_same_stable_slot_lock_as_rotation(self):
+        with sync.profile_lock(self.third) as held:
+            self.assertTrue(held)
+            with mock.patch.object(sync, '_sync_direction') as transfer:
+                report = self.sync()
+            self.assertEqual(report['errors'], ['profile-busy'])
+            transfer.assert_not_called()
+        self.assertEqual(self.sync()['failed'], 0)
+
     def test_agent_subdirectory_round_trip_preserves_layout_and_active_outputs(self):
         fixtures.share_cowork(self)
         store = 'local-agent-mode-sessions'
