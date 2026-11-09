@@ -294,6 +294,7 @@ def require_live_home(home, action):
 def install_lock(home, name='install.lock', wait=0):
     """Serialise installs on one router home. Yields False when one is still
     running after `wait` seconds (removal waits for a running update).
+
     The scheduled updater and a manual run both swap `current`, rewrite both
     plists and reload the same launchd label. The lock is advisory and held on
     an open descriptor, so the OS releases it when the holder exits.
@@ -306,8 +307,7 @@ def install_lock(home, name='install.lock', wait=0):
               'are not serialised')
         yield True
         return
-    handle = (load('router_windows_lock', Path(__file__).with_name('windows_native.py')).open_lock(path / name)
-              if msvcrt is not None else os.open(path / name, os.O_RDWR | os.O_CREAT, 0o600))
+    handle = os.open(path / name, os.O_RDWR | os.O_CREAT, 0o600)
     try:
         deadline = time.monotonic() + wait
         while True:

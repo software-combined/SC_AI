@@ -522,6 +522,7 @@ on Linux. Windows falls back to Electron's roaming AppData location only
 when `LOCALAPPDATA` is absent. The subscription profile uses roaming AppData.
 Set `CLAUDE_USER_DATA_DIR` to override the third-party profile on all three
 systems. The first-party profile remains at the platform's native location.
+The override's parent folder must be writable so sharing and account recovery can coordinate safely.
 Windows Store installations resolve that subscription profile from the signed-in
 user's package registration automatically. Its `Network/Cookies` storage is a
 sign-in change detector, with legacy `Cookies` storage still supported; neither

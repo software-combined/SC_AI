@@ -18,8 +18,10 @@ def fingerprint(root):
         if path.is_symlink():
             values.append((path.relative_to(root).as_posix(), 'symlink'))
         elif path.is_file():
-            if (os.name == 'nt' and path.name == '.claude-profile-sync.lock'
-                    and path.parent in lock_roots):
+            if (os.name == 'nt' and (path.name == '.claude-profile-sync.lock'
+                    and path.parent in lock_roots or path.parent == Path(root)
+                    and path.name in {'.Claude.claude-profile-sync.lock',
+                                      '.Claude-3p.claude-profile-sync.lock'})):
                 # Windows denies reads of the held byte-range lock. Keep its
                 # presence and metadata in snapshots; all user files still hash.
                 info = path.stat()

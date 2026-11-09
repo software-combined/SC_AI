@@ -46,8 +46,8 @@ def policy_root(home, receipts, third):
 @contextlib.contextmanager
 def _profile_locks(sync, roots):
     with contextlib.ExitStack() as locks:
-        for root in sorted(roots):
-            if not locks.enter_context(sync._service.install_lock(root, '.claude-profile-sync.lock')):
+        for root in sorted(set(roots)):
+            if not locks.enter_context(sync.profile_lock(root)):
                 raise ValueError('Claude is already sharing tasks. Try again shortly.')
         yield
 
@@ -197,7 +197,7 @@ def recover(home, context, receipts, check, *, before_finish=lambda: None):
     old = rotation.recovery_root(home, receipts)
     if old is None:
         return 'none'
-    with _profile_locks(sync, (roots[0], old)):
+    with _profile_locks(sync, (*roots, old)):
         check()
         return rotation.recover(home, receipts, check=check, before_finish=before_finish)
 

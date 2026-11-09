@@ -176,7 +176,7 @@ class AccountSwitchTests(fixtures.SyncFixture):
         with self.assertRaisesRegex(self.owner.SwitchError, 'account changed'):
             self.switch()
         self.assertEqual(json.loads(self.config.read_bytes())['deploymentMode'], '1p')
-        self.assertFalse(list(self.third.parent.glob('.Claude-3p*')))
+        self.assertFalse(list(self.third.parent.glob('.Claude-3p.rotation-*')))
 
     def test_normal_open_or_selected_openrouter_cannot_bypass_account_recovery(self):
         self.config.write_text('{"deploymentMode":"3p"}')
@@ -223,7 +223,7 @@ class AccountSwitchTests(fixtures.SyncFixture):
         self.assertEqual(self.owner.attached_profile(self.home)[1]['deploymentMode'], '1p')
         self.assertNotIn('deploymentMode', json.loads(self.config.read_bytes()))
 
-    def test_recovery_locks_old_root_not_already_published_clean_root(self):
+    def test_recovery_locks_native_clean_and_saved_profile_slots(self):
         rotation = module('claude_profile_rotation')
         publish = rotation._publish.move_new
         def interrupt(source, target):
@@ -235,7 +235,16 @@ class AccountSwitchTests(fixtures.SyncFixture):
             with self.assertRaisesRegex(self.owner.SwitchError, 'recovery is pending'):
                 self.switch()
         self.assertFalse((self.third / '.claude-profile-sync.lock').exists())
-        self.assertEqual(self.switch(action='start'), '1p')
+        recover = rotation.recover
+        old = rotation.recovery_root(self.home, self.owner._receipts)
+        def recover_locked(*args, **kwargs):
+            for root in (self.first, self.third, old):
+                with fixtures.sync.profile_lock(root) as acquired:
+                    self.assertFalse(acquired, str(root))
+            return recover(*args, **kwargs)
+        with mock.patch.object(self.owner._accounts, '_rotation', return_value=rotation), \
+                mock.patch.object(rotation, 'recover', side_effect=recover_locked):
+            self.assertEqual(self.switch(action='start'), '1p')
         self.assertFalse(rotation.pending(self.home))
 
     def test_cancel_interrupted_recovery_leaves_both_profiles_closed_and_retained(self):

@@ -253,7 +253,7 @@ class ProfileLaunchTests(unittest.TestCase):
             self.assertEqual(json.loads(self.config.read_text())['deploymentMode'], mode)
 
         dispatch('switch', '1p')
-        with fixtures.sync._service.install_lock(third, '.claude-profile-sync.lock') as locked:
+        with fixtures.sync.profile_lock(third) as locked:
             self.assertTrue(locked)
             before_busy = fixtures.fingerprint(first), fixtures.fingerprint(third)
             dispatch('switch', '1p', code=1)

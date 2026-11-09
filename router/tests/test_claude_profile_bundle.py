@@ -159,16 +159,16 @@ class BundleSyncSafetyTests(SyncFixture):
 
     @unittest.skipUnless(os.name == 'nt', 'Windows byte-range coordination lock')
     def test_held_lock_keeps_presence_and_metadata_in_fingerprint(self):
-        path = self.third / '.claude-profile-sync.lock'
-        with sync._service.install_lock(self.third, path.name) as locked:
+        path = self.third.parent / '.Claude-3p.claude-profile-sync.lock'
+        with sync.profile_lock(self.third) as locked:
             self.assertTrue(locked)
             with self.assertRaises(PermissionError):
                 path.read_bytes()
-            before = fixtures.fingerprint(self.third)
+            before = fixtures.fingerprint(self.root)
             info = path.stat()
             self.assertIn((path.name, 'coordination-lock', info.st_size,
                            info.st_mtime_ns, info.st_ino, info.st_mode & 0o777), before)
-            self.assertEqual(fixtures.fingerprint(self.third), before)
+            self.assertEqual(fixtures.fingerprint(self.root), before)
 
     def test_fingerprint_propagates_unreadable_user_files(self):
         read = Path.read_bytes

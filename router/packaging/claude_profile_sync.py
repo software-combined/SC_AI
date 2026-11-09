@@ -30,6 +30,16 @@ ordinary_path = _rules.ordinary_path
 _stage_union = _bundle.stage_union
 
 
+def profile_lock(root):
+    """Lock the profile's stable slot, not a file inside its movable directory."""
+    # ponytail: needs a writable parent, as rotation does; revisit if read-only parents are supported.
+    root = ordinary_path(Path(root).absolute())
+    path = root.parent / ('.' + root.name + '.claude-profile-sync.lock')
+    _records.assert_ancestors(root)
+    _records.assert_ancestors(path)
+    return _service.install_lock(io_path(path.parent), path.name)
+
+
 def _report(failed=0, errors=(), pending=0):
     return dict(copied=0, replaced=0, unchanged=0, unshared=0, retired=0, pending=pending,
                 failed=failed, errors=list(errors))
@@ -322,7 +332,7 @@ def sync_profiles(home, winner, env=None):
     roots = {'1p': first, '3p': third}
     with contextlib.ExitStack() as locks:
         for root in sorted((first, third)):
-            if not locks.enter_context(_service.install_lock(root, '.claude-profile-sync.lock')):
+            if not locks.enter_context(profile_lock(root)):
                 return _report(1, ['profile-busy'])
         try:
             accounts = _records._identity.bind_profile_accounts(home, first, third)
