@@ -1,5 +1,38 @@
 # Compatibility
 
+## Router 1.3.42 release checks, 10 November 2026 AEDT
+
+Clients: Codex desktop `26.1103.41825` (build `25679`), bundled CLI
+`0.167.0-alpha.3.2`, and Claude Code `2.1.318`.
+
+| Client and route | Requested model and effort | Upstream requests | Result |
+| --- | --- | --- | --- |
+| Codex / OpenRouter | `deepseek/deepseek-v4.1-flash-1017`, Low | 2 | Tool result and final marker passed |
+| Claude Code / OpenRouter | `anthropic/claude-haiku-5.5`, Low | 3 | Sequential Reads, paired results and final markers passed |
+| Claude Code / Claude subscription | `claude-sonnet-5-5`, Low | 2 | Read, paired result and final marker passed |
+| Codex / ChatGPT subscription | `gpt-6-luna`, Low | 1 | HTTP 429; no tool result or final marker |
+
+The owner waived only the last compatibility leg for this release because
+subscription credits were exhausted. That leg remains unverified, not passed.
+The waiver does not change authentication, account isolation, required offline
+or native checks, beta observation, or native-installer acceptance flags.
+
+The three passing routes used the same runtime fingerprint:
+`850249f7a8811a2cd2c80445b6e63c0598c1fca7c62cc592051d6b5cb7704d05`.
+All reported the requested model. Codex reported Low effort; Claude's served
+effort was not exposed. Provider reports do not independently attest model weights.
+
+Checks used synthetic data and isolated listeners with the existing sign-ins.
+No credentials were copied or installed client settings changed. Each leg capped
+attempts at eight, input at 512 KiB, output at 2,048 tokens and time at 180 seconds.
+A 16,000-token usage stop permits one bounded in-flight request to finish.
+Claude's client budgets were USD 0.25 for OpenRouter and USD 0.20 for subscription.
+No automatic retry followed the subscription rejection; its usage and served
+identity were not reported. Earlier startup failures remain unqualified.
+
+These are client protocol checks, not desktop switching or fleet acceptance.
+Publication and installed beta observation remain separate gates.
+
 ## Auto Code and Auto Router, 7 November 2026 AEDT
 
 Codex desktop `26.1029.61003` (build `24614`), its bundled CLI

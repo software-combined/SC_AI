@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 1.3.42
+
 - Coordinate Claude sharing and recovery outside the profile folders so Windows
   can retain and restore them while the destination stays locked. Keep Mac
   launcher execution tests on supported hosts.
