@@ -135,20 +135,69 @@ def _connected(names):
         ', '.join(names), ' and '.join(_RESTART[name] for name in names))
 
 
+def _signed_in_default(home, variant, mode):
+    """Migrate a signed-out OpenRouter install to the signed-in default.
+
+    Existing installs on the signed-out `switched` variant lose sidebar
+    projects and thread links on restart. Subscription installs migrate to
+    `switched_signed_in` on the next update or attach, except during an
+    active usage-limit episode where the signed-out route keeps Send
+    available. No-subscription installs already run signed out. An unknown
+    or failed limit check never migrates: staying signed out is the safe
+    side, and the Switch Codex offer remains available. Switch back to the
+    signed-out route from the menu if a display ever disables Send.
+    """
+    if variant != _switch.SWITCHED or mode == 'none':
+        return variant
+    try:
+        offer = _load('codex_switch_offer')
+    except Exception:
+        return _switch.SWITCHED
+    # One successful read decides. A missing record migrates (Switch
+    # Codex can fall back later). An unreadable or corrupt record stays
+    # signed out. A valid, expired record migrates. A valid, active one
+    # stays signed out so Send keeps working. lstat (not stat) separates a
+    # truly absent entry from a dangling link, which must stay signed out.
+    try:
+        (home / offer.EPISODE_FILE).lstat()
+    except FileNotFoundError:
+        return _switch.SWITCHED_SIGNED_IN
+    except Exception:
+        return _switch.SWITCHED
+    try:
+        current = offer.episode(home)
+        if current is None:
+            return _switch.SWITCHED
+        # Reject an impossible ordering (reset before observation) as
+        # corrupt: stay signed out instead of migrating.
+        if current['end'] <= offer._seconds(current['seen_at']):
+            return _switch.SWITCHED
+        # fallback_needed re-reads the file, so decide from this read.
+        now = time.time()
+        fixed = offer._version(offer.FIXED_IN)
+        needed = now < current['end'] and (
+            fixed is None or (offer.installed() or ()) < fixed)
+        return _switch.SWITCHED if needed else _switch.SWITCHED_SIGNED_IN
+    except Exception:
+        return _switch.SWITCHED
+
+
 def attach_codex(home, state, mode, codex_config, previous=None,
                  static_catalogue=False, python=None):
     """Write the Codex provider block and receipt; returns the config path.
 
     Shared with the full install path so a current install and a fresh one
     write the same block, the same before-image and the same receipt. The
-    block is the variant the receipt records, so an update never switches
-    Codex to or from the router's own provider. Given the router's `python`,
+    block is the recorded variant, so an update never switches Codex to or
+    from the router's own provider; the only forced move is a signed-out
+    OpenRouter install to the signed-in default (see `_signed_in_default`).
+    Given the router's `python`,
     the Switch Codex app is then built, refreshed or removed to match.
     """
     if previous is None:
         previous = codex_config.codex_attachment(home)
     config_path = Path.home() / '.codex' / 'config.toml'
-    variant = _switch.recorded(previous)
+    variant = _signed_in_default(home, _switch.recorded(previous), mode)
     if previous.get('openai_mode') not in (None, mode):
         variant = _switch.SWITCHED_BACK
     block = _switch.build(home, state, mode, static_catalogue, variant)
