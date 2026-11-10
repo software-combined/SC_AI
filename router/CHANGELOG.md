@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+## 1.3.43
+
+- Deliver Factory 1.0.0 so the project manager is the one trusted contact and
+  owners coordinate on one small team board.
+
 ## 1.3.42
 
 - Coordinate Claude sharing and recovery outside the profile folders so Windows
