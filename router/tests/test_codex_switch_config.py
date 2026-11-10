@@ -1,7 +1,6 @@
-"""Switch Codex blocks, receipts, updates and refusals. A switched Codex
-refuses detach, uninstall, service-only conversion and rollback until
-switched back. The signed-out to signed-in migration is covered in
-test_codex_signed_in_default.py."""
+"""Switch Codex blocks, receipts, updates and refusals.
+Every attach retains the recorded variant. A switched Codex refuses detach,
+uninstall, service-only conversion and rollback until switched back."""
 import contextlib
 import io
 import json
@@ -180,8 +179,8 @@ class SwitchFlowTests(unittest.TestCase):
     def test_updates_keep_routed_variants(self):
         with tempfile.TemporaryDirectory() as tmp:
             home, config = self._attached(tmp)
-            for variant, version in (('switched_signed_in', '1.0.1'),
-                                     ('switched_back', '1.0.2')):
+            for variant, version in (('switched', '1.0.1'),
+                                     ('switched_signed_in', '1.0.2'), ('switched_back', '1.0.3')):
                 with self.subTest(variant=variant):
                     switch.switch(home, variant)
                     switched = config.read_text()
