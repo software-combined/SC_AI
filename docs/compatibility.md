@@ -1,5 +1,13 @@
 # Compatibility
 
+## Router 1.3.43 release, 10 November 2026 AEDT
+
+This release changes no Router code. It delivers Factory 1.0.0, whose changes
+are Markdown agent guidance only. The installed clients are Codex desktop
+`26.1103.41825` (build `25679`) and Claude Code `2.1.318`. No client upgrade
+occurred, so no new paid probe ran. The 1.3.42 results carry over, including
+the waived and unverified Codex ChatGPT subscription leg.
+
 ## Router 1.3.42 release checks, 10 November 2026 AEDT
 
 Clients: Codex desktop `26.1103.41825` (build `25679`), bundled CLI
