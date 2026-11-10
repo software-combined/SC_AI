@@ -134,6 +134,7 @@ def _connected(names):
     return '%s connected; %s to use the router.' % (
         ', '.join(names), ' and '.join(_RESTART[name] for name in names))
 
+
 def attach_codex(home, state, mode, codex_config, previous=None,
                  static_catalogue=False, python=None):
     """Write the Codex provider block and receipt; returns the config path.
@@ -167,9 +168,11 @@ def attach_codex(home, state, mode, codex_config, previous=None,
     codex_config._owned.inspect(after, block)
     event = previous.get('repair_notice') if after == before else None
     event = event or uuid.uuid4().hex
+    fallback_return = previous.get(_switch.FALLBACK_RETURN)
     codex_config.write_receipt(home, config_path, block, rules_receipt, mode, before,
                                desktop=desktop, variant=variant if variant != _switch.DEFAULT else None,
-                               reviewer=reviewer, repair_notice=event)
+                               reviewer=reviewer, repair_notice=event, fallback_return=fallback_return
+                               if variant == _switch.SWITCHED else None)
     entry = codex_config.codex_attachment(home)
     codex_config._owned.inspect(codex_config._owned.read(config_path), block)
     if entry.get('inserted_block') != block or entry.get('repair_notice') != event:

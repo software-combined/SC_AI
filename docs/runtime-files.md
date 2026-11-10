@@ -173,11 +173,20 @@ The updater remembers which Switch Codex offers it has made in
 ```
 
 `seen_at` names the episode, and a new episode starts with no offers made.
-`switch` is the offer to move Codex to OpenRouter models; `back` is the offer
-to return to the ChatGPT subscription. The offer is written before its dialog
-appears and is owner-only (0600). A home that cannot be written therefore
-shows no dialog rather than the same one every minute, and a dialog that
-cannot be drawn is taken back off the list so a later pass offers it again.
+All platforms start a worker without claiming that a dialog appeared.
+`switch` offers the signed-out OpenRouter fallback. `back` offers the prior
+combined or signed-in OpenRouter connection. The recorded reset only triggers
+the offer; another limit can still apply. Before showing a dialog, the worker
+writes a temporary `claim` in this record. It recovers an abandoned claim on
+the next pass, and an unwritable record prevents the dialog. A declined offer
+stays recorded. A failed switch or an unshown dialog leaves the offer pending.
+The worker rechecks the connection and episode after the offer. Its dialog
+never holds the update-check lock.
+Missing or invalid return-choice evidence defaults to the combined connection.
+An unreadable receipt leaves the offer pending instead of changing settings.
+The Codex entry in `activation.json` stores a `fallback_return` choice while
+the signed-out fallback is active. Updates and interrupted-switch recovery
+preserve it; leaving that fallback removes it.
 
 `installation-pending.json` retains the fixed Windows recovery inputs while an
 installation changes required components. It contains owned launchers, pointers,

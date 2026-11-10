@@ -172,8 +172,9 @@ Temporary operating-system failures cannot grant access or open key setup.
 
 Desktop connection commands accept explicit destinations. The switch owner
 rechecks the current selection while holding the installation lock, followed
-by the client transition and profile locks. Repeated destination selections
-do nothing. Existing shortcuts retain their toggle behaviour. Platform identity
+by the client transition and profile locks. Repeated explicit destination
+selections do nothing; reselecting the single OpenRouter menu choice offers
+the other sign-in mode. Existing shortcuts retain their toggle behaviour. Platform identity
 and lifecycle helpers serve both clients; the configuration proof uses the
 CLI bundled with the verified desktop app.
 Windows switching checks the required-component receipt under the installation lock
@@ -885,6 +886,10 @@ state. `switched_back` is the default plus `scg_router` with
 sign-in on, so threads started while switched still resume. The Codex receipt
 entry records the variant (`variant`, absent until the first switch), and
 `client_choice.attach_codex` rebuilds it on every install and update.
+Entering the signed-out fallback also records whether the prior choice was
+signed-in OpenRouter or the combined connection. Update and pending-switch
+recovery preserve that return choice. Older receipts default to the combined
+connection and are not changed merely by updating the router.
 `switch` and `restore` are the only writers that change it. `switch` writes the config first, then the receipt, with the config
 put back if the receipt write fails; `restore` undoes a switch, putting both
 back. While Codex is switched, `tools/disable.py` (and so a
@@ -943,13 +948,15 @@ calls it after every pass that holds the update lock, the minute Express job
 included, and swallows anything it raises. It reads the router's
 `codex-usage-limit.json` itself, because the router's reader needs Python
 3.14, so its parsing and five-hour rule are copies that a test pins to
-`ai_router/usage_episodes.py`. On macOS, for a Codex install in subscription
-mode that has `APP`, it offers the signed-out fallback once per episode from
-an affected desktop build. It offers the way back only while that fallback is
-active and the episode has ended or the installed ChatGPT app is at or above
-`FIXED_IN`. The offer passes an explicit destination through the launcher.
-Switch Codex still asks before it changes anything. `APP` is the one place
-the Switch Codex app's location is named.
+`ai_router/usage_episodes.py`. For a Codex install in subscription mode, it
+offers the signed-out fallback once per episode from an affected desktop build.
+It offers the recorded previous connection after the recorded reset, or when the
+installed app is at or above `FIXED_IN`. A recorded reset is a trigger for an
+offer, not proof that every limit has ended. On all platforms a retained
+controller opens a detached dialog worker.
+The worker rechecks the episode and receipt; the switch owner repeats the
+episode check under the installation lock and asks before changing anything.
+Missing dialogs leave the offer pending.
 
 `packaging/codex_switch_app.py` owns that app. Every Codex attach and update
 builds or refreshes it on a Mac when Codex is attached in subscription mode

@@ -13,14 +13,14 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from native_payload import load, succeeded
 
 DESTINATIONS = {
-    'codex': [('subscription', 'ChatGPT + OpenRouter'), ('openrouter', 'OpenRouter only'),
-              ('openrouter_fallback', 'OpenRouter for usage limits')],
+    'codex': [('subscription', 'ChatGPT + OpenRouter'), ('openrouter', 'OpenRouter')],
     'claude': [('subscription', 'Claude subscription'), ('openrouter', 'OpenRouter')]}
 MAINTENANCE = ('setup.status', 'setup.resume', 'setup.add', 'setup.key', 'setup.remove',
                'router.restart', 'updates.check', 'updates.install',
                'help.guide', 'help.support', 'startup.toggle')
 ACTIONS = MAINTENANCE + tuple(client + '.' + action for client in DESTINATIONS
-                             for action in ('subscription', 'openrouter', 'open')) + ('codex.openrouter_fallback',)
+                             for action in ('subscription', 'openrouter', 'open')) + (
+                                 'codex.openrouter_fallback', 'codex.limit_offer')
 BUSY = 'SCG Router is busy. Try again shortly.'
 
 
@@ -42,7 +42,7 @@ def snapshot(home):
     for client, receipt_name in (('codex', 'codex'), ('claude', 'claude-desktop')):
         if receipt_name not in raw.get('clients', {}):
             continue
-        selected, subscription = None, True
+        selected, subscription, sign_in_status = None, True, None
         try:
             if client == 'codex':
                 owner = load('codex_switch_config')
@@ -50,10 +50,11 @@ def snapshot(home):
                 owner.managed_block(entry)
                 subscription = entry.get('openai_mode') != 'none'
                 variant = owner.current(home)
-                selected = ('openrouter' if not subscription else
-                            'openrouter_fallback' if variant == owner.SWITCHED else
-                            'openrouter' if variant == owner.SWITCHED_SIGNED_IN
-                            or not subscription else 'subscription')
+                selected = ('openrouter' if not subscription or variant in owner.ROUTED_VARIANTS
+                            else 'subscription')
+                if selected == 'openrouter':
+                    sign_in_status = ('ChatGPT sign-in not used' if not subscription or variant == owner.SWITCHED
+                                      else 'ChatGPT sign-in required')
             else:
                 owner = load('claude_desktop_switch')
                 subscription = owner.subscription_chosen(home)
@@ -62,9 +63,10 @@ def snapshot(home):
         except (Exception, SystemExit):
             selected = None
         clients.append(dict(id=client, label='Codex' if client == 'codex' else 'Claude',
-                            selected=selected, choices=[dict(id=key, label=label,
-                            enabled=key not in ('subscription', 'openrouter_fallback') or subscription)
-                            for key, label in DESTINATIONS[client]]))
+                            selected=selected, sign_in_status=sign_in_status,
+                            choices=[dict(id=key, label=label, enabled=key != 'subscription' or subscription,
+                                          reselect=client == 'codex' and key == 'openrouter' and subscription)
+                                     for key, label in DESTINATIONS[client]]))
     health = raw.get('routing_healthy')
     status = ('Running' if health is True else
               'Router is not running' if health is False else 'Status unknown')
@@ -104,6 +106,74 @@ def _installer(home, flags, run):
     return launch()
 
 
+def _limit_offer(home, dialog):
+    """Show an offer, then ask through the switch owner before any restart."""
+    service, offer = load('service'), load('codex_switch_offer')
+    # Hold only the offer lock while waiting for the person. Updates must not wait.
+    with service.install_lock(home, '.codex-switch-offer.lock') as held:
+        if not held:
+            return dict(outcome='cancelled')
+        try:
+            offer._recover_claim(home)
+        except (OSError, ValueError):
+            return dict(outcome='cancelled')
+        found = offer.due(home)
+        if found is None:
+            return dict(outcome='cancelled')
+        kind, episode = found
+        entry = offer._codex.codex_attachment(home)
+        destination = offer._switch.SWITCHED if kind == offer.SWITCH else offer._switch.return_target(entry)
+        before = offer._offered(home, episode['seen_at'])
+        try:
+            offer._claim(home, episode['seen_at'], before, kind)
+        except (OSError, ValueError):
+            return dict(outcome='cancelled')
+        message = (offer.BACK_OPENROUTER if kind == offer.BACK
+                   and destination == offer._switch.SWITCHED_SIGNED_IN else offer.MESSAGES[kind])
+        if sys.platform == 'win32':
+            try:
+                answer = load('windows_dialog').show(message, home, True,
+                                                    labels=('Open Switch Codex', 'Later'))
+            except (OSError, ValueError, subprocess.SubprocessError):
+                answer = None
+        else:
+            answer = dialog.confirm_result(message, home, labels=('Open Switch Codex', 'Later'))
+        try:
+            found = offer.due(home, include_offered=True)
+            unchanged = offer._codex.codex_attachment(home) == entry
+        except (OSError, ValueError, SystemExit):
+            offer._finish_claim(home, episode['seen_at'], before)
+            return dict(outcome='cancelled')
+        if (found is None or found[0] != kind or found[1]['seen_at'] != episode['seen_at']
+                or not unchanged):
+            offer._finish_claim(home, episode['seen_at'], before)
+            return dict(outcome='cancelled')
+        if answer is None:
+            offer._finish_claim(home, episode['seen_at'], before)
+            return dict(outcome='cancelled')
+        if not answer:
+            offer._finish_claim(home, episode['seen_at'], before + [kind])
+            return dict(outcome='cancelled')
+        owner = load('codex_desktop_switch')
+        failed = False
+        try:
+            result = owner.switch(home, target=destination, expected=entry, offer_kind=kind,
+                                  offer_seen=episode['seen_at'])
+        except (Exception, SystemExit) as exc:
+            result, failed = False, True
+            safe = str(exc) if isinstance(exc, owner.SwitchError) else 'SCG Router could not finish. Try again.'
+            try:
+                dialog.message(safe)
+            except (Exception, SystemExit):
+                pass
+        try:
+            offer._finish_claim(home, episode['seen_at'], before if result is False else before + [kind])
+        except (OSError, ValueError):
+            pass
+        return dict(outcome=('failed' if failed else 'cancelled')
+                    if result is None or result is False else 'done')
+
+
 def execute(home, resources, action, run=subprocess.run):
     """Fixed action names are the only mutation interface exposed to the shell."""
     if action not in ACTIONS:
@@ -113,6 +183,8 @@ def execute(home, resources, action, run=subprocess.run):
     if action.startswith('setup.'):
         rc = load('native_setup').onboard(resources, home, action.split('.')[1])
         return dict(outcome='done' if rc == 0 else 'failed')
+    if action == 'codex.limit_offer':
+        return _limit_offer(home, dialog)
     if action.startswith(('codex.', 'claude.')):
         client, target = action.split('.')
         if client == 'codex':
@@ -125,7 +197,7 @@ def execute(home, resources, action, run=subprocess.run):
                 result = True
             else:
                 result = owner.switch(home, target={
-                    'openrouter': 'switched_signed_in',
+                    'openrouter': 'openrouter',
                     'openrouter_fallback': 'switched',
                     'subscription': 'switched_back'}[target])
         else:
@@ -133,7 +205,7 @@ def execute(home, resources, action, run=subprocess.run):
             result = owner.switch(home, action='start' if target == 'open' else 'switch',
                                   target=None if target == 'open' else
                                   ('3p' if target == 'openrouter' else '1p'))
-        return dict(outcome='cancelled' if result is None else 'done')
+        return dict(outcome='cancelled' if result is None or result is False else 'done')
     if action == 'startup.toggle':
         startup = load('desktop_startup')
         with load('service').install_lock(home) as held:

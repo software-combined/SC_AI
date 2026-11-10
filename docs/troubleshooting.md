@@ -176,10 +176,15 @@ A minimal HTTP request can pass because it does not request encrypted output.
 
 ## Codex Send button is greyed out or ChatGPT subscription access is unavailable
 
-From 1.3.41, open **SCG Router → Codex → OpenRouter for usage limits** and confirm the restart.
-Choose **ChatGPT + OpenRouter** to return. The [desktop menu](desktop-menu.md)
-preserves the saved-chat connections. The commands below remain recovery steps
-for installations without the menu and have their stated history limits.
+Open **SCG Router → Codex** and check the displayed ChatGPT sign-in status.
+If OpenRouter is not checked, choose it and read the confirmation. If that
+confirmation keeps sign-in, confirm it, then select the checked OpenRouter
+choice again to offer the signed-out connection. If the status already says
+sign-in is not used, do not reselect it: that offers the signed-in connection.
+During a limit, confirm the signed-out choice. To sign in again,
+select the checked OpenRouter choice or choose **ChatGPT + OpenRouter**.
+The commands below remain recovery steps for installations without the
+[desktop menu](desktop-menu.md) and have their stated history limits.
 
 From 1.3.41, normal OpenRouter-only use keeps your ChatGPT sign-in, projects
 and setup choices. The active-limit fallback signs Codex out to keep Send
@@ -237,8 +242,8 @@ can take the key-window repair path without applying the client connection.
 ### macOS
 
 If the menu is unavailable, run [setup and repair](recovery.md) to restore
-the current controls and shortcut first. Then choose **OpenRouter for usage
-limits** in the repaired menu. Do not rely on an outdated shortcut.
+the current controls and shortcut first. Then follow the sign-in status and
+OpenRouter steps above. Do not rely on an outdated shortcut.
 You can also choose **Open Switch Codex** in the Router usage-limit notice.
 Confirm the restart. Select an OpenRouter model and check that it replies.
 When subscription access returns, open **Switch Codex** again, confirm, and

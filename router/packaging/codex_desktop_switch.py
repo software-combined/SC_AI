@@ -38,8 +38,9 @@ SWITCHED, SWITCHED_SIGNED_IN, SWITCHED_BACK = (
 ROUTED_VARIANTS = _blocks.ROUTED_VARIANTS
 # Plain wording (AGENTS.md section 4a), naming the app as people see it.
 PROMPTS = {
-    SWITCHED_SIGNED_IN: 'Switch the ChatGPT app (Codex) to OpenRouter models? It will restart.',
-    SWITCHED: ('Switch the ChatGPT app (Codex) to OpenRouter models while your subscription is limited? '
+    SWITCHED_SIGNED_IN: ('Switch the ChatGPT app (Codex) to OpenRouter models with ChatGPT sign-in? '
+                         'It will restart. Send may still be blocked if a subscription limit remains.'),
+    SWITCHED: ('Switch the ChatGPT app (Codex) to OpenRouter models without ChatGPT sign-in? '
                'It will restart. Projects and setup choices stay separate until you switch back.'),
     SWITCHED_BACK: ('Switch the ChatGPT app (Codex) back to your ChatGPT subscription? '
                     'It will restart.')}
@@ -64,9 +65,10 @@ QUIT_FIRST = ('Quit the ChatGPT app (Codex) first, then choose Continue to switc
               'to your ChatGPT subscription.')
 BACK_OPEN_AGAIN = ('The ChatGPT app (Codex) is switched back to your ChatGPT subscription. '
                    'Quit it if it is still open, then open it again.')
-UNFINISHED = _transaction.UNFINISHED
-FAILED = _transaction.FAILED
+UNFINISHED, FAILED = _transaction.UNFINISHED, _transaction.FAILED
 CHECK_FAILED = 'Codex could not be checked. Nothing was changed. Try again.'
+SIGNIN_FALLBACK = ('ChatGPT sign-in could not be verified. Try OpenRouter without ChatGPT sign-in? '
+                   'Codex will restart and projects may be hidden until you sign in again.')
 WINDOWS_STAYED_OPEN = 'Codex is still running. Finish active work, quit Codex, then try again.'
 WINDOWS_CLOSE = 'Codex will fully close. Running tasks will stop.'
 WINDOWS_RECOVER = 'Finish an earlier Codex switch? It will restart. ' + WINDOWS_CLOSE
@@ -97,11 +99,12 @@ def _switch_lock(home, record):
         yield True
 
 
-def switch(home, *, run=subprocess.run, platform_ops=None, prove=None, ready=None, target=None):
-    """Move Codex to the other variant; returns it, or None when cancelled."""
-    if target not in (None, SWITCHED, SWITCHED_SIGNED_IN, SWITCHED_BACK):
+def switch(home, *, run=subprocess.run, platform_ops=None, prove=None, ready=None, target=None, expected=None,
+           offer_kind=None, offer_seen=None):
+    """Move Codex to the other variant; None means declined, False means no offer was shown."""
+    if target not in (None, 'openrouter', SWITCHED, SWITCHED_SIGNED_IN, SWITCHED_BACK):
         raise ValueError('Unknown Codex destination.')
-    home, record = Path(home), {'to': None}
+    home, record = Path(home), {'to': None, 'offer_fallback': target == 'openrouter'}
     try:
         if sys.platform not in ('darwin', 'win32', 'linux'):
             raise SwitchError(MAC_ONLY)
@@ -113,9 +116,10 @@ def switch(home, *, run=subprocess.run, platform_ops=None, prove=None, ready=Non
                     raise SwitchError(INSTALLATION_REQUIRED)
                 target = _switch(home, run, _platform if platform_ops is None else platform_ops,
                                  _proof.prove if prove is None else prove,
-                                 _route_ready if ready is None else ready, record, target)
+                                 _route_ready if ready is None else ready, record, target, expected, offer_kind,
+                                 offer_seen)
             else:
-                target = None
+                target = False if offer_kind is not None else None
     except Exception as exc:
         if 'reason' not in record and (exc.__cause__ is not None or not isinstance(exc, SwitchError)):
             record.update(_platform.error_facts(exc, 'switch'))
@@ -124,8 +128,11 @@ def switch(home, *, run=subprocess.run, platform_ops=None, prove=None, ready=Non
     _log(home, record, 'done' if target else 'cancelled')
     return target
 
-
-def _switch(home, run, ops, prove, ready, record, target=None):
+def _switch(home, run, ops, prove, ready, record, target=None, expected=None, offer_kind=None, offer_seen=None):
+    found = _offer.due(home, include_offered=True) if offer_kind is not None else None
+    if offer_kind is not None and (found is None or found[0] != offer_kind or found[1]['seen_at'] != offer_seen
+            or _receipts.codex_attachment(home) != expected or (home / MARKER).exists()):
+        return False  # A notice never initiates pending-switch recovery.
     stayed_open = WINDOWS_STAYED_OPEN if sys.platform == 'win32' else STAYED_OPEN
     identity = _app_identity(ops, run, record)
     root = identity['root'] if identity else None
@@ -145,8 +152,9 @@ def _switch(home, run, ops, prove, ready, record, target=None):
     def checked_proof(root, target):
         if sys.platform == 'win32' and identity and identity.get('family'):
             ops._checked_identity(sys.platform, run, CODEX, identity)
-        result = _timed(record, 'proof', lambda: (sys.platform != 'win32' or _serving_current(home))
-                        and supplied_proof(root, target))
+        serving = sys.platform != 'win32' or _serving_current(home)
+        result = _timed(record, 'proof', lambda: serving and supplied_proof(root, target))
+        record['serving_ok'] = serving
         record['proof_ok'] = result is True
         if sys.platform == 'win32' and identity and identity.get('family'):
             ops._checked_identity(sys.platform, run, CODEX, identity)
@@ -196,14 +204,21 @@ def _switch(home, run, ops, prove, ready, record, target=None):
         raise SwitchError(_blocks.EDITED) from exc
     if current is None:
         raise SwitchError(_blocks.NOT_CONNECTED)
+    if offer_kind is not None and (entry != expected or _offer.due(home, include_offered=True) != found):
+        return False
+    if expected is not None and entry != expected:
+        raise SwitchError(CHECK_FAILED)
+    if target == 'openrouter':
+        if entry.get('openai_mode') == 'none':
+            return SWITCHED_SIGNED_IN  # The existing external-only block needs no switch.
+        target = (SWITCHED_SIGNED_IN if current == SWITCHED else SWITCHED
+                  if current == SWITCHED_SIGNED_IN or _offer.fallback_needed(home) else SWITCHED_SIGNED_IN)
     if target == SWITCHED_SIGNED_IN and entry.get('openai_mode') == 'none':
         return target
     if target == SWITCHED and entry.get('openai_mode') == 'none':
         raise SwitchError(NOTHING_TO_SWITCH)
-    if target in ROUTED_VARIANTS:
-        if current == target:
-            return target
-    elif target == SWITCHED_BACK and current not in ROUTED_VARIANTS:
+    if (target in ROUTED_VARIANTS and current == target
+            or target == SWITCHED_BACK and current not in ROUTED_VARIANTS):
         return target
     target = record['to'] = target or (
         SWITCHED if current == SWITCHED_SIGNED_IN and _offer.fallback_needed(home) else
@@ -227,11 +242,20 @@ def _switch(home, run, ops, prove, ready, record, target=None):
         prompt = PROMPTS[target] if root else QUIT_FIRST
         if sys.platform == 'win32':
             prompt += '\n\n' + WINDOWS_CLOSE
-        if not _timed(record, 'confirmation', lambda: ops.confirm(prompt, sys.platform,
-                run=run, **({'home': home} if sys.platform == 'win32' else {}))):
-            return None
+        answer = _timed(record, 'confirmation', lambda: _dialog.confirm_result(prompt, home, run=run)
+                        if offer_kind is not None and ops is _platform and sys.platform != 'win32' else
+                        ops.confirm(prompt, sys.platform, run=run,
+                                    **({'home': home} if sys.platform == 'win32' else {})))
+        if answer is not True:
+            return False if offer_kind is not None and answer is None else None
     except (OSError, subprocess.SubprocessError) as exc:
+        if offer_kind is not None:
+            return False
         raise SwitchError(FAILED) from exc
+    if offer_kind is not None:
+        found = _offer.due(home, include_offered=True)
+        if found is None or found[0] != offer_kind or found[1]['seen_at'] != offer_seen:
+            return False
     closed = None  # the way back may go on with no app it can quit or reopen
     if root is not None:
         try:
@@ -262,6 +286,13 @@ def _switch(home, run, ops, prove, ready, record, target=None):
                 _open(ops, run, identity, fresh=sys.platform == 'win32')
         except (OSError, subprocess.SubprocessError):
             raise SwitchError('%s Open the ChatGPT app (Codex) to continue.' % exc) from exc
+        if (target == SWITCHED_SIGNED_IN and record.get('offer_fallback') and str(exc) == NOT_PROVEN
+                and record.get('serving_ok') is True
+                and _blocks.current(home) not in ROUTED_VARIANTS):
+            if not ops.confirm(SIGNIN_FALLBACK, sys.platform, run=run,
+                               **({'home': home} if sys.platform == 'win32' else {})):
+                return None
+            return _switch(home, run, ops, prove, ready, record, target=SWITCHED)
         raise
     if not closed:
         _notice(ops, run, BACK_OPEN_AGAIN)
@@ -347,8 +378,7 @@ def _route_ready(home):
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--home', default=os.environ.get(
-        'ROUTER_HOME', str(Path.home() / '.codex' / 'mixed-model-router')))
+    parser.add_argument('--home', default=os.environ.get('ROUTER_HOME', str(Path.home() / '.codex' / 'mixed-model-router')))
     parser.add_argument('--to', choices=(SWITCHED, SWITCHED_SIGNED_IN, SWITCHED_BACK))
     args = parser.parse_args(argv)
     try:

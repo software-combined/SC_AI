@@ -43,14 +43,19 @@ def menu(facts, *, busy=None, available=None, checked_update=None):
     if facts.get('menu_delivery') == 'failed':
         rows += [item('Menu update needs repair; choose Update or repair', enabled=False)]
     for client in facts.get('clients', []):
-        options = [item(choice['label'] + ('…' if choice['id'] != client['selected'] else ''),
+        options = [item(choice['label'] + ('…' if choice['id'] != client['selected']
+                                            or choice.get('reselect') else ''),
                         client['id'] + '.' + choice['id'],
-                        enabled=changing and choice.get('enabled', True),
+                        enabled=changing and choice.get('enabled', True) and not (
+                            client['id'] == 'codex' and choice['id'] == 'openrouter'
+                            and choice['id'] == client['selected'] and not choice.get('reselect')),
                         checked=choice['id'] == client['selected'])
                    for choice in client['choices']]
         options += [item('Open ' + client['label'], client['id'] + '.open', enabled=changing)]
         selected = next((c['label'] for c in client['choices']
                          if c['id'] == client['selected']), 'Check setup')
+        if client.get('sign_in_status'):
+            selected += ' (%s)' % client['sign_in_status']
         rows.append(item(client['label'] + ' — ' + selected, children=options))
     version, running = facts.get('version', 'Unknown'), facts.get('running_version', 'Unknown')
     updates = [item('Installed version ' + version, enabled=False)]
@@ -87,7 +92,7 @@ def menu(facts, *, busy=None, available=None, checked_update=None):
 def chooser(rows):
     """(details, actions) for the control window, which has no submenus.
 
-    A connection's current choice is a detail, not an action: choosing it does nothing.
+    The checked Codex OpenRouter choice can also change its sign-in mode.
     An action offered twice keeps its first place and its later, more specific label.
     """
     details, options = [], {}
@@ -101,10 +106,12 @@ def chooser(rows):
             if not action:
                 if label and not client:
                     details.append(label)
-            elif child['enabled'] and action != 'menu.quit' and not (client and child['checked']):
+            elif child['enabled'] and action != 'menu.quit' and not (
+                    client and child['checked'] and action != 'codex.openrouter'):
                 if action == 'startup.toggle':
                     label = 'Turn %s start at sign-in' % ('off' if child['checked'] else 'on')
                 elif client and not action.endswith('.open'):
-                    label = '%s: switch to %s' % (row['label'].split(' — ')[0], label.rstrip('…'))
+                    label = ('Codex: change ChatGPT sign-in' if child['checked'] else
+                             '%s: switch to %s' % (row['label'].split(' — ')[0], label.rstrip('…')))
                 options[action] = label
     return details, list(options.items())

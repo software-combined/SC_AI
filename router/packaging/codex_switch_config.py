@@ -18,7 +18,9 @@ writes one of three other variants between the same markers:
 The Codex receipt entry records the variant beside the block it describes
 (`variant`, absent until the first switch) and every attach rebuilds the
 recorded one: an update never switches Codex either way, and a never-switched
-install keeps today's default block byte for byte. `current`, `switch` and
+install keeps today's default block byte for byte. `fallback_return` records
+the signed-in connection before entering the signed-out fallback; older or
+invalid receipts return to the combined connection. `current`, `switch` and
 `restore` are the Switch Codex API. Detach, uninstall and rollback refuse
 while Codex is switched: Switch Codex moves Codex back to the ChatGPT
 subscription first, so neither detach nor uninstall does that silently, and
@@ -35,6 +37,7 @@ DEFAULT, SWITCHED, SWITCHED_SIGNED_IN, SWITCHED_BACK = (
     'default', 'switched', 'switched_signed_in', 'switched_back')
 ROUTED_VARIANTS = (SWITCHED, SWITCHED_SIGNED_IN)
 VARIANTS = (DEFAULT, *ROUTED_VARIANTS, SWITCHED_BACK)
+FALLBACK_RETURN = 'fallback_return'
 PROVIDER = 'scg_router'
 # The router owns these two names (ai_router/codex_route.HEADER and
 # ai_router/routed_models.NAME). The installer never imports the router
@@ -69,6 +72,12 @@ def recorded(entry):
     if variant not in VARIANTS:
         raise SystemExit(EDITED)
     return variant
+
+
+def return_target(entry):
+    """Return the previous connection, or the historic safe default."""
+    value = (entry or {}).get(FALLBACK_RETURN)
+    return SWITCHED_SIGNED_IN if value == SWITCHED_SIGNED_IN else SWITCHED_BACK
 
 
 def build(home, state, mode, static_catalogue, variant):
@@ -156,7 +165,7 @@ def switch(home, variant):
     entry = _codex.codex_attachment(home)
     if not entry.get('inserted_block'):
         raise SystemExit(NOT_CONNECTED)
-    recorded(entry)  # refuses a variant this release does not know
+    current_variant = recorded(entry)  # refuses a variant this release does not know
     config_path = Path(entry['config_path'])
     live = managed_block(entry)
     state = json.loads((Path(home) / 'mixed-router-state.json').read_text())
@@ -166,6 +175,11 @@ def switch(home, variant):
     block = _codex.seed_picker_selection(config_path, live, block)
     original, removed = _codex.replace_config_block(config_path, block, live, entry['inserted_block'])
     record = dict(entry, inserted_block=block, variant=variant)
+    if variant == SWITCHED and current_variant != SWITCHED:
+        record[FALLBACK_RETURN] = (SWITCHED_SIGNED_IN if current_variant == SWITCHED_SIGNED_IN
+                                   else SWITCHED_BACK)
+    elif variant != SWITCHED:
+        record.pop(FALLBACK_RETURN, None)
     if removed:  # owner root lines, kept with earlier ones as attach_config does
         kept = (entry.get('reviewer') or {}).get('removed') or []
         record['reviewer'] = {'removed': kept + removed}

@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+## 1.3.48
+
+- Show one Codex OpenRouter menu choice. Confirm changes to ChatGPT sign-in,
+  and offer the previous connection after a recorded usage-limit reset.
+
 ## 1.3.47
 
 - Add Gemini 4 Carbon to the Codex and Claude Code model choices through OpenRouter.
