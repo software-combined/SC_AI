@@ -3,10 +3,11 @@
 ## Unreleased
 
 - Add Muse Ember to the Codex and Claude Code model choices through OpenRouter.
-- Sign in by default for existing OpenRouter-only Codex installs: on the next
-  update or attach, a signed-out `switched` install migrates to the
-  signed-in default. An active usage limit or an unreadable limit record
-  keeps the signed-out route; use the menu to fall back if Send is disabled.
+- Restore the update behaviour to never switch Codex either way. The
+  1.3.45 auto-migration from the signed-out OpenRouter profile to the
+  signed-in default is removed; updates preserve the current recorded
+  profile (an install already moved by 1.3.45 stays signed in) and the
+  SCG Router menu keeps the explicit choice.
 
 ## 1.3.43
 
