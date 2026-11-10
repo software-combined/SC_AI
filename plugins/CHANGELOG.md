@@ -1,5 +1,16 @@
 # Changelog
 
+## scg-agent-factory 1.0.0 (2026-11-10)
+
+- Give the human one trusted contact. The project manager acknowledges and
+  records each request, answers status from current records, separates checked
+  facts from owner reports, says what is not done and closes each request.
+- Add one small team board for requests between owners. It holds open requests
+  only, stays within ten short entries and needs no reading by the human.
+  Owners use it to reach the project manager, including for human questions.
+- Add team-board, status-answer and human-message stages to the continuity
+  check. Give owners the board location in their brief and recovery text.
+
 ## scg-agent-factory 0.4.1 (2026-11-05)
 
 - Route human questions from Factory owners and helpers through the project

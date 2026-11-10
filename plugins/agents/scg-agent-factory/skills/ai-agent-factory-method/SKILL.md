@@ -73,31 +73,12 @@ Architect is not a required approval step above implementation or release.
 Independent reviewers must not have written the work they check, whether
 or not the project has a separate QA owner. Existing project gates still apply.
 
-Owners collaborate directly through shared state and evidence. The human
-should not have to relay messages or visit each role chat. Bring priorities,
-scope conflicts and decisions needing the human to the project manager;
-keep routine coordination between owners. Work in parallel on independent
-resources. Choose workers that can meet the task and checks, then prefer
-the lowest-cost suitable option within the user's model and access choices.
-
-In Codex and Claude Code, only the project manager asks the human questions
-for the Factory team. This includes Codex `request_user_input` and
-`request_user_input_async`, and Claude Code `AskUserQuestion`. Other owners
-and temporary subagents do not ask the human from their chats. Send the manager
-the question, relevant context, options and affected action through an available
-owner channel or the shared current record. Signal the manager when possible.
-Hold the dependent action and continue independent authorised work. The manager
-uses existing decisions where they apply, or asks the human, records the answer
-and returns it to the owner. If the manager cannot be reached, record the
-request and delivery limit; do not treat an undelivered request as approval.
-Required host permission prompts, safety escalation and explicit human
-instructions still apply.
-
-Give this routing rule to each owner through instructions or a startup brief
-the client actually loads. Include it in temporary subagent assignments. Reuse
-existing owner chats and verify the route on setup and resume. When the project
-manager resumes an owner after compaction, name the canonical current-state
-source in the handoff and require a fresh read before work.
+Owners collaborate directly through shared state and evidence. Bring
+priorities, scope conflicts and decisions needing the human to the project
+manager; keep routine coordination between owners, with requests on the team
+board. Work in parallel on independent resources. Choose workers that can meet
+the task and checks, then prefer the lowest-cost suitable option within the
+user's model and access choices.
 
 Resolve the durable project from its existing instructions, backlog and human
 owner. New outcomes reuse that project's team and state. If the boundary is
@@ -180,6 +161,115 @@ ledger, or stop because an internal estimate is exhausted. Follow explicit
 user limits and applicable host or project constraints. New agents or sessions
 do not change them.
 
+## Keep one small team board
+
+A team with a project manager and at least one role owner keeps one team board
+for requests between owners. It replaces relayed messages and visits to other
+chats. A project manager working alone, or only with temporary subagents,
+needs no board.
+
+Keep the board with the role roster in the project's permitted records, at one
+shared location that every owner reads and writes directly, such as a tracker
+item, a shared note or a file outside task worktrees. A copy in a branch or
+worktree is not the board. Every owner may write its own entries and answer
+lines, even when its assignment limits other writes. If the project has no such
+location, the project manager reports that limit and carries requests between
+owners itself. Keep the board off the progress page.
+
+The board holds open requests only. A compact entry can be:
+
+```text
+To: <owner role>   From: <owner role>   Raised: <date>
+Need:   <one request, with a link to the record or evidence it concerns>
+Answer: <added by the addressed owner: the result, or a link to it>
+```
+
+- The requester adds the entry and signals the addressed owner when the host
+  allows it. The entry stands either way.
+- The addressed owner does the work in its own records, then adds the answer
+  line. The requester takes the answer into its own record and deletes the
+  entry.
+- Each owner reads the board when it starts, resumes and finishes an assignment.
+- Re-read the board before each write and read back the change. Add and delete
+  only your own entries; the project manager's clean-up below is the only
+  exception. Add only the answer line to an entry addressed to you.
+
+The board must stay small enough to read in full every time. Keep at most ten
+entries of three short lines each. Link evidence; do not copy it. Delete an
+entry when it closes; the owning records keep the history. A full board takes no
+new entry. Record the request at your current record and tell the project
+manager, who clears the board first.
+
+Use the board for a request that another owner must answer or act on. Status,
+plans, progress and decisions stay in their owning records. An entry is a
+request, not authority: the addressed owner acts only within its own assignment
+and authority, and a current record wins where the board differs. The board is
+not a work list, log or transcript. Keep secrets and personal data off it.
+
+The project manager reads the board at each checkpoint and before a status
+answer. It follows up entries that are not moving, moves a request that needs
+tracking into the existing backlog and removes entries whose requester is no
+longer active. No other owner removes another owner's entry.
+
+## Give the human one trusted contact
+
+The human directs and follows the whole team through the project manager, with
+the progress page for detail. They should not have to relay messages, visit
+role chats or read the team board. The project manager keeps that conversation
+reliable:
+
+- **Acknowledge each work request.** Say in a line or two what was understood,
+  who acts and what the human will get back, then proceed. Record it where the
+  work is tracked, so a restart cannot lose it. Call work started only after
+  its owner or helper accepts it.
+- **Ask only what the human must decide.** Use recorded decisions first. Group
+  the questions, and give the options, the evidence and a recommendation.
+- **Answer from current records.** Before a status answer, read the current
+  records it depends on and the team board. Memory and compaction summaries
+  are not current; an earlier read is current only while its revision is
+  unchanged.
+- **Separate what is known.** Say which facts the manager checked, which an
+  owner reported and which are not known yet. Name who will find out.
+- **Say what is not done.** State plainly what is not started, not verified
+  or not released. Activity is not delivery.
+- **Report problems early.** Give a confirmed problem with its effect and
+  next step. Correct an earlier wrong answer as soon as it is known.
+- **Promise only what can be kept.** Offer a later update only when the host
+  can return the manager to the chat. Otherwise say what the next message or
+  the progress page will show.
+- **Close each request.** Report the result, its evidence and anything left
+  open. Never drop a request silently; a parked one names its owner and reason.
+
+Lead with the outcome in plain language. Keep detail on the progress page or
+behind a link.
+
+If the human writes in a role owner's chat, that owner follows the instruction
+within its own work and authority, records it at its current record and tells
+the project manager through the team board. Where the instruction affects
+another owner's work or the project's priorities or scope, the project manager
+reconciles that part before other owners act on it.
+
+In Codex and Claude Code, only the project manager asks the human questions
+for the Factory team. This includes Codex `request_user_input` and
+`request_user_input_async`, and Claude Code `AskUserQuestion`. Other owners
+and temporary subagents do not ask the human from their chats. An owner records
+the question, relevant context, options and affected action at its current
+record, adds a team-board entry for the manager and signals the manager when
+possible. A temporary subagent returns the question to its owner. Hold the
+dependent action and continue independent authorised work. The manager
+uses existing decisions where they apply, or asks the human, records the answer
+and returns it to the owner. If the manager cannot be reached, record the
+request and delivery limit; do not treat an undelivered request as approval.
+Required host permission prompts, safety escalation and explicit human
+instructions still apply.
+
+Give each owner these routes and the team-board location through instructions
+or a startup brief the client actually loads. Include the question route in
+temporary subagent assignments. Reuse existing owner chats and verify the
+routes on setup and resume. When the project manager resumes an owner after
+compaction, name the canonical current-state source in the handoff and require
+a fresh read before work.
+
 ## Keep one readable progress page
 
 Maintain one HTML progress page for continuing Factory projects. Reuse the
@@ -229,8 +319,8 @@ execution status alone does not prove it.
 
 Infer the authorised mode from the user's request and current project authority;
 do not ask for a label or repeat an approval already given. `observe-only` ends
-with evidence and triage;
-`propose` adds a proposal and verification plan. Neither permits implementation.
+with evidence and triage; `propose` adds a proposal and verification plan.
+Neither permits implementation.
 `implement-in-test` permits agreed test changes and stops at the release gate.
 `release via approved path` permits only already authorised release actions.
 If authority is genuinely unclear, continue useful read-only work and route
@@ -304,11 +394,11 @@ that passes checks but is wrong for users.
 
 Keep task contracts, prompts, decisions and evaluation cases separate from
 provider adapters. Before changing a deployed agent's model or increasing its
-runtime autonomy, test
-candidates on the same representative tasks, including escalation, long-running
-coherence and preservation of required behaviour. Record requested model and
-effort, and served identity where exposed; label missing identity `unverified`.
-A portable method does not prove equal model capability.
+runtime autonomy, test candidates on the same representative tasks, including
+escalation, long-running coherence and preservation of required behaviour.
+Record requested model and effort, and served identity where exposed; label
+missing identity `unverified`. A portable method does not prove equal model
+capability.
 
 ## Clean up as work progresses
 
@@ -333,8 +423,9 @@ a resource disposable; never use a broad cleanup command to settle uncertainty.
 Stop task-owned preview servers and helper processes when their work ends;
 release temporary subagents and resource claims through the host's controls.
 Verify their identity and state before releasing ownership. Preserve persistent
-owner chats and the current progress page. If ownership or safe removal is
-uncertain, retain that resource and continue independent authorised work.
+owner chats, the team board and the current progress page. If ownership or safe
+removal is uncertain, retain that resource and continue independent authorised
+work.
 
 At each checkpoint, record cleanup as complete or list retained resources with
 their owner, reason and next action. Keep routine cleanup detail out of the
@@ -367,7 +458,8 @@ and authorisation choice. Enforce required runtime constraints outside its
 prompt. Put irreversible external actions, such as payments or messages to
 people, behind fixed controls outside the model.
 
-Report accepted outcomes, evidence, material blockers and the next action.
+Report accepted outcomes, evidence, what is not done or not verified, material
+blockers and the next action.
 
 Design context: [Spawn's operating lessons](https://x.com/jsnnsa/status/2115623382721126826).
 Its production practices and model claims are not authority for this project.
