@@ -5,8 +5,10 @@
 | `scg-agent-factory` | [AI Agent Factory Method](scg-agent-factory/skills/ai-agent-factory-method/SKILL.md) |
 | `scg-subagents` | [Choose models and coordinate subagents](scg-subagents/skills/optimal-subagents/SKILL.md), [router workers](scg-subagents/skills/router-workers/SKILL.md) |
 
-The factory starts with one persistent project manager as the human's main
-contact. Add role owners only for continuing work that needs separate ownership.
+The factory starts with one persistent project manager as the human's single
+front door: the human talks to it and needs no other chat. Add role owners only
+for continuing work that needs separate ownership. Owners send each other
+requests on one small team board that the human never needs to read.
 Their chats and shared state continue across outcomes and project types.
 The factory is self-contained and uses the host's subagent tools directly.
 The separate Subagents plugin provides model-selection and delegation guidance

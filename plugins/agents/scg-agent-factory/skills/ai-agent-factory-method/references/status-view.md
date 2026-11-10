@@ -43,6 +43,7 @@ Write for someone who builds with AI and knows little software terminology.
 Use concrete actions and familiar words. Say `test version`, `ready to publish`
 and `user check`. Keep identifiers, commits, test runs and internal coordination
 out of the main view. Do not expose an agent roster as an organisation chart.
+A Factory team board stays off the page.
 
 Each card has a short outcome, one owner and one next step. Name an agent owner
 plainly, such as `Engineering (agent team)`. Selecting the card opens its full
@@ -118,4 +119,5 @@ prove the source or evidence was checked again.
 Use the existing authorised delivery surface and audience for shared pages.
 Read back the actual published view. A local edit does not update a shared page.
 Keep urgent faults and questions in chat; the final report still states the
-outcome, material limits and next action, with a link to the page.
+outcome, material limits and next action, with a link to the page. With a
+Factory team, that chat is the project manager's.

@@ -68,6 +68,7 @@ Role:                 <assigned responsibility or combined roles>
 Role definition:      <stable file or record section>
 Project instructions: <applicable instruction sources and standards>
 Current state:        <canonical outcome record or existing backlog view>
+Team board:           <the one shared board; omit for a manager working alone>
 ```
 
 Fill ordinary placeholders by hand when adopting a template. Leave out
@@ -87,10 +88,15 @@ when one exists. If the host cannot create or resume a persistent owner, report
 the actual limitation and proposed setup. A saved file or temporary helper
 does not prove that a persistent owner was created.
 
-For Codex and Claude Code, give every owner the Factory method's human-question
-routing rule in instructions or a startup brief the client loads. Include the
-rule in temporary subagent assignments. Reuse existing chats; do not assume a
+For Codex and Claude Code, give every owner the Factory method's human-contact
+routes in instructions or a startup brief the client loads. Include the question
+route in temporary subagent assignments. Reuse existing chats; do not assume a
 changed skill has updated their saved instructions or active context.
+
+When the team has a second persistent owner, the project manager creates the
+team board described in the Factory method, records its location with the
+roster and adds it to each owner brief. An existing team gains the board when
+its project manager next resumes.
 
 ## Make recovery discoverable
 
@@ -104,9 +110,10 @@ For example, adapt this text in the source the active client loads on resume:
 
 ```text
 When this role starts or resumes, read its binding at <role-record>.
-Read <factory-method> and follow its human-question routing rule.
+Read <factory-method> and follow its human-contact and team-board rules.
 Read the current revision at <current-state-source> before resumed work,
 shared-state writes or subagent dispatch. Follow superseded pointers to the current source.
+Read the team board at <team-board>, where the team has one.
 Earlier reads and compaction summaries are historical evidence.
 ```
 
@@ -139,7 +146,8 @@ compaction behaviour in Codex and Claude Code.
 ## Verify the setup
 
 Check the actual owner identities, selected duties, instruction routes and
-current-state pointers. Check that the client loads the question-routing rule.
+current-state pointers. Check that the client loads the human-contact routes
+and that each owner can read and write the one shared team board.
 Complete one bounded useful assignment. Confirm that the owner reads the
 current record and acts only within its allocation.
 Keep actual installation, fresh discovery, role loading and human acceptance
