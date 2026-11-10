@@ -3290,5 +3290,126 @@
         "conformance": "pass"
       }
     ]
-  }
+  },
+{
+  "kind": "model_routes_v1",
+  "observed_at": "2026-11-10T04:19:21.699444+00:00",
+  "model": "meta/muse-ember",
+  "provider": "openrouter",
+  "capability_fingerprint": "7eb6b6da9ffd1d0b7c05a3b7970a4e905daf1749f06970a2241e7ba1440f7f84",
+  "runtime_fingerprint": "850249f7a8811a2cd2c80445b6e63c0598c1fca7c62cc592051d6b5cb7704d05",
+  "router_version": "1.3.43",
+  "router_revision": "f043ac72744e6d632e3d2f1f2e8940b6e884f8af",
+  "routes": [
+    {
+      "protocol": "responses",
+      "client": "codex",
+      "client_version": "0.167.0-alpha.3.2",
+      "requested_effort": "low",
+      "served_models": [
+        {
+          "value": "meta/muse-ember",
+          "source": "response.created.response.model"
+        },
+        {
+          "value": "meta/muse-ember",
+          "source": "response.in_progress.response.model"
+        },
+        {
+          "value": "meta/muse-ember",
+          "source": "response.completed.response.model"
+        },
+        {
+          "value": "meta/muse-ember",
+          "source": "response.created.response.model"
+        },
+        {
+          "value": "meta/muse-ember",
+          "source": "response.in_progress.response.model"
+        },
+        {
+          "value": "meta/muse-ember",
+          "source": "response.completed.response.model"
+        },
+        {
+          "value": "meta/muse-ember",
+          "source": "response.created.response.model"
+        },
+        {
+          "value": "meta/muse-ember",
+          "source": "response.in_progress.response.model"
+        },
+        {
+          "value": "meta/muse-ember",
+          "source": "response.completed.response.model"
+        }
+      ],
+      "served_efforts": [
+        {
+          "value": "low",
+          "source": "response.created.response.reasoning.effort"
+        },
+        {
+          "value": "low",
+          "source": "response.in_progress.response.reasoning.effort"
+        },
+        {
+          "value": "low",
+          "source": "response.completed.response.reasoning.effort"
+        },
+        {
+          "value": "low",
+          "source": "response.created.response.reasoning.effort"
+        },
+        {
+          "value": "low",
+          "source": "response.in_progress.response.reasoning.effort"
+        },
+        {
+          "value": "low",
+          "source": "response.completed.response.reasoning.effort"
+        },
+        {
+          "value": "low",
+          "source": "response.created.response.reasoning.effort"
+        },
+        {
+          "value": "low",
+          "source": "response.in_progress.response.reasoning.effort"
+        },
+        {
+          "value": "low",
+          "source": "response.completed.response.reasoning.effort"
+        }
+      ],
+      "calls": 4,
+      "conformance": "pass",
+      "result": "pass"
+    },
+    {
+      "protocol": "messages",
+      "client": "claude",
+      "client_version": "2.1.318",
+      "requested_effort": "low",
+      "served_models": [
+        {
+          "value": "meta/muse-ember",
+          "source": "message_start.message.model"
+        },
+        {
+          "value": "meta/muse-ember",
+          "source": "message_start.message.model"
+        },
+        {
+          "value": "meta/muse-ember",
+          "source": "message_start.message.model"
+        }
+      ],
+      "served_efforts": [],
+      "calls": 3,
+      "conformance": "pass",
+      "result": "pass"
+    }
+  ]
+}
 ]
