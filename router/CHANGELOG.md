@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Add Muse Ember to the Codex and Claude Code model choices through OpenRouter.
+
 ## 1.3.43
 
 - Deliver Factory 1.0.0 so the project manager is the one trusted contact and
