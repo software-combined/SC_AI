@@ -1,5 +1,39 @@
 # Compatibility
 
+## Router 1.3.44 candidate, 10 November 2026 AEDT
+
+Clients: Codex desktop `26.1103.60933` (build `25894`), bundled CLI
+`0.167.0-alpha.3.2`, and Claude Code `2.1.318`. The desktop app changed since
+the 1.3.43 record, so its subscription compatibility check was repeated.
+
+| Client and route | Requested model and effort | Upstream attempts | Result |
+| --- | --- | --- | --- |
+| Codex / OpenRouter | `meta/muse-ember`, Low | 4 | Tool, image and compaction passed |
+| Claude Code / OpenRouter | `meta/muse-ember`, Low | 3 | Two sequential Reads and paired results passed |
+| Claude Code / Claude subscription | `claude-sonnet-5-5`, Low | Not retained | Read and final marker passed |
+| Codex / ChatGPT subscription | `gpt-6.1-sol`, Low | 1 | HTTP 429; no tool result or final marker |
+
+The owner waived the Codex ChatGPT subscription compatibility check for this
+release on 10 November 2026 because its usage allowance was exhausted. The
+subscription result remains unverified, not passed. The waiver does not change
+the other checks, beta observation or native-installer acceptance gates.
+
+The external checks used synthetic inputs and an isolated candidate Router.
+The provider reported `meta/muse-ember` for both clients and Low effort for
+Codex. Claude's reported effort was unavailable. The candidate's runtime
+fingerprint is `850249f7a8811a2cd2c80445b6e63c0598c1fca7c62cc592051d6b5cb7704d05`.
+The acceptance ledger records the candidate capability fingerprint and both
+client versions. The external probe capped attempts at twelve, input at
+512 KiB and output at 65,536 tokens per request. Claude's client budget was
+USD 0.25. These checks do not prove model weights or fleet delivery.
+
+The subscription checks used the existing sign-ins with synthetic tasks. Codex
+used a two-send limit, a 32 KiB input cap and a 1,024-token output cap. Its
+first send returned 429 and no retry was sent. A prior isolated switch probe
+stopped before a model call because its network sandbox was unavailable.
+Claude used restricted mode, two client turns, 2,048 output tokens per request
+and a USD 0.20 client budget. No client settings or credentials were changed.
+
 ## Router 1.3.43 release, 10 November 2026 AEDT
 
 This release changes no Router code. It delivers Factory 1.0.0, whose changes
