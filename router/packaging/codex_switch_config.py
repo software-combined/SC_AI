@@ -17,10 +17,8 @@ writes one of three other variants between the same markers:
 
 The Codex receipt entry records the variant beside the block it describes
 (`variant`, absent until the first switch) and every attach rebuilds the
-recorded one: an update never switches Codex either way, except a signed-out
-`switched` install migrating to the signed-in default (see
-`client_choice._signed_in_default`). A never-switched install keeps today's
-default block byte for byte. `current`, `switch` and
+recorded one: an update never switches Codex either way, and a never-switched
+install keeps today's default block byte for byte. `current`, `switch` and
 `restore` are the Switch Codex API. Detach, uninstall and rollback refuse
 while Codex is switched: Switch Codex moves Codex back to the ChatGPT
 subscription first, so neither detach nor uninstall does that silently, and
