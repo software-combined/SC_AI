@@ -33,17 +33,25 @@ _dialog = _load('native_dialog')
 _offer = _load('codex_switch_offer')
 CODEX = _platform.App('com.openai.codex', ())
 MARKER = _transaction.MARKER
-SWITCHED, SWITCHED_SIGNED_IN, SWITCHED_BACK = (
-    _blocks.SWITCHED, _blocks.SWITCHED_SIGNED_IN, _blocks.SWITCHED_BACK)
+SWITCHED, SWITCHED_SIGNED_IN, OPENROUTER, SWITCHED_BACK = (
+    _blocks.SWITCHED, _blocks.SWITCHED_SIGNED_IN, _blocks.OPENROUTER, _blocks.SWITCHED_BACK)
+OPENROUTER_TOGGLE = 'openrouter_toggle'
 ROUTED_VARIANTS = _blocks.ROUTED_VARIANTS
 # Plain wording (AGENTS.md section 4a), naming the app as people see it.
 PROMPTS = {
+    OPENROUTER: ('Switch the ChatGPT app (Codex) to OpenRouter models? It will restart. '
+                 'Your chats and projects stay in place. Send may still be blocked '
+                 'if a subscription limit remains.'),
     SWITCHED_SIGNED_IN: ('Switch the ChatGPT app (Codex) to OpenRouter models with ChatGPT sign-in? '
                          'It will restart. Send may still be blocked if a subscription limit remains.'),
     SWITCHED: ('Switch the ChatGPT app (Codex) to OpenRouter models without ChatGPT sign-in? '
                'It will restart. Projects and setup choices stay separate until you switch back.'),
     SWITCHED_BACK: ('Switch the ChatGPT app (Codex) back to your ChatGPT subscription? '
                     'It will restart.')}
+RETURN_OPENROUTER = ('Switch the ChatGPT app (Codex) back to OpenRouter models with '
+                     'ChatGPT sign-in? It will restart. Your ChatGPT chats and projects '
+                     'return; chats started in the earlier OpenRouter connection stay separate. Send may still '
+                     'be blocked if a subscription limit remains.')
 DESTINATIONS = {variant: 'OpenRouter models' for variant in ROUTED_VARIANTS}
 DESTINATIONS[SWITCHED_BACK] = 'your ChatGPT subscription'
 MAC_ONLY = 'Switch Codex is available on Mac.'
@@ -102,9 +110,10 @@ def _switch_lock(home, record):
 def switch(home, *, run=subprocess.run, platform_ops=None, prove=None, ready=None, target=None, expected=None,
            offer_kind=None, offer_seen=None):
     """Move Codex to the other variant; None means declined, False means no offer was shown."""
-    if target not in (None, 'openrouter', SWITCHED, SWITCHED_SIGNED_IN, SWITCHED_BACK):
+    if target not in (None, OPENROUTER_TOGGLE, SWITCHED, SWITCHED_SIGNED_IN, OPENROUTER,
+                      SWITCHED_BACK):
         raise ValueError('Unknown Codex destination.')
-    home, record = Path(home), {'to': None, 'offer_fallback': target == 'openrouter'}
+    home, record = Path(home), {'to': None, 'offer_fallback': target == OPENROUTER_TOGGLE}
     try:
         if sys.platform not in ('darwin', 'win32', 'linux'):
             raise SwitchError(MAC_ONLY)
@@ -146,8 +155,9 @@ def _switch(home, run, ops, prove, ready, record, target=None, expected=None, of
     if prove is _proof.prove:
         def prove(root, target):
             cli = command()
+            provider = 'openai' if target == OPENROUTER else 'scg_router'
             return cli is not None and _proof.prove(root, app_exe=app_exe, command=cli,
-                                                    signed_out=target == SWITCHED)
+                                                    signed_out=target == SWITCHED, provider=provider)
     supplied_proof = prove
     def checked_proof(root, target):
         if sys.platform == 'win32' and identity and identity.get('family'):
@@ -211,8 +221,16 @@ def _switch(home, run, ops, prove, ready, record, target=None, expected=None, of
     if target == 'openrouter':
         if entry.get('openai_mode') == 'none':
             return SWITCHED_SIGNED_IN  # The existing external-only block needs no switch.
-        target = (SWITCHED_SIGNED_IN if current == SWITCHED else SWITCHED
-                  if current == SWITCHED_SIGNED_IN or _offer.fallback_needed(home) else SWITCHED_SIGNED_IN)
+        target = OPENROUTER
+    if target == OPENROUTER_TOGGLE:
+        if entry.get('openai_mode') == 'none':
+            return SWITCHED_SIGNED_IN
+        if current == SWITCHED:
+            saved = _blocks.return_target(entry)
+            target = OPENROUTER if saved == SWITCHED_BACK else saved
+        else:
+            target = (SWITCHED if current in (SWITCHED_SIGNED_IN, OPENROUTER)
+                      or _offer.fallback_needed(home) else OPENROUTER)
     if target == SWITCHED_SIGNED_IN and entry.get('openai_mode') == 'none':
         return target
     if target == SWITCHED and entry.get('openai_mode') == 'none':
@@ -221,9 +239,9 @@ def _switch(home, run, ops, prove, ready, record, target=None, expected=None, of
             or target == SWITCHED_BACK and current not in ROUTED_VARIANTS):
         return target
     target = record['to'] = target or (
-        SWITCHED if current == SWITCHED_SIGNED_IN and _offer.fallback_needed(home) else
+        SWITCHED if current in (SWITCHED_SIGNED_IN, OPENROUTER) and _offer.fallback_needed(home) else
         SWITCHED_BACK if current in ROUTED_VARIANTS else
-        (SWITCHED if _offer.fallback_needed(home) else SWITCHED_SIGNED_IN))
+        (SWITCHED if _offer.fallback_needed(home) else OPENROUTER))
     if target in ROUTED_VARIANTS:
         if entry.get('openai_mode') == 'none':
             raise SwitchError(NOTHING_TO_SWITCH)
@@ -239,7 +257,9 @@ def _switch(home, run, ops, prove, ready, record, target=None, expected=None, of
             record['reason'] = 'bundled_command_missing'
             raise SwitchError(NO_COMMAND)
     try:
-        prompt = PROMPTS[target] if root else QUIT_FIRST
+        prompt = (RETURN_OPENROUTER if target == OPENROUTER
+                  and current in (SWITCHED, SWITCHED_SIGNED_IN)
+                  else PROMPTS[target]) if root else QUIT_FIRST
         if sys.platform == 'win32':
             prompt += '\n\n' + WINDOWS_CLOSE
         answer = _timed(record, 'confirmation', lambda: _dialog.confirm_result(prompt, home, run=run)
@@ -286,7 +306,7 @@ def _switch(home, run, ops, prove, ready, record, target=None, expected=None, of
                 _open(ops, run, identity, fresh=sys.platform == 'win32')
         except (OSError, subprocess.SubprocessError):
             raise SwitchError('%s Open the ChatGPT app (Codex) to continue.' % exc) from exc
-        if (target == SWITCHED_SIGNED_IN and record.get('offer_fallback') and str(exc) == NOT_PROVEN
+        if (target in (SWITCHED_SIGNED_IN, OPENROUTER) and record.get('offer_fallback') and str(exc) == NOT_PROVEN
                 and record.get('serving_ok') is True
                 and _blocks.current(home) not in ROUTED_VARIANTS):
             if not ops.confirm(SIGNIN_FALLBACK, sys.platform, run=run,
@@ -379,7 +399,7 @@ def _route_ready(home):
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--home', default=os.environ.get('ROUTER_HOME', str(Path.home() / '.codex' / 'mixed-model-router')))
-    parser.add_argument('--to', choices=(SWITCHED, SWITCHED_SIGNED_IN, SWITCHED_BACK))
+    parser.add_argument('--to', choices=(SWITCHED, SWITCHED_SIGNED_IN, OPENROUTER, SWITCHED_BACK))
     args = parser.parse_args(argv)
     try:
         switch(Path(args.home).expanduser(), target=args.to)

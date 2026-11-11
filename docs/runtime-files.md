@@ -220,8 +220,9 @@ switch that refused can be diagnosed afterwards:
 ```
 
 `at` is the local time with its offset. `to` is the variant the run aimed
-for: `switched` for the signed-out limit fallback, `switched_signed_in` for
-normal OpenRouter-only use, or `switched_back` for the subscription. It is
+for: `switched` for the signed-out limit fallback, `openrouter` for normal
+OpenRouter-only use on the ChatGPT provider, `switched_signed_in` for the
+earlier signed-in routed provider, or `switched_back` for the subscription. It is
 `null` when the run refused before choosing one. `result` is `done`,
 `cancelled` or the message the person saw, which
 never holds paths, settings, addresses or keys. `open` appears only when the

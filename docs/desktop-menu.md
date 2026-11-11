@@ -19,6 +19,8 @@ Choose a destination in that assistant's section:
 
 The checkmark identifies the selected connection. OpenRouter normally keeps your
 ChatGPT sign-in. Select the checked OpenRouter choice again to change sign-in.
+Normal OpenRouter use changes only the model list, so your existing chats and
+projects stay visible.
 When Send is blocked by a subscription limit, you can use OpenRouter without
 ChatGPT sign-in. Projects and setup choices can be hidden until you sign in again.
 If SCG Router cannot verify ChatGPT sign-in, it can offer the signed-out

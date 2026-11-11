@@ -333,7 +333,8 @@ the sign-in setting, even when Router has not recorded a usage limit.
 From version 26.917.51856, the ChatGPT app (Codex) stops sending messages once
 your ChatGPT subscription reaches its usage limit, even for OpenRouter models.
 Switch Codex keeps your ChatGPT sign-in during normal OpenRouter use, so
-projects and setup choices stay with your account. During an active limit,
+projects, chats and setup choices stay with your account; only the model list
+changes. During an active limit,
 the fallback signs Codex out to keep Send available. Projects and setup
 choices stay separate until you switch back. On Mac, SCG Router adds Switch Codex to your
 Applications folder when Codex uses your ChatGPT subscription and your ChatGPT
@@ -367,7 +368,9 @@ While Codex is switched:
 - a model that needs your ChatGPT subscription answers with a short message
   that says what to pick instead;
 - Codex still asks you before it runs a command that needs approval;
-- conversations you start while switched still open after you switch back.
+- chats you start in the signed-out limit fallback stay in that profile and
+  are not listed after you switch back; normal OpenRouter chats stay with
+  your ChatGPT provider.
 
 Conversation titles and other chat metadata use Luna through the OpenRouter
 key while switched. Your chosen chat model stays unchanged. If Luna is absent

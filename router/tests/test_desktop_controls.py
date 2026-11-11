@@ -46,7 +46,8 @@ class DesktopControlsTests(unittest.TestCase):
             running_version='1.3.0.6', clients={'codex': {'config_path': '/private'}},
             token='private-token', key='private-key', feed='/private')
         config = mock.Mock(SWITCHED='switched', SWITCHED_SIGNED_IN='switched_signed_in',
-                           ROUTED_VARIANTS=('switched', 'switched_signed_in'))
+                           OPENROUTER='openrouter',
+                           ROUTED_VARIANTS=('switched', 'switched_signed_in', 'openrouter'))
         config.current.return_value = 'switched_signed_in'
         config._codex.codex_attachment.return_value = {'openai_mode': 'subscription'}
         modules = dict(install=installer, codex_switch_config=config, update_status=module('update_status'),
@@ -65,12 +66,13 @@ class DesktopControlsTests(unittest.TestCase):
         installer = mock.Mock()
         installer._diag._status_document.return_value = dict(clients={'codex': {}})
         config = mock.Mock(SWITCHED='switched', SWITCHED_SIGNED_IN='switched_signed_in',
-                           ROUTED_VARIANTS=('switched', 'switched_signed_in'))
+                           OPENROUTER='openrouter',
+                           ROUTED_VARIANTS=('switched', 'switched_signed_in', 'openrouter'))
         config._codex.codex_attachment.return_value = {'openai_mode': 'subscription'}
         modules = dict(install=installer, codex_switch_config=config,
                        update_status=module('update_status'),
                        desktop_startup=SimpleNamespace(enabled=lambda home: False))
-        for variant in ('switched', 'switched_signed_in'):
+        for variant in ('switched', 'switched_signed_in', 'openrouter'):
             with self.subTest(variant=variant):
                 config.current.return_value = variant
                 with mock.patch.object(control, 'load', side_effect=modules.__getitem__):
@@ -85,7 +87,8 @@ class DesktopControlsTests(unittest.TestCase):
         installer = mock.Mock()
         installer._diag._status_document.return_value = dict(clients={'codex': {}})
         config = mock.Mock(SWITCHED='switched', SWITCHED_SIGNED_IN='switched_signed_in',
-                           ROUTED_VARIANTS=('switched', 'switched_signed_in'))
+                           OPENROUTER='openrouter',
+                           ROUTED_VARIANTS=('switched', 'switched_signed_in', 'openrouter'))
         config.current.return_value = 'switched'
         config._codex.codex_attachment.return_value = {'openai_mode': 'none'}
         modules = dict(install=installer, codex_switch_config=config,
@@ -98,7 +101,7 @@ class DesktopControlsTests(unittest.TestCase):
 
     def test_fixed_destinations_reach_the_switch_owner(self):
         control, owner = module('desktop_control'), mock.Mock()
-        for action, target in (('codex.openrouter', 'openrouter'),
+        for action, target in (('codex.openrouter', 'openrouter_toggle'),
                                ('codex.openrouter_fallback', 'switched'),
                                ('codex.subscription', 'switched_back'),
                                ('claude.openrouter', '3p'), ('claude.subscription', '1p')):

@@ -186,9 +186,11 @@ select the checked OpenRouter choice or choose **ChatGPT + OpenRouter**.
 The commands below remain recovery steps for installations without the
 [desktop menu](desktop-menu.md) and have their stated history limits.
 
-From 1.3.41, normal OpenRouter-only use keeps your ChatGPT sign-in, projects
-and setup choices. The active-limit fallback signs Codex out to keep Send
-available. Projects and setup choices stay separate until you switch back.
+Normal OpenRouter-only use keeps your ChatGPT sign-in, projects and setup
+choices, and it keeps the same chats visible because it does not change
+Codex's model provider. The active-limit fallback signs Codex out to keep
+Send available. Projects and setup choices stay separate until you switch
+back.
 
 Affected Codex desktop versions disable **Send** when the ChatGPT allowance runs out,
 including when you select an OpenRouter model. The router cannot fix a disabled

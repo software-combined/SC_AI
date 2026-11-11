@@ -230,10 +230,10 @@ class PlatformSwitchTests(unittest.TestCase):
         case = windows_fixtures.WindowsSwitchTransactionTests()
         case.setUp()
         self.addCleanup(case.doCleanups)
-        self.assertEqual(case.switch(target='openrouter'), 'switched_signed_in')
-        self.assertEqual(case.switch(target='openrouter'), 'switched')
-        self.assertEqual(case.switch(target='openrouter'), 'switched_signed_in')
-        self.assertEqual((case.confirm.call_count, case.proofs[-1][1]), (3, 'switched_signed_in'))
+        self.assertEqual(case.switch(target='openrouter_toggle'), 'openrouter')
+        self.assertEqual(case.switch(target='openrouter_toggle'), 'switched')
+        self.assertEqual(case.switch(target='openrouter_toggle'), 'openrouter')
+        self.assertEqual((case.confirm.call_count, case.proofs[-1][1]), (3, 'openrouter'))
 
     @unix_only
     def test_linux_reselect_reaches_confirmation_for_both_openrouter_modes(self):
@@ -242,8 +242,8 @@ class PlatformSwitchTests(unittest.TestCase):
         self.addCleanup(case.doCleanups)
         app = case.fake()
         with mock.patch.object(switcher.sys, 'platform', 'linux'):
-            for target in ('switched_signed_in', 'switched', 'switched_signed_in'):
-                self.assertEqual(switcher.switch(case.home, target='openrouter', platform_ops=app,
+            for target in ('openrouter', 'switched', 'openrouter'):
+                self.assertEqual(switcher.switch(case.home, target='openrouter_toggle', platform_ops=app,
                                                  ready=lambda _home: True, prove=case.prove()), target)
         self.assertEqual([call[0] for call in app.calls].count('confirm'), 3)
 
@@ -271,13 +271,13 @@ class OneChoiceUpdateTests(unittest.TestCase):
             home = Path(temporary) / 'home'
             config, _, _, _ = _install(self, temporary, home, '1.0.0')
             blocks = switcher._blocks
-            blocks.switch(home, 'switched_signed_in')
+            blocks.switch(home, 'openrouter')
             blocks.switch(home, 'switched')
             before = config.read_bytes()
             _install(self, temporary, home, '1.0.1')
             entry = blocks._codex.codex_attachment(home)
             self.assertEqual(entry['variant'], 'switched')
-            self.assertEqual(entry['fallback_return'], 'switched_signed_in')
+            self.assertEqual(entry['fallback_return'], 'openrouter')
             self.assertEqual(config.read_bytes(), before)
 
     def test_explicit_mode_change_clears_old_return_target(self):
@@ -285,7 +285,7 @@ class OneChoiceUpdateTests(unittest.TestCase):
             home = Path(temporary) / 'home'
             _install(self, temporary, home, '1.0.0')
             blocks = switcher._blocks
-            blocks.switch(home, 'switched_signed_in')
+            blocks.switch(home, 'openrouter')
             blocks.switch(home, 'switched')
             _install(self, temporary, home, '1.0.1', '--clients', 'codex', '--openai-mode', 'none')
             self.assertNotIn('fallback_return', blocks._codex.codex_attachment(home))

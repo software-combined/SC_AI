@@ -7,13 +7,17 @@ writes one of three other variants between the same markers:
 
 - `switched`, root keys only: the active provider becomes `scg_router`, which
   needs no OpenAI sign-in during an active usage-limit episode. The picker
-  reads the routed-only list. `openai_base_url` stays, so threads started on
-  the built-in provider still resume through the router, and approvals stay
-  with the person, as in every managed block.
-- `switched_signed_in`: the same routed-only provider with ChatGPT sign-in
-  retained for normal use, so projects and setup state stay with the account.
-- `switched_back`: the default block plus `scg_router` with sign-in required,
-  so threads started while switched still resume.
+  reads the routed-only list. Codex records that provider on every new chat,
+  so chats from the built-in provider are hidden and cannot resume until the
+  person switches back. This is the explicit, temporary limit fallback.
+- `openrouter`: the default provider with the routed-only picker and ChatGPT
+  sign-in retained, so projects, chats and setup state stay with the account;
+  only the model list changes.
+- `switched_signed_in`: the earlier signed-in routed provider, retained so an
+  update keeps an existing install on the provider it already records.
+- `switched_back`: the default block plus a `scg_router` entry with sign-in
+  required, retained for compatibility with earlier releases. Chats recorded
+  under `scg_router` stay separate from the built-in provider's chats.
 
 The Codex receipt entry records the variant beside the block it describes
 (`variant`, absent until the first switch) and every attach rebuilds the
@@ -33,9 +37,9 @@ import importlib.util
 import json
 from pathlib import Path
 
-DEFAULT, SWITCHED, SWITCHED_SIGNED_IN, SWITCHED_BACK = (
-    'default', 'switched', 'switched_signed_in', 'switched_back')
-ROUTED_VARIANTS = (SWITCHED, SWITCHED_SIGNED_IN)
+DEFAULT, SWITCHED, SWITCHED_SIGNED_IN, OPENROUTER, SWITCHED_BACK = (
+    'default', 'switched', 'switched_signed_in', 'openrouter', 'switched_back')
+ROUTED_VARIANTS = (SWITCHED, SWITCHED_SIGNED_IN, OPENROUTER)
 VARIANTS = (DEFAULT, *ROUTED_VARIANTS, SWITCHED_BACK)
 FALLBACK_RETURN = 'fallback_return'
 PROVIDER = 'scg_router'
@@ -77,7 +81,8 @@ def recorded(entry):
 def return_target(entry):
     """Return the previous connection, or the historic safe default."""
     value = (entry or {}).get(FALLBACK_RETURN)
-    return SWITCHED_SIGNED_IN if value == SWITCHED_SIGNED_IN else SWITCHED_BACK
+    return (OPENROUTER if value == OPENROUTER else
+            SWITCHED_SIGNED_IN if value == SWITCHED_SIGNED_IN else SWITCHED_BACK)
 
 
 def build(home, state, mode, static_catalogue, variant):
@@ -89,9 +94,20 @@ def build(home, state, mode, static_catalogue, variant):
         return block
     # The URL codex_config.build_block writes; a test pins the two together.
     url = 'http://127.0.0.1:%s/%s/backend-api/codex' % (state['port'], state['token'])
+    if variant == OPENROUTER:
+        # Keep Codex on its built-in `openai` provider. Codex stores a provider
+        # on every chat and lists only that provider by default, so a custom
+        # provider here hides the person's projects and chats after restart.
+        return ''.join((
+            _codex.BEGIN + '\n',
+            'model_provider = "openai"\n',
+            'openai_base_url = "%s"\n' % url,
+            'model_catalog_json = "%s/%s"\n' % (Path(home).as_posix(), ROUTED_LIST),
+            'approvals_reviewer = "user"\n',
+            _codex.END + '\n'))
     provider = ('model_providers.%s = { name = "SC router", base_url = "%s", '
                 'wire_api = "responses", requires_openai_auth = ' % (PROVIDER, url))
-    if variant in ROUTED_VARIANTS:
+    if variant in (SWITCHED, SWITCHED_SIGNED_IN):
         sign_in = 'true' if variant == SWITCHED_SIGNED_IN else 'false'
         return ''.join((
             _codex.BEGIN + '\n',
@@ -176,7 +192,8 @@ def switch(home, variant):
     original, removed = _codex.replace_config_block(config_path, block, live, entry['inserted_block'])
     record = dict(entry, inserted_block=block, variant=variant)
     if variant == SWITCHED and current_variant != SWITCHED:
-        record[FALLBACK_RETURN] = (SWITCHED_SIGNED_IN if current_variant == SWITCHED_SIGNED_IN
+        record[FALLBACK_RETURN] = (OPENROUTER if current_variant == OPENROUTER else
+                                   SWITCHED_SIGNED_IN if current_variant == SWITCHED_SIGNED_IN
                                    else SWITCHED_BACK)
     elif variant != SWITCHED:
         record.pop(FALLBACK_RETURN, None)

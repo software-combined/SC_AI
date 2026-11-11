@@ -129,7 +129,8 @@ def _limit_offer(home, dialog):
         except (OSError, ValueError):
             return dict(outcome='cancelled')
         message = (offer.BACK_OPENROUTER if kind == offer.BACK
-                   and destination == offer._switch.SWITCHED_SIGNED_IN else offer.MESSAGES[kind])
+                   and destination in (offer._switch.SWITCHED_SIGNED_IN, offer._switch.OPENROUTER)
+                   else offer.MESSAGES[kind])
         if sys.platform == 'win32':
             try:
                 answer = load('windows_dialog').show(message, home, True,
@@ -197,7 +198,7 @@ def execute(home, resources, action, run=subprocess.run):
                 result = True
             else:
                 result = owner.switch(home, target={
-                    'openrouter': 'openrouter',
+                    'openrouter': 'openrouter_toggle',
                     'openrouter_fallback': 'switched',
                     'subscription': 'switched_back'}[target])
         else:

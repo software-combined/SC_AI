@@ -6,6 +6,8 @@
 
 - Show one Codex OpenRouter menu choice. Confirm changes to ChatGPT sign-in,
   and offer the previous connection after a recorded usage-limit reset.
+- Keep Codex's ChatGPT provider during normal OpenRouter use. The model list
+  changes, but existing chats and projects stay visible after a restart.
 
 ## 1.3.47
 

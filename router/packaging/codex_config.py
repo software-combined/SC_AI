@@ -464,7 +464,7 @@ def write_receipt(home, config_path, block, rules_receipt, mode, before='',
         entry['desktop'] = desktop
     if variant:
         entry['variant'] = variant
-    if fallback_return in ('switched_signed_in', 'switched_back'):
+    if fallback_return in ('switched_signed_in', 'openrouter', 'switched_back'):
         entry['fallback_return'] = fallback_return
     if reviewer:
         entry['reviewer'] = reviewer

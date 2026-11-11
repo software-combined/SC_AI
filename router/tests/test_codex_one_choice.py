@@ -20,13 +20,15 @@ class OneChoiceMenuTests(unittest.TestCase):
         installer = mock.Mock()
         installer._diag._status_document.return_value = {'clients': {'codex': {}}}
         config = mock.Mock(SWITCHED='switched', SWITCHED_SIGNED_IN='switched_signed_in',
-                           ROUTED_VARIANTS=('switched', 'switched_signed_in'))
+                           OPENROUTER='openrouter',
+                           ROUTED_VARIANTS=('switched', 'switched_signed_in', 'openrouter'))
         config._codex.codex_attachment.return_value = {'openai_mode': 'subscription'}
         modules = dict(install=installer, codex_switch_config=config,
                        update_status=module('update_status'),
                        desktop_startup=SimpleNamespace(enabled=lambda _home: False))
         for variant, status in (('switched', 'ChatGPT sign-in not used'),
-                                ('switched_signed_in', 'ChatGPT sign-in required')):
+                                ('switched_signed_in', 'ChatGPT sign-in required'),
+                                ('openrouter', 'ChatGPT sign-in required')):
             with self.subTest(variant=variant):
                 config.current.return_value = variant
                 with mock.patch.object(control, 'load', side_effect=modules.__getitem__):
@@ -62,7 +64,7 @@ class OneChoiceSwitchTests(unittest.TestCase):
         self.case.setUp()
         self.addCleanup(self.case.doCleanups)
 
-    def choose(self, app, target='openrouter', prove=None):
+    def choose(self, app, target='openrouter_toggle', prove=None):
         return switcher.switch(self.case.home, target=target, platform_ops=app,
                                ready=lambda _home: True, prove=prove or self.case.prove())
 
@@ -92,12 +94,16 @@ class OneChoiceSwitchTests(unittest.TestCase):
 
     def test_reselect_uses_opposite_mode_without_an_episode(self):
         app = self.case.fake()
-        self.assertEqual(self.choose(app), 'switched_signed_in')
+        self.assertEqual(self.choose(app), 'openrouter')
         self.assertEqual(self.choose(app), 'switched')
         self.assertIn('projects', app.calls[-3][1].lower())
-        self.assertEqual(self.choose(app), 'switched_signed_in')
+        self.assertEqual(self.choose(app), 'openrouter')
         self.assertIn('send', app.calls[-3][1].lower())
-        self.assertIn('model_provider = "scg_router"', self.case.config.read_text())
+        self.assertNotIn('model_provider = "scg_router"', self.case.config.read_text())
+        self.assertIn('model_catalog_json =', self.case.config.read_text())
+        calls = len(app.calls)
+        self.assertEqual((self.choose(app, target='openrouter'), len(app.calls)),
+                         ('openrouter', calls))
 
     def test_recorded_limit_selects_signed_out_and_cancel_changes_nothing(self):
         with mock.patch.object(switcher._offer, 'fallback_needed', return_value=True):
@@ -143,6 +149,7 @@ class OneChoiceSwitchTests(unittest.TestCase):
 
     def test_a_proven_fallback_remembers_the_previous_connection(self):
         for before, expected in (('switched_signed_in', 'switched_signed_in'),
+                                 ('openrouter', 'openrouter'),
                                  ('switched_back', 'switched_back')):
             with self.subTest(before=before):
                 switcher._blocks.switch(self.case.home, before)
@@ -150,6 +157,9 @@ class OneChoiceSwitchTests(unittest.TestCase):
                 entry = switcher._receipts.codex_attachment(self.case.home)
                 self.assertEqual(entry.get('fallback_return'), expected)
                 self.assertEqual(switcher._blocks.return_target(entry), expected)
+        switcher._blocks.switch(self.case.home, 'switched_signed_in')
+        self.assertEqual(self.choose(self.case.fake()), 'switched')
+        self.assertEqual(self.choose(self.case.fake()), 'switched_signed_in')
 
     def test_offer_refuses_a_profile_changed_since_the_notice(self):
         expected = switcher._receipts.codex_attachment(self.case.home)
@@ -189,6 +199,7 @@ class OneChoiceOfferTests(unittest.TestCase):
     def test_return_offer_uses_recorded_destination(self):
         self.record()
         for saved, expected in ((None, 'switched_back'), ('switched_signed_in', 'switched_signed_in'),
+                                ('openrouter', 'openrouter'),
                                 ('switched_back', 'switched_back'), ('invalid', 'switched_back')):
             with self.subTest(saved=saved):
                 self.attach(variant='switched')
@@ -208,7 +219,8 @@ class OneChoiceOfferTests(unittest.TestCase):
                         mock.patch.object(control, 'load', side_effect=modules.__getitem__):
                     self.assertEqual(control._limit_offer(self.home, dialog), {'outcome': 'cancelled'})
                 message = dialog.confirm_result.call_args.args[0]
-                self.assertIn('OpenRouter models with ChatGPT sign-in' if expected == 'switched_signed_in'
+                self.assertIn('OpenRouter models with ChatGPT sign-in'
+                              if expected in ('switched_signed_in', 'openrouter')
                               else 'back from OpenRouter models', message)
                 (self.home / offers.OFFERS_FILE).unlink()
 

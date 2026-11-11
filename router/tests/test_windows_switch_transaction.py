@@ -98,7 +98,7 @@ class WindowsSwitchTransactionTests(unittest.TestCase):
         loaded, restoring = self.partial_reopen()
         self.unchanged()
         self.assertEqual(restoring, [False])
-        self.assertEqual(loaded, ['switched_signed_in', 'default'])
+        self.assertEqual(loaded, ['openrouter', 'default'])
 
     def test_failed_proof_restores_original_crlf_bytes(self):
         self.before = self.before.replace(b'\r\n', b'\n').replace(b'\n', b'\r\n')
@@ -116,7 +116,7 @@ class WindowsSwitchTransactionTests(unittest.TestCase):
     def test_unverified_rollback_shutdown_keeps_the_marker_and_does_not_rewrite(self):
         _, restoring = self.partial_reopen(refuse_shutdown=True)
         self.assertEqual(restoring, [])
-        self.assertEqual(switcher._blocks.current(self.home), 'switched_signed_in')
+        self.assertEqual(switcher._blocks.current(self.home), 'openrouter')
         self.assertTrue((self.home / switcher.MARKER).exists())
 
     def test_pending_recovery_honors_matching_and_opposing_explicit_destinations(self):
@@ -128,7 +128,7 @@ class WindowsSwitchTransactionTests(unittest.TestCase):
             self.assertFalse((self.home / switcher.MARKER).exists())
 
     def test_consent_ends_surviving_tray_workers_and_switches_both_directions(self):
-        self.assertEqual(self.switch(), 'switched_signed_in')
+        self.assertEqual(self.switch(), 'openrouter')
         self.assertEqual(set(self.api.ended), {10, 11})
         self.assertTrue(self.api.visible)
         prompt = self.confirm.call_args.args[0]
@@ -206,11 +206,11 @@ class WindowsSwitchTransactionTests(unittest.TestCase):
                 mock.patch.object(self.api, 'close_window', side_effect=closing), \
                 mock.patch.object(self.api, 'alive', side_effect=live), \
                 mock.patch.object(self.api, 'activate', side_effect=reopen):
-            self.assertEqual(self.switch(), 'switched_signed_in')
+            self.assertEqual(self.switch(), 'openrouter')
         self.assertEqual(len(self.proofs), 1)
         self.assertTrue(self.api.visible)
         self.assertEqual(self.api.ended, [])
-        self.assertEqual(switcher._blocks.current(self.home), 'switched_signed_in')
+        self.assertEqual(switcher._blocks.current(self.home), 'openrouter')
 
     def test_failed_reopen_restores_settings_and_reopens_the_original_connection(self):
         activate, calls = self.api.activate, []
