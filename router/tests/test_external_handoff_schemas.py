@@ -105,16 +105,19 @@ class ExternalHandoffSchemaTests(unittest.TestCase):
 
     def test_changed_lite_prefix_is_deterministic_and_tracks_schema_changes(self):
         payload = payload_for('lite')
-        first = json.loads(prepare(self.external, payload).body)['input'][0]
-        retry = json.loads(prepare(self.external, payload).body)['input'][0]
+        first = json.loads(prepare(self.external, payload).body)
+        retry = json.loads(prepare(self.external, payload).body)
         native = json.loads(prepare(SubscriptionProvider(), payload, 'gpt-6-astra').body)['input'][0]
         stock = json.loads(prepare(SubscriptionProvider(), payload, 'gpt-6-astra', NO_KEY).body)['input'][0]
         self.assertEqual(first, retry)
+        self.assertEqual(first['input'], [])
         self.assertEqual(native, json.loads(prepare(SubscriptionProvider(), payload, 'gpt-6-astra').body)['input'][0])
-        self.assertEqual(len({first['id'], native['id'], stock['id'], payload['input'][0]['id']}), 4)
+        self.assertEqual(len({native['id'], stock['id'], payload['input'][0]['id']}), 3)
         changed = deepcopy(payload)
         changed['input'][0]['tools'][0]['tools'][0]['parameters']['properties']['message']['maxLength'] = 500
-        self.assertNotEqual(first['id'], json.loads(prepare(self.external, changed).body)['input'][0]['id'])
+        self.assertNotEqual(first['tools'], json.loads(prepare(self.external, changed).body)['tools'])
+        self.assertNotEqual(native['id'], json.loads(
+            prepare(SubscriptionProvider(), changed, 'gpt-6-astra').body)['input'][0]['id'])
 
     def test_effective_authority_keeps_the_captured_request_metadata(self):
         payload = payload_for('discovered')

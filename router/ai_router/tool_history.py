@@ -41,6 +41,10 @@ def rewrite_tool_history(payload, names, wire_names, history_mode):
     latest_search, listings = tool_merge.newest_listings(items, wire_names)
     rewritten = []
     for item in items:
+        if item.get('type') == 'additional_tools' and item.get('role') == 'developer':
+            # prepare_tools already promoted these declarations. Replaying their
+            # native schemas bypasses aliasing, envelopes and tool-count limits.
+            continue
         if item.get('type') == 'tool_search_call':
             item = _replace(item, ('execution',), type='function_call', name=SEARCH_NAME,
                             arguments=json.dumps(item['arguments']))

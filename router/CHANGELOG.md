@@ -9,16 +9,25 @@
 - Keep native model defaults on fresh subscription installs and preserve explicit choices.
 - Show model access in the Router menu and check saved keys before work-account
   provisioning, preserving live keys and keys whose validity is unknown.
-- Adapt composed tool parameter roots for Claude models on the Codex OpenRouter
-  route. Preserve native tool arguments and replay history through the existing envelope.
-- Recognise nested provider tool-schema errors instead of reporting an unnamed rejection.
-- Keep shipped tool-schema profiles when an older model cache names the same upstream target.
 - Discover Windows Store Codex consistently during setup, SC plugin delivery,
   readiness and preflight, without a separate CLI install or PATH changes.
 - Defer plugin registration when saved choices cannot be read, so disabled
   plugins are not turned back on after a failed check.
 - Guide failed setup through safe diagnosis and verified completion while
   preserving subscription defaults and the user's restart choice.
+
+## 1.3.51
+
+- Keep existing Codex chats usable after model switches by merging repeated
+  tool declarations before assigning names. Promote saved tool-definition blocks
+  into the current tool list instead of forwarding native declarations twice.
+
+## 1.3.50
+
+- Adapt composed tool parameter roots for Claude models on the Codex OpenRouter
+  route. Preserve native tool arguments and replay history through the existing envelope.
+- Recognise nested provider tool-schema errors instead of reporting an unnamed rejection.
+- Keep shipped tool-schema profiles when an older model cache names the same upstream target.
 
 ## 1.3.49
 

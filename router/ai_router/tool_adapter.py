@@ -85,15 +85,15 @@ def prepare_tools(payload, row):
             initial.extend(item.get('tools', []))
     released.extend(recall(payload.get('input', [])))
     released_keys = {tool_merge.key_of(t, ns) for t, ns in tool_entries(released)}
-    entries = [(dict(tool), namespace) for tool, namespace in tool_entries(initial)]
-    declared = {}
-    for tool, namespace in entries:
-        declared.setdefault(tool_merge.key_of(tool, namespace), tool)
-    for tool, namespace in tool_entries(released):
+    entries, declared = [], {}
+    for tool, namespace in tool_entries(initial + released):
         key = tool_merge.key_of(tool, namespace)
+        if key[1] is None:
+            key += (tool.get('type'),)  # Unnamed built-ins have distinct tool types.
         existing = declared.get(key)
         if existing is not None:
-            # Complete a catalogue stub from the discovered schema; never clobber.
+            # Current declarations win over saved history; complete stubs only.
+            # Deduplicate before binding aliases, or duplicates share a wire name.
             tool_merge.complete_parameters(existing, tool)
             continue
         tool = dict(tool)

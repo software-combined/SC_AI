@@ -170,6 +170,20 @@ For a diagnostic check, run:
 If you open a new PowerShell window or the router updates, paste the path block again.
 For a source installation, use its Python 3.14 interpreter and matching installer instead.
 
+## Existing Codex chats fail after a model switch
+
+A provider can reject an old chat's tools even when a fresh chat works.
+Codex can send current tools alongside saved `additional_tools` declarations.
+Router merges these before assigning tool names, then removes the promoted
+definition blocks from external requests. Conversation messages and paired
+tool results remain available; saved chat history is unchanged.
+
+If the error persists after updating Router, share the model name and safe
+`upstream_rejected` diagnostics with IT. Do not share raw chat or request bodies.
+The [focused compatibility record](compatibility/saved-tool-declarations-2026-11-11.md)
+describes the verified scope. The reproducer is `tools/probe_duplicate_tools.py`; it runs offline
+unless `--live --max-calls 3` explicitly enables its bounded provider comparison.
+
 ## Claude on OpenRouter rejects Codex tool schemas
 
 A fresh chat can fail even on a greeting because Codex sends its tool schemas
