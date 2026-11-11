@@ -1,5 +1,35 @@
 # Compatibility
 
+## Router 1.3.50 release checks, 11 November 2026 AEDT
+
+Clients remain Codex desktop `26.1103.60933` (build `25894`), bundled CLI
+`0.167.0-alpha.3.2`, and Claude Code `2.1.318`. Neither client changed since
+the preceding compatibility checks. This release reuses those unchanged-path
+results and the focused schema checks below; it does not claim a new pass
+for the earlier unverified Codex ChatGPT-subscription leg.
+
+The synthetic composed-tool reproducer returned HTTP 400 before adaptation
+and completed a tool call, replay and final marker after adaptation:
+
+| Requested model and effort | Requests | Provider-reported model | Result |
+| --- | --- | --- | --- |
+| `anthropic/claude-haiku-5.5`, Low | 3 | `anthropic/claude-haiku-5.5` | Passed |
+| `anthropic/claude-opus-5.5`, High | 3 | `anthropic/claude-opus-5.5` | Passed |
+
+`tools/probe_tool_compositions.py` caps each request at 2048 output tokens.
+The rejected field was the root composition in `tools[].parameters`, reported
+upstream as `tools.0.custom.input_schema` with unsupported `anyOf`, `oneOf`
+and `allOf`. The returned argument object remained unchanged after decoding.
+Provider-reported effort was not exposed.
+
+The real Codex bundled CLI `0.167.0-alpha.3.2` also completed the synthetic
+union-schema dynamic tool and final marker through an isolated candidate
+Router in two requests, requested at Low effort on Haiku 5.5. That check used
+`tools/probe_codex_runtime.py --union-root`, a temporary client home and a
+four-request ceiling with 4096 output tokens per request. The native check's
+served model and effort were not retained. No installed client settings changed.
+These results establish candidate behavior, not installed delivery or acceptance.
+
 ## Router 1.3.49 release, 11 November 2026 AEDT
 
 This release changes no Router code. It delivers Factory 1.1.0, whose changes

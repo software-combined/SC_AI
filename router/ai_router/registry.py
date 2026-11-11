@@ -43,7 +43,7 @@ class Model:
     modalities: tuple = ('text', 'image')
     excluded_efforts: frozenset = frozenset()   # live-advertised but proven unsupported
     schema_mode: str = 'native'   # 'native' | 'json_text' (recursive schemas as JSON string)
-                                  # | 'json_text_root' (non-object roots as JSON value)
+                                  # | 'json_text_root' / 'json_text_composition' (root envelopes)
     history_mode: str = 'native'  # 'native' | 'portable' (carried tool history replay)
     max_tools: int | None = None  # provider ceiling on exposed tools
     drop_images: bool = False  # upstream stalls on image input; run text-only
@@ -134,7 +134,7 @@ def load(text):
         if not provider_defs.is_external(row['provider']) \
                 and row['provider'] not in provider_defs.subscription_ids():
             raise SystemExit(f'models.json {row["slug"]}: bad provider')
-        if row['schema_mode'] not in ('native', 'json_text', 'json_text_root'):
+        if row['schema_mode'] not in ('native', 'json_text', 'json_text_root', 'json_text_composition'):
             raise SystemExit(f'models.json {row["slug"]}: bad schema_mode')
         if row['history_mode'] not in ('native', 'portable'):
             raise SystemExit(f'models.json {row["slug"]}: bad history_mode')

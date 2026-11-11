@@ -162,6 +162,25 @@ For a diagnostic check, run:
 If you open a new PowerShell window or the router updates, paste the path block again.
 For a source installation, use its Python 3.14 interpreter and matching installer instead.
 
+## Claude on OpenRouter rejects Codex tool schemas
+
+A fresh chat can fail even on a greeting because Codex sends its tool schemas
+with the message. Claude rejects `anyOf`, `oneOf` and `allOf` at the root of a
+tool's parameter schema. Its nested provider error can otherwise appear as an
+unnamed HTTP 400 rejection.
+
+The Router uses an argument envelope for these schemas on configured Claude
+Responses rows. It restores the original arguments before Codex validates and
+executes the tool, and applies the same envelope when replaying tool calls.
+Plain object schemas and compositions inside properties keep their native form.
+
+Run the offline regression with `python3.14 -m unittest tests.test_tool_compositions`.
+The separate synthetic live check is
+`python3.14 tools/probe_tool_compositions.py --model anthropic/claude-haiku-5.5 --live --max-calls 3`.
+It makes at most three requests, each capped at 2048 output tokens, and checks
+the original rejection, adapted tool arguments and final returned marker.
+It does not run as a paid CI test or change installed settings.
+
 ## OpenRouter rejects every new Codex chat
 
 Codex can request `output.encrypted_content` in the Responses API `include` list.

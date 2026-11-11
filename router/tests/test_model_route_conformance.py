@@ -223,7 +223,7 @@ class ModelRouteConformanceTests(unittest.TestCase):
                 if protocol == provider_defs.RESPONSES:
                     tools = {tool['name']: tool for tool in sent['tools']}
                     for name, wrapped in (('recursive', row.schema_mode == 'json_text'),
-                                          ('root_value', row.schema_mode == 'json_text_root')):
+                                          ('root_value', row.schema_mode in ('json_text_root', 'json_text_composition'))):
                         self.assertEqual('arguments_json' in tools[name]['parameters'].get('properties', {}), wrapped)
                     self.assertEqual('input_image' in json.dumps(sent['input']),
                                      'image' in row.modalities and not row.drop_images)

@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+## 1.3.50
+
+- Adapt composed tool parameter roots for Claude models on the Codex OpenRouter
+  route. Preserve native tool arguments and replay history through the existing envelope.
+- Recognise nested provider tool-schema errors instead of reporting an unnamed rejection.
+- Keep shipped tool-schema profiles when an older model cache names the same upstream target.
+
 ## 1.3.49
 
 - Deliver Factory 1.1.0 so the project manager designs the whole team from the
