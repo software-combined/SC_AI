@@ -15,10 +15,13 @@ install.py does.
 import importlib.util
 import json
 import os
-import shutil
 import sys
 import time
+import subprocess
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import client_executable
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 # Bootstrap loader (Plan 123 exception): service must be spec-loaded before
@@ -97,12 +100,17 @@ def do_preflight(args):
     clients = getattr(args, 'clients', None)
     if clients is None:
         clients = 'none' if (args.client or 'codex') == 'none' else 'codex'
-    if clients in ('codex', 'both') and shutil.which('codex') is None:
-        missing.append('Codex CLI not found: install Codex first, or pass '
-                       '--client none for a service-only install')
-    if clients in ('claude', 'both') and shutil.which('claude') is None:
-        missing.append('Claude Code CLI not found: install Claude Code first, '
-                       'or pass --clients codex for a Codex-only install')
+    for client, label in (('codex', 'Codex'), ('claude', 'Claude Code')):
+        if clients not in (client, 'both'):
+            continue
+        try:
+            executable = client_executable.resolve(client, run=subprocess.run)
+        except client_executable.DiscoveryError as error:
+            missing.append(label + ' discovery failed (' + error.reason +
+                           '): check SCG Router diagnostics or contact Software Combined IT')
+            continue
+        if executable is None:
+            missing.append(label + ' CLI not found: install ' + label + ' first')
     if missing:
         for line in missing:
             print('preflight: ' + line)
@@ -142,6 +150,9 @@ def _status_document(home):
                     for defn in defs}
     default = keys.default_id()
     present, usable = per_provider.get(default, (False, False))
+    service_present, service_usable = keys.key_state(
+        home, state, {}, next(defn for defn in defs if defn.id == default),
+        _key_private, client_env=os.environ)
     def _client(entry):
         if not isinstance(entry, dict):
             return {'attached': False, 'config_path': ''}
@@ -163,6 +174,7 @@ def _status_document(home):
            'running_version': running,
            'routing_healthy': routing,
            'serving': serving, 'key_present': present, 'key_usable': usable,
+           'service_key_present': service_present, 'service_key_usable': service_usable,
            'feed': _svc.feed_source(feed),
            'channel': ((home / 'channel').read_text().strip()
                        if (home / 'channel').exists() else 'stable'),

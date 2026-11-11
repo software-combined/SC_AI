@@ -59,9 +59,10 @@ def _mode_line(mode, provider_id=None):
 
 def _confirm_text(payload, which='codex', *, managed=False):
     if managed:
-        action = ('Continue installation' if which == 'none'
-                  else setup_page.RESTART[key_dialog.clients(which)] + ', then start a new chat')
-        return 'Your work key is ready.\n\n' + action + '.'
+        names = {'codex': 'Codex', 'claude': 'Claude Code', 'both': 'Codex and Claude Code',
+                 'none': 'SCG Router'}[key_dialog.clients(which)]
+        return ('Your work key and choices are saved.\n\nContinue installation. '
+                'Then open SCG Router and choose Check setup to finish connecting %s.' % names)
     lines = []
     if which in ('codex', 'both'):
         lines.append('Codex: ' + _mode_line(payload.get('mode')))
@@ -69,12 +70,11 @@ def _confirm_text(payload, which='codex', *, managed=False):
         lines.append('Claude Code: ' + _mode_line(payload.get('claude_mode')))
     if payload.get('starter'):
         lines.append(payload['starter'])
-    return ('You are connected.\n\nKey: %s\nCredit left: %s\n%s\n\n'
-            'To finish setup, %s.'
+    return ('Your key and choices are saved.\n\nKey: %s\nCredit left: %s\n%s\n\n'
+            'To finish setup, open SCG Router and choose Check setup.'
             % (payload.get('label', 'your key'),
                setup_page.remaining(payload.get('limit'), payload.get('usage')),
-               '\n'.join(lines),
-               setup_page.RESTART[key_dialog.clients(which)].lower()))
+               '\n'.join(lines)))
 
 
 def _open_page(url, opener=None, label=provider_defs.label_for(provider_defs.DEFAULT_EXTERNAL)):
@@ -145,7 +145,7 @@ def run_window(url, tool_path=None, platform_name=None, which=None, run=None,
             error = 'A key is already saved on this computer. Open SCG Router and choose Check setup.'
         key_dialog.message(tool_path, error,
                            platform_name=platform_name, run=run)
-        if managed or status in (404, 409):
+        if managed or payload.get('key_saved') or status in (404, 409):
             return 1
 
 

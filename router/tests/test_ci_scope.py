@@ -98,6 +98,9 @@ class InstallerScopeTests(unittest.TestCase):
                          [name for name in module.INSTALLER_TESTS if name not in macos_only])
         self.assertIn('tests.test_claude_desktop_platform', module.installer_tests(windows=True))
         self.assertIn('tests.test_client_choice', module.installer_tests(windows=True))
+        self.assertIn('tests.test_windows_client_discovery', module.installer_tests(windows=True))
+        for name in ('model_access_flow', 'codex_subscription_defaults', 'setup_completion'):
+            self.assertIn('tests.test_' + name, module.installer_tests(windows=True))
 
 
 if __name__ == '__main__':

@@ -82,10 +82,12 @@ def key_state(home, state, env, defn, private=None, client_env=None):
         exists = key_file.is_file()
     except OSError:
         exists = False
+    unreadable = False
     try:
         text = key_file.read_text() if exists else ''
     except OSError:
         text = ''
+        unreadable = True
     private_ok = bool(private(key_file)) if (exists and private is not None) else bool(text.strip())
     auth_key = ''
     # The key env and the client's own data directory are separate inputs:
@@ -102,7 +104,7 @@ def key_state(home, state, env, defn, private=None, client_env=None):
         except (OSError, ValueError, AttributeError):
             auth_key = ''
     env_key = env.get(defn.key.env, '').strip() if env else ''
-    present = bool(env_key or text.strip() or auth_key)
+    present = bool(env_key or text.strip() or auth_key or unreadable)
     # Mirror key_for()'s order exactly: an existing key file is terminal, so
     # the third-party credential is consulted only when there is no key file
     # at all. An empty placeholder therefore reports not usable, which is

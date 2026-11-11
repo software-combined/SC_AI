@@ -31,12 +31,14 @@ load packaging/native_dialog.py
 load packaging/native_setup.py
 load packaging/native_shortcuts.py
 load packaging/native_readiness.py
+load packaging/client_executable.py
 load packaging/atomic_write.py
 load packaging/owned_json.py
 load packaging/client_removal.py
 load packaging/bundle.py
 load packaging/claude_config.py
 load packaging/client_choice.py
+load packaging/setup_completion.py
 load packaging/claude_desktop_config.py
 load packaging/claude_desktop_policy.py
 load packaging/claude_desktop_platform.py

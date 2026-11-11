@@ -16,6 +16,7 @@ EXPLICIT_FILES = (
     'packaging/updater.py', 'packaging/router_launch.py',
     'packaging/service.py', 'packaging/feed.py', 'packaging/runtime.lock',
     'packaging/platforms/windows_tasks.py',
+    'packaging/client_executable.py', 'packaging/setup_completion.py',
     'packaging/assets/router-icon.png',
     'packaging/assets/signin.html',
     'packaging/assets/inter-400.woff2', 'packaging/assets/inter-OFL.txt',

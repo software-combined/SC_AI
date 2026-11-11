@@ -133,6 +133,7 @@ check_manifest = _bundle.check_manifest
 check_identity = _bundle.check_identity
 
 _delivery = _svc.load('router_install_delivery', Path(__file__).resolve().parent / 'install_delivery.py')
+_completion = _svc.load('router_setup_completion', Path(__file__).resolve().parent / 'setup_completion.py')
 
 
 def self_test(python, release_dir):
@@ -262,18 +263,24 @@ def _rollback_failed_install(home, state, backend, latest, previous, catalog_pat
 
 
 def _open_key_window(python, home, setup_url, clients):
-    """Open the native key window; the setup URL prints only on a TTY."""
-    if sys.stdout.isatty(): print(f'open {setup_url} to connect your OpenRouter key')
-    try:  # URL on stdin, never argv; write once, close, never read.
-        proc = subprocess.Popen([python, '-m', 'ai_router.key_prompt', '--stdin', '--clients',
-                                 clients], cwd=str(current_release_dir(home)),
-                                start_new_session=True, stdin=subprocess.PIPE,
-                                creationflags=getattr(subprocess, 'CREATE_NO_WINDOW', 0),
-                                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        try: proc.stdin.write((setup_url + '\n').encode()); proc.stdin.close()
-        except OSError: pass
-    except OSError:
-        if not sys.stdout.isatty(): print('could not open the key window; the next request opens it')
+    """Wait for the key window in this install's selected home."""
+    home = Path(home).resolve()
+    return _completion.open_window(python, home, current_release_dir(home), setup_url, clients)
+
+
+def _attach_current(args, home, python):
+    return _client_choice.attach_current(args, home, codex=_codex_config, desktop=_desktop_config,
+        claude=attach_claude, write_state=_write_state, python=python,
+        resolve=_resolve_clients_and_modes, ensure_state=ensure_state, ready=_current_ready)
+
+
+def _complete_choices(home, python):
+    return _completion.reconcile(home, python, _client_choice, _codex_config,
+                                  ensure_state, build_parser, _attach_current)
+
+
+def _finish_key_setup(args, home, python, url, clients):
+    return _completion.finish(args, home, python, url, clients, _open_key_window, _complete_choices)
 
 
 def do_install(args, _fetch=fetch, _run=None):
@@ -292,7 +299,7 @@ def _do_install(args, _fetch=fetch, _run=None, delivery=None):
     _sync_seams()
     if args.version:
         return do_rollback(args)
-    home = Path(args.home).expanduser()
+    home = Path(args.home).expanduser().resolve()
     python = find_python(args.python)
     if python is None:
         if args.install_python and sys.platform == 'darwin' and not args.dry_run:
@@ -320,11 +327,8 @@ def _do_install(args, _fetch=fetch, _run=None, delivery=None):
         if (args.clients is None and args.client is None and not args.choose_clients
                 and not args.desktop and args.claude_mode is None
                 and args.anthropic_mode is None and args.openai_mode is None):
-            return 0
-        return _client_choice.attach_current(
-            args, home, codex=_codex_config, desktop=_desktop_config,
-            claude=attach_claude, write_state=_write_state, python=python,
-            resolve=_resolve_clients_and_modes, ensure_state=ensure_state, ready=_current_ready)
+            return 0 if args.dry_run else _complete_choices(home, python)
+        return _attach_current(args, home, python)
     if args.dry_run:
         print(f'would fetch {feed}; interpreter {python}')
         print('would verify, unpack, self-test, swap current, restart, write config')
@@ -402,17 +406,13 @@ def _do_install(args, _fetch=fetch, _run=None, delivery=None):
         _delivery.normalize_pointer(home)
         if delivery is not None: delivery['installed_version'] = current
         if args.repair:
-            return _client_choice.attach_current(args, home, codex=_codex_config,
-                desktop=_desktop_config, claude=attach_claude, write_state=_write_state,
-                python=python, resolve=_resolve_clients_and_modes,
-                ensure_state=ensure_state, ready=_current_ready)
+            return _attach_current(args, home, python)
         # Explicit key refresh also upgrades a legacy Claude listing snapshot.
         _claude_config.refresh_snapshot(
             home, state, _codex_config,
             lambda: _operator.listing(state))
-        if setup_url is not None and os.environ.get('ROUTER_NO_KEY_WINDOW') != '1':
-            _open_key_window(python, home, setup_url, clients)
-        print(f'router {current}; health ok; key window ready')
+        _finish_key_setup(args, home, python, setup_url, clients)
+        print(f'router {current}; health ok')
         return 0
     catalog_path = home / 'mixed-models.json'
     before_catalog = catalog_path.read_bytes() if catalog_path.exists() else None
@@ -436,8 +436,6 @@ def _do_install(args, _fetch=fetch, _run=None, delivery=None):
     # installs are a no-op); notice failures never surface.
     _svc.notice.record(home, previous, latest['version'], args.clients)
     previous_receipt = _codex_config.codex_attachment(home)
-    if setup_url is not None and os.environ.get('ROUTER_NO_KEY_WINDOW') != '1':  # desktop alone asks the Claude question
-        _open_key_window(python, home, setup_url, 'claude' if args.desktop and clients == 'none' else clients)
     saved = None if args.desktop or args.client == 'none' else _desktop_config.saved_profile(home, _codex_config)
     if clients == 'none':
         if args.desktop or saved:
@@ -455,6 +453,7 @@ def _do_install(args, _fetch=fetch, _run=None, delivery=None):
         if not args.feed:
             (home / 'feed-serial').write_text(str(serial) + '\n')
         backend.start_updates(home)
+        _finish_key_setup(args, home, python, setup_url, 'claude' if args.desktop else clients)
         print(f"router {latest['version']}; health ok; {_client_choice.none_outcome(args, bool(saved))}")
         return 0
     if clients in ('claude', 'both'): attach_claude(home, state, python=python)
@@ -465,6 +464,7 @@ def _do_install(args, _fetch=fetch, _run=None, delivery=None):
         if not args.feed:
             (home / 'feed-serial').write_text(str(serial) + '\n')
         backend.start_updates(home)
+        _finish_key_setup(args, home, python, setup_url, clients)
         print(f"router {latest['version']}; health ok; Claude Code attached")
         return 0
     _client_choice.attach_codex(home, state, mode, _codex_config, previous_receipt, static_catalogue=args.static_catalogue, python=python)
@@ -477,6 +477,7 @@ def _do_install(args, _fetch=fetch, _run=None, delivery=None):
         # serial, so recording it makes the real feed look stale for good.
         (home / 'feed-serial').write_text(str(serial) + '\n')
     backend.start_updates(home)
+    _finish_key_setup(args, home, python, setup_url, clients)
     print(f"router {latest['version']}; health ok; restart Codex to load the router")
     return 0
 

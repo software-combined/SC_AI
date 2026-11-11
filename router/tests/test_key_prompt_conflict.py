@@ -6,6 +6,18 @@ from ai_router import key_dialog, key_prompt
 
 
 class KeyPromptConflictTests(unittest.TestCase):
+    def test_saved_key_partial_failure_stops_without_another_collection(self):
+        with mock.patch.object(key_dialog, 'collect', side_effect=[{'key': 'synthetic'},
+                                AssertionError('key collected twice')]) as collect, \
+                mock.patch.object(key_dialog, 'message') as show, \
+                mock.patch.object(key_prompt, 'submit', return_value=(500, {
+                    'ok': False, 'key_saved': True, 'error': 'Key saved. Choose Check setup.'})) as post:
+            self.assertEqual(key_prompt.run_window('http://127.0.0.1:1/t/setup/n',
+                tool_path='powershell', platform_name='win32'), 1)
+        collect.assert_called_once()
+        post.assert_called_once()
+        self.assertIn('Check setup', show.call_args.args[1])
+
     def test_windows_close_requires_explicit_save(self):
         script = key_dialog.argv('powershell', 'win32')[-1]
         self.assertLess(script.index("$f.Tag = 'cancel'"), script.index('$f.ShowDialog()'))

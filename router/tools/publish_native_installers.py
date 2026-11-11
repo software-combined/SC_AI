@@ -1,9 +1,10 @@
-"""Publish five verified native packages, then switch the public download page."""
+"""Verify native packages for stable publication or local beta staging."""
 import argparse
 import hashlib
 import importlib.util
 import json
 import re
+import shutil
 import tempfile
 from pathlib import Path
 
@@ -11,6 +12,9 @@ ROOT = Path(__file__).resolve().parents[1]
 TARGETS = {'darwin/arm64', 'darwin/x86_64', 'windows/x86_64',
            'linux/arm64', 'linux/x86_64'}
 ORIGIN = 'https://dist.softwarecombined.com'
+SUFFIXES = {'darwin/arm64': 'macOS-arm64.dmg', 'darwin/x86_64': 'macOS-x86_64.dmg',
+            'windows/x86_64': 'Windows.exe', 'linux/arm64': 'Linux-aarch64.AppImage',
+            'linux/x86_64': 'Linux-x86_64.AppImage'}
 
 
 def load(name, path):
@@ -24,10 +28,12 @@ publisher = load('native_feed_publisher', ROOT / 'tools/publish_feed.py')
 verify = load('native_feed_signatures', ROOT / 'packaging/feed_verify.py')
 
 
-def packages(directory, channel):
+def packages(directory, channel, *, expected=None):
     """Require one untampered artifact per target, all from the same bundle."""
     records, versions, bundles = {}, set(), set()
     for receipt in sorted(Path(directory).glob('*.json')):
+        if expected is not None and receipt.is_symlink():
+            raise ValueError('unsafe native receipt link')
         doc = json.loads(receipt.read_text())
         if not isinstance(doc, dict) or 'artifact_sha256' not in doc:
             continue
@@ -38,6 +44,10 @@ def packages(directory, channel):
                 not re.fullmatch(r'\d+(?:\.\d+){2,3}', str(doc.get('version', ''))) or
                 doc.get('channel') != channel or doc.get('native_signature') != 'unsigned'):
             raise ValueError('invalid or duplicate native package receipt')
+        if expected is not None and (
+                doc['version'] != expected['version'] or doc.get('sha256') != expected['sha256']
+                or name != 'SCG-Router-Installer-' + expected['version'] + '-' + SUFFIXES[target]):
+            raise ValueError('native package does not match the selected beta release')
         artifact = Path(directory) / name
         if artifact.is_symlink():
             raise ValueError('unsafe native package link')
@@ -76,6 +86,51 @@ def public_distribution(distribution):
         raise ValueError('update sign-in requirement is still active')
 
 
+def signed_inventory(rows, sign):
+    checksums = ''.join(row['sha256'] + '  ' + row['name'] + '\n' for row in rows).encode()
+    signature = verify.sign_hex(Path(sign).read_text().strip(), checksums)
+    if not verify.verify_hex(verify.FEED_PUBLIC_KEY, checksums, signature):
+        raise ValueError('checksum signer is not the trusted release signer')
+    return checksums, (signature + '\n').encode()
+
+
+def stage_beta(args):
+    """Stage a complete beta cohort locally; never publish software or metadata."""
+    if args.channel != 'beta' or args.macos_arm64_only or args.dry_run:
+        raise ValueError('beta staging requires a complete beta release')
+    dist, output = Path(args.dist), Path(args.stage_beta)
+    document = dist / 'latest.json'
+    if document.is_symlink():
+        raise ValueError('unsafe beta document link')
+    latest = json.loads(document.read_text())
+    if (not isinstance(latest, dict) or latest.get('channel') != 'beta'
+            or not re.fullmatch(r'\d+(?:\.\d+){2,3}', str(latest.get('version', '')))
+            or not re.fullmatch('[0-9a-f]{64}', str(latest.get('sha256', '')))):
+        raise ValueError('selected release is not a valid beta')
+    bundle = publisher.bundle_name(latest)
+    if (dist / bundle).is_symlink():
+        raise ValueError('unsafe beta bundle link')
+    publisher._check_bundle(dist, bundle, latest['sha256'])
+    manifest = packages(args.artifacts, 'beta', expected=latest)
+    if output.exists() or output.is_symlink() or not output.parent.is_dir():
+        raise ValueError('beta assets need a fresh output directory')
+    checksums, signature = signed_inventory(manifest['packages'], args.sign)
+    with tempfile.TemporaryDirectory(dir=output.parent) as temporary:
+        stage = Path(temporary) / 'assets'
+        stage.mkdir()
+        for row in manifest['packages']:
+            copied = stage / row['name']
+            shutil.copyfile(Path(args.artifacts) / row['name'], copied)
+            with copied.open('rb') as stream:
+                if hashlib.file_digest(stream, 'sha256').hexdigest() != row['sha256']:
+                    raise ValueError('native package changed during staging')
+        (stage / 'SHA256SUMS').write_bytes(checksums)
+        (stage / 'SHA256SUMS.sig').write_bytes(signature)
+        stage.rename(output)
+    print('Staged five beta native installers ' + latest['version'])
+    return 0
+
+
 def publish(args):
     if args.channel != 'stable':
         raise ValueError('public native downloads use the stable channel only')
@@ -89,18 +144,14 @@ def publish(args):
         stage = Path(temporary)
         version = manifest['version']
         prefix = 'installers/' + version + '/'
-        checksums = ''.join(row['sha256'] + '  ' + row['name'] + '\n' for row in manifest['packages']).encode()
         if args.dry_run:
             print(json.dumps({'version': version, 'channel': args.channel,
                               'packages': len(manifest['packages']), 'public_downloads': True}))
             return 0
         public_distribution(args.distribution_id)
-        seed = Path(args.sign).read_text().strip()
-        signature = verify.sign_hex(seed, checksums)
-        if not verify.verify_hex(verify.FEED_PUBLIC_KEY, checksums, signature):
-            raise ValueError('checksum signer is not the trusted release signer')
+        checksums, signature = signed_inventory(manifest['packages'], args.sign)
         (stage / 'SHA256SUMS').write_bytes(checksums)
-        (stage / 'SHA256SUMS.sig').write_text(signature + '\n')
+        (stage / 'SHA256SUMS.sig').write_bytes(signature)
         for row in manifest['packages']:
             publisher.publish_bundle(args.bucket, prefix + row['name'], directory / row['name'],
                                      row['sha256'], 'application/octet-stream')
@@ -120,13 +171,20 @@ def publish(args):
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--artifacts', required=True)
-    parser.add_argument('--channel', choices=('stable',), required=True)
-    parser.add_argument('--bucket', required=True)
-    parser.add_argument('--distribution-id', required=True)
+    parser.add_argument('--channel', choices=('stable', 'beta'), required=True)
+    parser.add_argument('--bucket')
+    parser.add_argument('--distribution-id')
+    parser.add_argument('--stage-beta', metavar='DIRECTORY')
+    parser.add_argument('--dist', default='dist')
     parser.add_argument('--sign', required=True)
     parser.add_argument('--dry-run', action='store_true')
     parser.add_argument('--macos-arm64-only', action='store_true')
-    return publish(parser.parse_args(argv))
+    args = parser.parse_args(argv)
+    if args.stage_beta:
+        return stage_beta(args)
+    if not args.bucket or not args.distribution_id:
+        parser.error('publication requires --bucket and --distribution-id')
+    return publish(args)
 
 
 if __name__ == '__main__':

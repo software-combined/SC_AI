@@ -18,6 +18,11 @@ import subprocess
 import sys
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import client_executable
+
+client_path = client_executable.client_path
+
 MARKETPLACE = 'scg-agent-plugins'
 MARKER = '.router-owned'
 SHARED = ('.local', 'share', 'scg-agent-plugins')
@@ -47,50 +52,6 @@ OLD_CODEX_SOURCE = re.compile(
 def shared_base(home=None):
     """The SCG plugin directory the git updater already uses."""
     return (Path(home) if home else Path.home()).joinpath(*SHARED)
-
-
-def _windows_codex_dirs(environ=None):
-    """Windows desktop's bundled CLI directories, newest build first."""
-    local = (os.environ if environ is None else environ).get('LOCALAPPDATA')
-    if not local:
-        return ()
-    base = Path(local) / 'OpenAI' / 'Codex' / 'bin'
-    try:
-        builds = sorted((p for p in base.iterdir() if p.is_dir()),
-                        key=lambda p: p.stat().st_mtime, reverse=True)
-    except OSError:
-        return ()
-    return tuple(str(p) for p in builds)
-
-
-def _macos_codex_dirs():
-    """Desktop installs can supply Codex without a separate terminal install."""
-    dirs = []
-    for root in (Path.home() / 'Applications', Path('/Applications')):
-        for app in ('ChatGPT.app', 'Codex.app'):
-            for relative in ('Contents/Resources/codex-cli/bin', 'Contents/Resources'):
-                folder = root / app / relative
-                if (folder / 'codex').is_file():
-                    dirs.append(str(folder))
-    return tuple(dirs)
-
-
-def client_path(environ=None, os_name=None):
-    """Find client CLIs and their helpers in scheduled jobs and desktop setup."""
-    # ponytail: fixed common dirs; a client under a version manager (nvm, fnm)
-    # still needs its bin dir on the scheduled job's PATH.
-    env = os.environ if environ is None else environ
-    dirs = [d for d in env.get('PATH', '').split(os.pathsep) if d]
-    extra = (str(Path.home() / '.local' / 'bin'),)
-    if (os.name if os_name is None else os_name) == 'nt':
-        extra += _windows_codex_dirs(env)
-    else:
-        # Admin-owned on macOS and Linux. On Windows they would be drive-root
-        # folders any local account can create, so a planted client could run.
-        extra += ('/opt/homebrew/bin', '/usr/local/bin')
-        if sys.platform == 'darwin':
-            extra += _macos_codex_dirs()
-    return os.pathsep.join(dirs + [d for d in extra if d not in dirs])
 
 
 def marketplace_root(base=None):
@@ -201,7 +162,8 @@ def _one_line(value, limit=200):
 def _client_json(call, command):
     """A client's `--json` answer, or None when it cannot give one."""
     try:
-        return json.loads(call(command).stdout)
+        result = call(command)
+        return json.loads(result.stdout) if result.returncode == 0 else None
     except (OSError, subprocess.SubprocessError, ValueError, TypeError):
         return None
 
@@ -236,15 +198,18 @@ def _switched_off(client, call):
     """
     try:
         if client == 'codex':
-            entries = _client_json(call, ['codex', 'plugin', 'list', '--marketplace',
-                                          MARKETPLACE, '--json'])['installed']
+            entries = _client_json(call, ['codex', 'plugin', 'list', '--json'])['installed']
             key = 'pluginId'
         else:
             entries = _client_json(call, ['claude', 'plugin', 'list', '--json'])
             key = 'id'
+        if not isinstance(entries, list) or any(not isinstance(entry, dict)
+                or not isinstance(entry.get(key), str) or not entry[key]
+                or type(entry.get('enabled')) is not bool for entry in entries):
+            return None
         return {entry[key] for entry in entries if entry.get('enabled') is False}
     except (LookupError, TypeError, AttributeError):
-        return set()
+        return None
 
 
 def register(client, root, names, run=subprocess.run, which=shutil.which):
@@ -257,7 +222,10 @@ def register(client, root, names, run=subprocess.run, which=shutil.which):
     log names the failure instead of only counting it.
     """
     path = client_path()
-    executable = which(client, path=path)
+    try:
+        executable = client_executable.resolve(client, path=path, run=run, which=which)
+    except client_executable.DiscoveryError as error:
+        return f'{client}: discovery failed ({error.reason})', 1
     if executable is None:
         return f'{client}: not installed', 1
     env = dict(os.environ, PATH=path)
@@ -270,6 +238,8 @@ def register(client, root, names, run=subprocess.run, which=shutil.which):
 
     # Read before any change: removing the old Codex source hides its plugins.
     disabled = _switched_off(client, call)
+    if disabled is None:
+        return f'{client}: plugin choices unavailable; registration deferred', 1
     off = {n for n in names if f'{n}@{MARKETPLACE}' in disabled}
     commands = _commands(client, root, [n for n in names if n not in off])
     if client == 'codex' and _old_codex_source(call):

@@ -263,6 +263,18 @@ class PublishFeedTests(unittest.TestCase):
                 publish.main(['--dist', str(dist), '--channel', 'beta',
                               '--bucket', 'feed-bucket'])
 
+    def test_prepare_only_signs_identical_documents_without_publishing(self):
+        dist = self._dist()
+        seed = self._seed(dist)
+        runner = _Aws()
+        code, _ = self._run(dist, runner, extra=['--sign', str(seed), '--prepare-only'])
+        self.assertEqual(code, 0)
+        self.assertEqual(runner.calls, [])
+        names = (publish.FEED_DOCUMENT, publish.RELEASE_DOCUMENT, publish.FEED_SIG_DOCUMENT)
+        prepared = {name: (dist / name).read_bytes() for name in names}
+        self._run(dist, runner, extra=['--sign', str(seed)])
+        self.assertEqual(prepared, {name: (dist / name).read_bytes() for name in names})
+
     def test_sidecar_signs_served_bytes(self):
         import importlib.util as _ilu
         dist = self._dist()

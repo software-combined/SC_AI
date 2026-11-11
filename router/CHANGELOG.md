@@ -2,6 +2,24 @@
 
 ## Unreleased
 
+## 1.3.53
+
+- Attach the complete native installer cohort and signed SHA-256 inventories
+  to beta prereleases while keeping stable publication gated.
+- Apply late subscription answers through the installer after saving access,
+  including when the key already exists. Keep setup pending until answers match
+  attached assistants; preserve saved keys and model picks during recovery.
+
+- Keep native model defaults on fresh subscription installs and preserve explicit choices.
+- Show model access in the Router menu and check saved keys before work-account
+  provisioning, preserving live keys and keys whose validity is unknown.
+- Discover Windows Store Codex consistently during setup, SC plugin delivery,
+  readiness and preflight, without a separate CLI install or PATH changes.
+- Defer plugin registration when saved choices cannot be read, so disabled
+  plugins are not turned back on after a failed check.
+- Guide failed setup through safe diagnosis and verified completion while
+  preserving subscription defaults and the user's restart choice.
+
 ## 1.3.52
 
 - Replace Claude Fable 5.1 with Fable 5.2 in the model catalogue and remove the

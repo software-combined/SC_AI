@@ -9,6 +9,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from native_payload import load
+import client_executable
 
 
 def successful_reply(home, since, client):
@@ -34,10 +35,17 @@ def successful_reply(home, since, client):
     return False
 
 
-def plugins_available(client, names, run=subprocess.run, which=shutil.which):
+def plugins_available(client, names, run=subprocess.run, which=shutil.which, reasons=None):
     skills = load('agent_skills')
     path = skills.client_path()
-    executable = which(client, path=path)
+    try:
+        executable = client_executable.resolve(client, path=path, run=run, which=which)
+    except client_executable.DiscoveryError as error:
+        if reasons is not None:
+            reasons[client] = error.reason
+        return False
+    if reasons is not None:
+        reasons[client] = 'found' if executable else 'not_found'
     if not executable:
         return False
     args = ['plugin', 'list']
@@ -55,20 +63,33 @@ def plugins_available(client, names, run=subprocess.run, which=shutil.which):
         return False
 
 
+def choices_applied(home):
+    """Saved answers need matching receipts before setup can be Ready."""
+    try:
+        state = json.loads((Path(home) / 'mixed-router-state.json').read_text())
+        attached = load('codex_config').read_receipt(home).get('clients', {})
+        return not state.get('setup') and not load('client_choice').mode_flags(state, attached)
+    except (OSError, ValueError, TypeError, AttributeError):
+        return False
+
+
 def check(home, source, status, progress, run=subprocess.run):
     skills = load('agent_skills')
     names = sorted(skills.plugin_sources(Path(source) / 'plugins'))
     clients = list(status.get('clients', {}))
     checks = {}
+    reasons = {}
     for client in clients:
         cli = 'claude' if client == 'claude-desktop' else client
         if cli not in ('codex', 'claude'):
             continue
         checks[client] = {
             'reply_seen': successful_reply(home, progress.get('started', float('inf')), cli),
-            'plugins_available': bool(names) and plugins_available(cli, names, run=run),
+            'plugins_available': bool(names) and plugins_available(cli, names, run=run, reasons=reasons),
             'fresh_session_confirmed': client in progress.get('confirmed_clients', []),
         }
-    ready = bool(checks) and status.get('serving') is True and all(
+    applied = choices_applied(home)
+    ready = (applied and bool(checks) and status.get('serving') is True
+             and status.get('service_key_usable') is not False) and all(
         all(facts.values()) for facts in checks.values())
-    return {'ready': ready, 'clients': checks}
+    return {'ready': ready, 'clients': checks, 'discovery': reasons, 'choices_applied': applied}

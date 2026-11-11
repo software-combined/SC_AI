@@ -29,7 +29,8 @@ def identity(*, api=None):
     api = api or bindings()
     packages = api.packages(FAMILY)
     if len(packages) != 1:
-        raise _native.NativeError('app_identity', 'app_unavailable')
+        raise _native.NativeError('app_identity',
+                                  'app_unavailable' if not packages else 'invalid_identity')
     try:
         root = Path(api.package_path(packages[0])).resolve()
         applications = ET.fromstring((root / 'AppxManifest.xml').read_bytes()).findall(

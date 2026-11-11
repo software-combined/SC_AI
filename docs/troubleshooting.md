@@ -69,7 +69,15 @@ The historical configuration removal during account changes remains unverified.
 Reproduce sign-in, sign-out or account switching only in an isolated standard Windows profile.
 Compare configuration timestamps, size and block presence; do not read authentication files.
 
-If Switch Codex reports a missing bundled tool, update the ChatGPT app (Codex).
+If Codex is installed but setup cannot verify it, choose **Try again** to repeat
+discovery. Cancel keeps your current setup. Do not install a separate CLI or
+change PATH. Contact IT if the check still fails.
+Setup distinguishes an absent app, unclear Windows identity and an invalid
+included setup tool. Preflight and plugin registration report fixed diagnostic
+reasons without command output, private paths or credentials.
+An installed app with an invalid tool never receives another download instruction.
+
+If Switch Codex reports a missing bundled tool, check its redacted diagnostics.
 Router discovers the current Store package, then checks the bundled Windows executable
 and its version. Do not set `CODEX_BIN` or save a versioned Store path.
 Store Codex identity and process checks use native Windows APIs.

@@ -16,6 +16,21 @@ def sealed(payload=b'synthetic opaque vendor data'):
 
 
 class SealedGatewayTests(unittest.TestCase):
+    def test_late_mode_answer_updates_only_the_owned_receipt_for_a_sealed_gateway(self):
+        state = dict(self.rig.state, claude_mode='none', anthropic_mode='none')
+        (self.rig.home / 'mixed-router-state.json').write_text(json.dumps(state))
+        before = self.protected()
+        previous = json.loads(before[self.receipt])['clients']['claude-desktop']
+        self.owner.attach(self.rig.home, state, self.rig.owner, data_dir_override=self.profile)
+        after = json.loads(self.receipt.read_bytes())['clients']['claude-desktop']
+        self.assertEqual(after, dict(previous, claude_mode='none'))
+        for path, content in before.items():
+            if path != self.receipt:
+                self.assertEqual(path.read_bytes(), content)
+        final = self.protected()
+        self.owner.attach(self.rig.home, state, self.rig.owner, data_dir_override=self.profile)
+        self.assertEqual(self.protected(), final)
+
     def setUp(self):
         self.rig = removal.RemovalRecoveryTests()
         self.rig.setUp()
