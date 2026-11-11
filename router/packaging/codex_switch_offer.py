@@ -12,16 +12,15 @@ once per episode:
 - the way back, while Codex is signed out, once the episode has ended or the
   installed ChatGPT app is at or above `FIXED_IN`.
 
-The dialog is only the offer: its action opens the Switch Codex app, which
-asks before it changes anything. macOS only, and only for a Codex install in
-subscription mode that has the app. An offer is recorded before its dialog
-appears, so a home that cannot be written shows nothing rather than the same
-offer every minute. A missing dialog tool, or a dialog that cannot be drawn,
-leaves the offer pending for a later pass.
+The dialog is only the offer: the switch owner still asks before it changes
+anything. It applies only to Codex installs in subscription mode. A detached
+worker from the retained controller shows it on every platform. Missing
+dialogs leave the offer pending.
 
 Python 3.9-safe, stdlib only and inert on import: the updater loads it by
 path, and Switch Codex's installer reuses `APP`.
 """
+import argparse
 import importlib.util
 import json
 import os
@@ -31,7 +30,6 @@ import sys
 import time
 from datetime import datetime
 from pathlib import Path
-from shutil import which
 
 APP = Path.home() / 'Applications' / 'Switch Codex.app'
 CHATGPT_APP = Path('/Applications/ChatGPT.app')
@@ -45,14 +43,15 @@ EPISODE_FILE = 'codex-usage-limit.json'
 WINDOW_S = 5 * 60 * 60
 OFFERS_FILE = 'codex-switch-offers.json'
 SWITCH, BACK = 'switch', 'back'
-OPEN = 'Open Switch Codex'
 MESSAGES = {
     SWITCH: ('Your ChatGPT subscription has reached its usage limit, so the '
              'ChatGPT app (Codex) cannot send messages. Switch it to OpenRouter '
              'models until the limit resets?'),
-    BACK: ('The ChatGPT app (Codex) can use your ChatGPT subscription again. '
-           'Switch it back from OpenRouter models?'),
+    BACK: ('The ChatGPT app (Codex) may be able to use your ChatGPT subscription again. '
+           'Switch it back from OpenRouter models? Send may still be blocked.'),
 }
+BACK_OPENROUTER = ('The ChatGPT app (Codex) may be able to use your ChatGPT subscription again. '
+                   'Return to OpenRouter models with ChatGPT sign-in? Send may still be blocked.')
 _VERSION = re.compile(r'\d{1,9}(?:\.\d{1,9}){0,5}')
 
 
@@ -114,6 +113,10 @@ def fallback_needed(home, now=None):
     current = episode(home)
     if current is None:
         return False
+    return _episode_active(current, now)
+
+
+def _episode_active(current, now=None):
     now = time.time() if now is None else now
     fixed = _version(FIXED_IN)
     return now < current['end'] and (fixed is None or (installed() or ()) < fixed)
@@ -140,9 +143,11 @@ def _offered(home, seen_at):
     return [kind for kind in doc['offered'] if kind in (SWITCH, BACK)]
 
 
-def due(home, now=None, platform_name=None):
+def due(home, now=None, platform_name=None, *, include_offered=False):
     """(kind, episode) for the offer this pass should make, else None."""
-    if (platform_name or sys.platform) != 'darwin' or not APP.exists():
+    platform_name = platform_name or sys.platform
+    if (platform_name not in ('darwin', 'win32', 'linux')
+            or (platform_name == 'darwin' and not APP.exists())):
         return None
     entry = _codex.codex_attachment(home)
     current = episode(home)
@@ -153,57 +158,87 @@ def due(home, now=None, platform_name=None):
         version = current['version']
         affected = (version is not None and version >= _version(AFFECTED_FROM)
                     and (fixed is None or version < fixed))
-        kind = SWITCH if affected and fallback_needed(home, now) else None
+        kind = SWITCH if affected and _episode_active(current, now) else None
     else:
-        kind = BACK if not fallback_needed(home, now) else None
-    if kind is None or kind in _offered(home, current['seen_at']):
+        kind = BACK if not _episode_active(current, now) else None
+    if kind is None or (not include_offered and kind in _offered(home, current['seen_at'])):
         return None
     return kind, current
-
-
-def command(kind, icon):
-    """osascript argv for one offer, or None when the dialog tool is missing."""
-    tool = which('osascript')
-    if tool is None:
-        return None
-    quote = lambda text: json.dumps(text, ensure_ascii=False)  # noqa: E731
-    icon_clause = ' with icon (POSIX file %s)' % quote(icon) if icon else ' with icon note'
-    destination = _switch.SWITCHED if kind == SWITCH else _switch.SWITCHED_BACK
-    return [tool, '-e', '\n'.join([
-        'set answer to button returned of (display dialog %s with title %s '
-        'buttons {%s, %s} default button %s cancel button %s%s)'
-        % (quote(MESSAGES[kind]), quote(_notice.TITLE), quote(_notice.DISMISS),
-           quote(OPEN), quote(OPEN), quote(_notice.DISMISS), icon_clause),
-        'if answer is %s then do shell script "/usr/bin/open " & quoted form of %s '
-        '& " --args --to %s"' % (quote(OPEN), quote(str(APP)), destination)])]
 
 
 def _remember(home, seen_at, offered):
     _atomic.replace_json(Path(home) / OFFERS_FILE, {'seen_at': seen_at, 'offered': offered})
 
 
+def _claim(home, seen_at, offered, kind):
+    """Reserve a writable record without marking the dialog presented."""
+    _atomic.replace_json(Path(home) / OFFERS_FILE,
+                         {'seen_at': seen_at, 'offered': offered, 'claim': kind})
+
+
+def _finish_claim(home, seen_at, offered):
+    """Clear only this episode's claim; preserve any newer record."""
+    current = episode(home)
+    if current is not None and current['seen_at'] != seen_at:
+        return
+    try:
+        doc = json.loads((Path(home) / OFFERS_FILE).read_text())
+    except (OSError, ValueError):
+        return
+    if isinstance(doc, dict) and doc.get('seen_at') == seen_at and doc.get('claim') in (SWITCH, BACK):
+        _remember(home, seen_at, offered)
+
+
+def _recover_claim(home):
+    """The caller holds the offer lock, so no previous worker is still active."""
+    try:
+        doc = json.loads((Path(home) / OFFERS_FILE).read_text())
+    except (OSError, ValueError):
+        return
+    if (isinstance(doc, dict) and isinstance(doc.get('seen_at'), str)
+            and isinstance(doc.get('offered'), list) and doc.get('claim') in (SWITCH, BACK)):
+        _remember(home, doc['seen_at'], _offered(home, doc['seen_at']))
+
+
+def _offer_desktop(home):
+    """Start a retained, detached worker; a launch is not presentation."""
+    try:
+        version = (Path(home) / 'control-version').read_text().strip()
+        if not re.fullmatch(r'\d+(?:\.\d+){2,3}', version):
+            return None
+        helper = Path(home) / 'control' / version / 'packaging' / Path(__file__).name
+        if not helper.is_file():
+            return None
+    except OSError:
+        return
+    command = [sys.executable, str(helper), '--home', str(home), '--desktop-offer']
+    try:
+        _notice._spawn(command)
+    except (OSError, ValueError):
+        return
+
+
 def offer(home, now=None, platform_name=None):
-    """Make the offer due this pass; the kind shown, else None. Never raises."""
+    """Start the worker when an offer is due; never claim presentation."""
     try:
         if os.environ.get('ROUTER_NO_NOTICE') == '1':
             return None
         found = due(home, now, platform_name)
         if found is None:
             return None
-        kind, current = found
-        cmd = command(kind, _notice._home_icon(home) or str(_notice.ICON))
-        if cmd is None:
-            return None  # no dialog tool: the offer stays pending
-        before = _offered(home, current['seen_at'])
-        # Recorded first: a failed write raises here, before any dialog.
-        _remember(home, current['seen_at'], before + [kind])
-        try:
-            shown = _notice._dialog_up(_notice._spawn(cmd), _notice._pid_alive)
-        except (OSError, ValueError):
-            shown = False
-        if not shown:
-            _remember(home, current['seen_at'], before)  # never drawn: still pending
-            return None
-        return kind
+        return _offer_desktop(home)
     except (Exception, SystemExit):  # an unknown receipt variant raises SystemExit
         return None
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--home', type=Path, required=True)
+    parser.add_argument('--desktop-offer', action='store_true', required=True)
+    args = parser.parse_args()
+    try:
+        control = _load('router_offer_control', _HERE / 'desktop_control.py')
+        dialog = _load('router_offer_dialog', _HERE / 'native_dialog.py')
+        control._limit_offer(args.home, dialog)
+    except (Exception, SystemExit):
+        pass  # The next updater pass can retry a dialog that was not shown.

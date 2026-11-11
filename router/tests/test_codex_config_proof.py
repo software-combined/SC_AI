@@ -60,13 +60,13 @@ class LoaderProofTests(unittest.TestCase):
         self.loader.write_text(FAKE)
         self.loader.chmod(0o755)
 
-    def prove(self, signed_out=True, **plan):
+    def prove(self, signed_out=True, provider=None, **plan):
         record = self.root / 'env.json'
         env = dict(os.environ, CODEX_BIN=str(self.loader), FAKE_RECORD=str(record),
                    FAKE_PLAN=json.dumps(plan), OPENAI_API_KEY='placeholder',
                    CODEX_SANDBOX='seatbelt')
         answer = proof.prove(None, codex_home=self.root / 'home', env=env, timeout=10,
-                             signed_out=signed_out)
+                             signed_out=signed_out, provider=provider)
         return answer, json.loads(record.read_text())
 
     def test_switched_answers(self):
@@ -83,6 +83,15 @@ class LoaderProofTests(unittest.TestCase):
                               ({'type': 'apiKey'}, False)):
             with self.subTest(account=account):
                 self.assertIs(self.prove(False, account=account, requiresOpenaiAuth=True)[0], want)
+
+    def test_managed_provider_must_match_the_requested_variant(self):
+        for provider, managed, want in (('openai', 'openai', True),
+                                        ('openai', 'scg_router', False),
+                                        ('scg_router', 'scg_router', True),
+                                        (None, 'openai', False)):
+            with self.subTest(provider=provider, managed=managed):
+                self.assertIs(self.prove(provider=provider,
+                                         requirements={'modelProvider': managed})[0], want)
 
     def test_error_replies_and_a_loader_that_exits_or_cannot_start_fail(self):
         for plan in ({'errors': ['configRequirements/read']}, {'errors': ['account/read']},

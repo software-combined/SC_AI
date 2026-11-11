@@ -14,12 +14,18 @@ Choose a destination in that assistant's section:
 
 | Assistant | Connection choices |
 | --- | --- |
-| Codex | ChatGPT + OpenRouter; OpenRouter only; OpenRouter for usage limits |
+| Codex | ChatGPT + OpenRouter; OpenRouter |
 | Claude | Claude subscription; OpenRouter |
 
-The checkmark identifies the selected connection. Selecting it again does nothing.
-OpenRouter only keeps your ChatGPT sign-in. OpenRouter for usage limits signs
-Codex out so Send remains available when the subscription is exhausted.
+The checkmark identifies the selected connection. OpenRouter normally keeps your
+ChatGPT sign-in. Select the checked OpenRouter choice again to change sign-in.
+Normal OpenRouter use changes only the model list, so your existing chats and
+projects stay visible.
+When Send is blocked by a subscription limit, you can use OpenRouter without
+ChatGPT sign-in. Projects and setup choices can be hidden until you sign in again.
+If SCG Router cannot verify ChatGPT sign-in, it can offer the signed-out
+connection. It asks for confirmation before the fallback and before the restart.
+The menu status shows whether ChatGPT sign-in is required for OpenRouter.
 Connecting Claude leaves it on your Claude subscription, which it is already using.
 Choose **OpenRouter** to switch; setup offers the same switch when you connect Claude.
 Before a change, SCG Router explains the required assistant restart.
@@ -33,7 +39,7 @@ Managed settings, failed shutdown or incomplete task recovery can stop the chang
 SCG Router preserves the previous selection when it cannot finish safely.
 
 Choose models inside the assistant. Claude Code keeps its terminal `/model` flow.
-The tray does not switch named human accounts or sign either subscription out.
+The menu does not switch named human accounts or delete their sign-in credentials.
 
 ## Understand the status
 

@@ -46,7 +46,8 @@ class DesktopControlsTests(unittest.TestCase):
             running_version='1.3.0.6', clients={'codex': {'config_path': '/private'}},
             token='private-token', key='private-key', feed='/private')
         config = mock.Mock(SWITCHED='switched', SWITCHED_SIGNED_IN='switched_signed_in',
-                           ROUTED_VARIANTS=('switched', 'switched_signed_in'))
+                           OPENROUTER='openrouter',
+                           ROUTED_VARIANTS=('switched', 'switched_signed_in', 'openrouter'))
         config.current.return_value = 'switched_signed_in'
         config._codex.codex_attachment.return_value = {'openai_mode': 'subscription'}
         modules = dict(install=installer, codex_switch_config=config, update_status=module('update_status'),
@@ -59,35 +60,35 @@ class DesktopControlsTests(unittest.TestCase):
         self.assertNotIn('private', json.dumps(facts))
         self.assertNotIn('reply_seen', facts)
 
-    def test_each_openrouter_variant_has_its_own_selected_destination(self):
+    def test_each_openrouter_variant_uses_the_same_selected_destination(self):
         control = module('desktop_control')
         model = module('desktop_model')
         installer = mock.Mock()
         installer._diag._status_document.return_value = dict(clients={'codex': {}})
         config = mock.Mock(SWITCHED='switched', SWITCHED_SIGNED_IN='switched_signed_in',
-                           ROUTED_VARIANTS=('switched', 'switched_signed_in'))
+                           OPENROUTER='openrouter',
+                           ROUTED_VARIANTS=('switched', 'switched_signed_in', 'openrouter'))
         config._codex.codex_attachment.return_value = {'openai_mode': 'subscription'}
         modules = dict(install=installer, codex_switch_config=config,
                        update_status=module('update_status'),
                        desktop_startup=SimpleNamespace(enabled=lambda home: False))
-        for variant, selected, offered, omitted in (
-                ('switched', 'openrouter_fallback', 'codex.openrouter', 'codex.openrouter_fallback'),
-                ('switched_signed_in', 'openrouter', 'codex.openrouter_fallback', 'codex.openrouter')):
+        for variant in ('switched', 'switched_signed_in', 'openrouter'):
             with self.subTest(variant=variant):
                 config.current.return_value = variant
                 with mock.patch.object(control, 'load', side_effect=modules.__getitem__):
                     facts = control.snapshot(Path('/unused'))
-                self.assertEqual(facts['clients'][0]['selected'], selected)
+                self.assertEqual(facts['clients'][0]['selected'], 'openrouter')
                 labels = dict(model.chooser(model.menu(facts)['menu'])[1])
-                self.assertIn(offered, labels)
-                self.assertNotIn(omitted, labels)
+                self.assertIn('codex.openrouter', labels)
+                self.assertNotIn('codex.openrouter_fallback', labels)
 
     def test_no_subscription_disables_the_usage_limit_fallback(self):
         control = module('desktop_control')
         installer = mock.Mock()
         installer._diag._status_document.return_value = dict(clients={'codex': {}})
         config = mock.Mock(SWITCHED='switched', SWITCHED_SIGNED_IN='switched_signed_in',
-                           ROUTED_VARIANTS=('switched', 'switched_signed_in'))
+                           OPENROUTER='openrouter',
+                           ROUTED_VARIANTS=('switched', 'switched_signed_in', 'openrouter'))
         config.current.return_value = 'switched'
         config._codex.codex_attachment.return_value = {'openai_mode': 'none'}
         modules = dict(install=installer, codex_switch_config=config,
@@ -96,12 +97,11 @@ class DesktopControlsTests(unittest.TestCase):
         with mock.patch.object(control, 'load', side_effect=modules.__getitem__):
             facts = control.snapshot(Path('/unused'))
         choices = {row['id']: row['enabled'] for row in facts['clients'][0]['choices']}
-        self.assertEqual(choices, {'subscription': False, 'openrouter': True,
-                                   'openrouter_fallback': False})
+        self.assertEqual(choices, {'subscription': False, 'openrouter': True})
 
     def test_fixed_destinations_reach_the_switch_owner(self):
         control, owner = module('desktop_control'), mock.Mock()
-        for action, target in (('codex.openrouter', 'switched_signed_in'),
+        for action, target in (('codex.openrouter', 'openrouter_toggle'),
                                ('codex.openrouter_fallback', 'switched'),
                                ('codex.subscription', 'switched_back'),
                                ('claude.openrouter', '3p'), ('claude.subscription', '1p')):
@@ -132,8 +132,7 @@ class DesktopControlsTests(unittest.TestCase):
                      update=dict(channel='stable', latest_known_version='1.3.5.190'), clients=[
                          dict(id='codex', label='Codex', selected='subscription', choices=[
                              dict(id='subscription', label='ChatGPT + OpenRouter'),
-                         dict(id='openrouter', label='OpenRouter only'),
-                         dict(id='openrouter_fallback', label='OpenRouter for usage limits')]),
+                         dict(id='openrouter', label='OpenRouter')]),
                          dict(id='claude', label='Claude', selected='subscription', choices=[
                              dict(id='subscription', label='Claude subscription'),
                              dict(id='openrouter', label='OpenRouter')])])
@@ -142,10 +141,8 @@ class DesktopControlsTests(unittest.TestCase):
                                        'Claude: Claude subscription'])
         self.assertIn('Running version 1.3.4.1', details)
         labels = dict(options)
-        self.assertEqual((labels['codex.openrouter'], labels['codex.openrouter_fallback'],
-                          labels['claude.openrouter'], labels['claude.open']),
-                         ('Codex: switch to OpenRouter only', 'Codex: switch to OpenRouter for usage limits',
-                          'Claude: switch to OpenRouter', 'Open Claude'))
+        self.assertEqual((labels['codex.openrouter'], labels['claude.openrouter'], labels['claude.open']),
+                         ('Codex: switch to OpenRouter', 'Claude: switch to OpenRouter', 'Open Claude'))
         self.assertEqual(labels['router.restart'], 'Restart Router to use version 1.3.5.190…')
         self.assertEqual(labels['startup.toggle'], 'Turn off start at sign-in')
         for action in ('setup.add', 'setup.remove', 'updates.install', 'help.support'):
@@ -155,8 +152,7 @@ class DesktopControlsTests(unittest.TestCase):
         self.assertEqual(model.chooser(model.menu(facts, busy='Switching…')['menu'])[1], [])
         rows = {row['label']: [child['label'] for child in row['children']] for row in model.menu(facts)['menu']}
         self.assertEqual(rows['Codex — ChatGPT + OpenRouter'],
-                         ['ChatGPT + OpenRouter', 'OpenRouter only…',
-                          'OpenRouter for usage limits…', 'Open Codex'])
+                         ['ChatGPT + OpenRouter', 'OpenRouter…', 'Open Codex'])
         self.assertEqual(rows['Updates'][-1], 'Check for updates…')
 
     def test_menu_ignores_repeated_clicks_and_leaves_service_running(self):
