@@ -3411,5 +3411,523 @@
       "result": "pass"
     }
   ]
+},
+{
+  "kind": "model_routes_v1",
+  "observed_at": "2026-11-10T20:50:11.335815+00:00",
+  "model": "google/gemini-4-carbon",
+  "provider": "openrouter",
+  "capability_fingerprint": "551493370248f82f4da97487e28db95d61dcaf2f3357a08fa666302b0fd8bc55",
+  "runtime_fingerprint": "efe104ff72bca8278b659d6cc1f3e849247bf7d7ac21b4ce340f5a89e4d3736f",
+  "router_version": "1.3.46",
+  "router_revision": "29cf7b63a8aad07a9461104d78c7259f185046ba",
+  "routes": [
+    {
+      "protocol": "responses",
+      "client": "codex",
+      "client_version": "0.167.0-alpha.3.2",
+      "requested_effort": "low",
+      "served_models": [],
+      "served_efforts": [],
+      "calls": 0,
+      "conformance": "pass",
+      "result": "fail"
+    },
+    {
+      "protocol": "messages",
+      "client": "claude",
+      "client_version": "2.1.318",
+      "requested_effort": "low",
+      "served_models": [],
+      "served_efforts": [],
+      "calls": 0,
+      "conformance": "pass",
+      "result": "fail"
+    }
+  ]
+},
+{
+  "kind": "model_routes_v1",
+  "observed_at": "2026-11-10T23:51:50.315785+00:00",
+  "model": "google/gemini-4-carbon",
+  "provider": "openrouter",
+  "capability_fingerprint": "551493370248f82f4da97487e28db95d61dcaf2f3357a08fa666302b0fd8bc55",
+  "runtime_fingerprint": "e74e9fe3e18236f1b372d6bf5f18b1d63987b2471e363e79230115a609c1f575",
+  "router_version": "1.3.46",
+  "router_revision": "29cf7b63a8aad07a9461104d78c7259f185046ba",
+  "routes": [
+    {
+      "protocol": "responses",
+      "client": "codex",
+      "client_version": "0.167.0-alpha.3.2",
+      "requested_effort": "low",
+      "served_models": [
+        {
+          "value": "google/gemini-4-carbon",
+          "source": "response.created.response.model"
+        },
+        {
+          "value": "google/gemini-4-carbon",
+          "source": "response.in_progress.response.model"
+        },
+        {
+          "value": "google/gemini-4-carbon",
+          "source": "response.completed.response.model"
+        },
+        {
+          "value": "google/gemini-4-carbon",
+          "source": "response.created.response.model"
+        },
+        {
+          "value": "google/gemini-4-carbon",
+          "source": "response.in_progress.response.model"
+        },
+        {
+          "value": "google/gemini-4-carbon",
+          "source": "response.completed.response.model"
+        },
+        {
+          "value": "google/gemini-4-carbon",
+          "source": "response.created.response.model"
+        },
+        {
+          "value": "google/gemini-4-carbon",
+          "source": "response.in_progress.response.model"
+        },
+        {
+          "value": "google/gemini-4-carbon",
+          "source": "response.completed.response.model"
+        }
+      ],
+      "served_efforts": [
+        {
+          "value": "low",
+          "source": "response.created.response.reasoning.effort"
+        },
+        {
+          "value": "low",
+          "source": "response.in_progress.response.reasoning.effort"
+        },
+        {
+          "value": "low",
+          "source": "response.completed.response.reasoning.effort"
+        },
+        {
+          "value": "low",
+          "source": "response.created.response.reasoning.effort"
+        },
+        {
+          "value": "low",
+          "source": "response.in_progress.response.reasoning.effort"
+        },
+        {
+          "value": "low",
+          "source": "response.completed.response.reasoning.effort"
+        },
+        {
+          "value": "low",
+          "source": "response.created.response.reasoning.effort"
+        },
+        {
+          "value": "low",
+          "source": "response.in_progress.response.reasoning.effort"
+        },
+        {
+          "value": "low",
+          "source": "response.completed.response.reasoning.effort"
+        }
+      ],
+      "calls": 4,
+      "conformance": "pass",
+      "result": "pass"
+    },
+    {
+      "protocol": "messages",
+      "client": "claude",
+      "client_version": "2.1.318",
+      "requested_effort": "low",
+      "served_models": [
+        {
+          "value": "google/gemini-4-carbon",
+          "source": "message_start.message.model"
+        },
+        {
+          "value": "google/gemini-4-carbon",
+          "source": "message_start.message.model"
+        },
+        {
+          "value": "google/gemini-4-carbon",
+          "source": "message_start.message.model"
+        }
+      ],
+      "served_efforts": [],
+      "calls": 3,
+      "conformance": "pass",
+      "result": "fail"
+    }
+  ]
+},
+{
+  "kind": "model_routes_v1",
+  "observed_at": "2026-11-10T23:53:10.853173+00:00",
+  "model": "google/gemini-4-carbon",
+  "provider": "openrouter",
+  "capability_fingerprint": "551493370248f82f4da97487e28db95d61dcaf2f3357a08fa666302b0fd8bc55",
+  "runtime_fingerprint": "e74e9fe3e18236f1b372d6bf5f18b1d63987b2471e363e79230115a609c1f575",
+  "router_version": "1.3.46",
+  "router_revision": "29cf7b63a8aad07a9461104d78c7259f185046ba",
+  "routes": [
+    {
+      "protocol": "responses",
+      "client": "codex",
+      "client_version": "0.167.0-alpha.3.2",
+      "requested_effort": "low",
+      "served_models": [
+        {
+          "value": "google/gemini-4-carbon",
+          "source": "response.created.response.model"
+        },
+        {
+          "value": "google/gemini-4-carbon",
+          "source": "response.in_progress.response.model"
+        },
+        {
+          "value": "google/gemini-4-carbon",
+          "source": "response.completed.response.model"
+        },
+        {
+          "value": "google/gemini-4-carbon",
+          "source": "response.created.response.model"
+        },
+        {
+          "value": "google/gemini-4-carbon",
+          "source": "response.in_progress.response.model"
+        },
+        {
+          "value": "google/gemini-4-carbon",
+          "source": "response.completed.response.model"
+        },
+        {
+          "value": "google/gemini-4-carbon",
+          "source": "response.created.response.model"
+        },
+        {
+          "value": "google/gemini-4-carbon",
+          "source": "response.in_progress.response.model"
+        },
+        {
+          "value": "google/gemini-4-carbon",
+          "source": "response.completed.response.model"
+        }
+      ],
+      "served_efforts": [
+        {
+          "value": "low",
+          "source": "response.created.response.reasoning.effort"
+        },
+        {
+          "value": "low",
+          "source": "response.in_progress.response.reasoning.effort"
+        },
+        {
+          "value": "low",
+          "source": "response.completed.response.reasoning.effort"
+        },
+        {
+          "value": "low",
+          "source": "response.created.response.reasoning.effort"
+        },
+        {
+          "value": "low",
+          "source": "response.in_progress.response.reasoning.effort"
+        },
+        {
+          "value": "low",
+          "source": "response.completed.response.reasoning.effort"
+        },
+        {
+          "value": "low",
+          "source": "response.created.response.reasoning.effort"
+        },
+        {
+          "value": "low",
+          "source": "response.in_progress.response.reasoning.effort"
+        },
+        {
+          "value": "low",
+          "source": "response.completed.response.reasoning.effort"
+        }
+      ],
+      "calls": 4,
+      "conformance": "pass",
+      "result": "pass"
+    },
+    {
+      "protocol": "messages",
+      "client": "claude",
+      "client_version": "2.1.318",
+      "requested_effort": "low",
+      "served_models": [
+        {
+          "value": "google/gemini-4-carbon",
+          "source": "message_start.message.model"
+        },
+        {
+          "value": "google/gemini-4-carbon",
+          "source": "message_start.message.model"
+        },
+        {
+          "value": "google/gemini-4-carbon",
+          "source": "message_start.message.model"
+        }
+      ],
+      "served_efforts": [],
+      "calls": 3,
+      "conformance": "pass",
+      "result": "fail"
+    }
+  ]
+},
+{
+  "kind": "model_routes_v1",
+  "observed_at": "2026-11-10T23:57:44.761836+00:00",
+  "model": "google/gemini-4-carbon",
+  "provider": "openrouter",
+  "capability_fingerprint": "551493370248f82f4da97487e28db95d61dcaf2f3357a08fa666302b0fd8bc55",
+  "runtime_fingerprint": "e74e9fe3e18236f1b372d6bf5f18b1d63987b2471e363e79230115a609c1f575",
+  "router_version": "1.3.46",
+  "router_revision": "29cf7b63a8aad07a9461104d78c7259f185046ba",
+  "routes": [
+    {
+      "protocol": "responses",
+      "client": "codex",
+      "client_version": "0.167.0-alpha.3.2",
+      "requested_effort": "low",
+      "served_models": [
+        {
+          "value": "google/gemini-4-carbon",
+          "source": "response.created.response.model"
+        },
+        {
+          "value": "google/gemini-4-carbon",
+          "source": "response.in_progress.response.model"
+        },
+        {
+          "value": "google/gemini-4-carbon",
+          "source": "response.completed.response.model"
+        },
+        {
+          "value": "google/gemini-4-carbon",
+          "source": "response.created.response.model"
+        },
+        {
+          "value": "google/gemini-4-carbon",
+          "source": "response.in_progress.response.model"
+        },
+        {
+          "value": "google/gemini-4-carbon",
+          "source": "response.completed.response.model"
+        },
+        {
+          "value": "google/gemini-4-carbon",
+          "source": "response.created.response.model"
+        },
+        {
+          "value": "google/gemini-4-carbon",
+          "source": "response.in_progress.response.model"
+        },
+        {
+          "value": "google/gemini-4-carbon",
+          "source": "response.completed.response.model"
+        }
+      ],
+      "served_efforts": [
+        {
+          "value": "low",
+          "source": "response.created.response.reasoning.effort"
+        },
+        {
+          "value": "low",
+          "source": "response.in_progress.response.reasoning.effort"
+        },
+        {
+          "value": "low",
+          "source": "response.completed.response.reasoning.effort"
+        },
+        {
+          "value": "low",
+          "source": "response.created.response.reasoning.effort"
+        },
+        {
+          "value": "low",
+          "source": "response.in_progress.response.reasoning.effort"
+        },
+        {
+          "value": "low",
+          "source": "response.completed.response.reasoning.effort"
+        },
+        {
+          "value": "low",
+          "source": "response.created.response.reasoning.effort"
+        },
+        {
+          "value": "low",
+          "source": "response.in_progress.response.reasoning.effort"
+        },
+        {
+          "value": "low",
+          "source": "response.completed.response.reasoning.effort"
+        }
+      ],
+      "calls": 4,
+      "conformance": "pass",
+      "result": "pass"
+    },
+    {
+      "protocol": "messages",
+      "client": "claude",
+      "client_version": "2.1.318",
+      "requested_effort": "low",
+      "served_models": [
+        {
+          "value": "google/gemini-4-carbon",
+          "source": "message_start.message.model"
+        },
+        {
+          "value": "google/gemini-4-carbon",
+          "source": "message_start.message.model"
+        },
+        {
+          "value": "google/gemini-4-carbon",
+          "source": "message_start.message.model"
+        }
+      ],
+      "served_efforts": [],
+      "calls": 3,
+      "conformance": "pass",
+      "result": "pass"
+    }
+  ]
+},
+{
+  "kind": "model_routes_v1",
+  "observed_at": "2026-11-11T00:24:26.167933+00:00",
+  "model": "google/gemini-4-carbon",
+  "provider": "openrouter",
+  "capability_fingerprint": "551493370248f82f4da97487e28db95d61dcaf2f3357a08fa666302b0fd8bc55",
+  "runtime_fingerprint": "694cbe98d3a9f04e1ace41f863d113ca9800d2622141bf04af28f7ebfc1ae86f",
+  "router_version": "1.3.47",
+  "router_revision": "29cf7b63a8aad07a9461104d78c7259f185046ba",
+  "routes": [
+    {
+      "protocol": "responses",
+      "client": "codex",
+      "client_version": "0.167.0-alpha.3.2",
+      "requested_effort": "low",
+      "served_models": [
+        {
+          "value": "google/gemini-4-carbon",
+          "source": "response.created.response.model"
+        },
+        {
+          "value": "google/gemini-4-carbon",
+          "source": "response.in_progress.response.model"
+        },
+        {
+          "value": "google/gemini-4-carbon",
+          "source": "response.completed.response.model"
+        },
+        {
+          "value": "google/gemini-4-carbon",
+          "source": "response.created.response.model"
+        },
+        {
+          "value": "google/gemini-4-carbon",
+          "source": "response.in_progress.response.model"
+        },
+        {
+          "value": "google/gemini-4-carbon",
+          "source": "response.completed.response.model"
+        },
+        {
+          "value": "google/gemini-4-carbon",
+          "source": "response.created.response.model"
+        },
+        {
+          "value": "google/gemini-4-carbon",
+          "source": "response.in_progress.response.model"
+        },
+        {
+          "value": "google/gemini-4-carbon",
+          "source": "response.completed.response.model"
+        }
+      ],
+      "served_efforts": [
+        {
+          "value": "low",
+          "source": "response.created.response.reasoning.effort"
+        },
+        {
+          "value": "low",
+          "source": "response.in_progress.response.reasoning.effort"
+        },
+        {
+          "value": "low",
+          "source": "response.completed.response.reasoning.effort"
+        },
+        {
+          "value": "low",
+          "source": "response.created.response.reasoning.effort"
+        },
+        {
+          "value": "low",
+          "source": "response.in_progress.response.reasoning.effort"
+        },
+        {
+          "value": "low",
+          "source": "response.completed.response.reasoning.effort"
+        },
+        {
+          "value": "low",
+          "source": "response.created.response.reasoning.effort"
+        },
+        {
+          "value": "low",
+          "source": "response.in_progress.response.reasoning.effort"
+        },
+        {
+          "value": "low",
+          "source": "response.completed.response.reasoning.effort"
+        }
+      ],
+      "calls": 4,
+      "conformance": "pass",
+      "result": "pass"
+    },
+    {
+      "protocol": "messages",
+      "client": "claude",
+      "client_version": "2.1.318",
+      "requested_effort": "low",
+      "served_models": [
+        {
+          "value": "google/gemini-4-carbon",
+          "source": "message_start.message.model"
+        },
+        {
+          "value": "google/gemini-4-carbon",
+          "source": "message_start.message.model"
+        },
+        {
+          "value": "google/gemini-4-carbon",
+          "source": "message_start.message.model"
+        }
+      ],
+      "served_efforts": [],
+      "calls": 3,
+      "conformance": "pass",
+      "result": "pass"
+    }
+  ]
 }
 ]

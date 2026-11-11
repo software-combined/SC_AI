@@ -21,7 +21,7 @@ from .model_metadata import project_modalities, qualify_name
 from .registry import load, picker_key, upstream_id_for
 
 MODELS_PATH = Path(__file__).with_name('models.json')
-EVIDENCE_PATH = Path(__file__).resolve().parents[1] / 'docs' / 'acceptance-ledger.json'
+EVIDENCE_PATH = Path(__file__).resolve().parents[2] / 'docs' / 'acceptance-ledger.json'
 
 
 def fetch_live(provider_id=provider_defs.DEFAULT_EXTERNAL):
