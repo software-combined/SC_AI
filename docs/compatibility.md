@@ -4,7 +4,8 @@
 
 The isolated candidate tested `anthropic/claude-fable-5.2` at Low effort with
 Codex bundled CLI `0.167.0-alpha.3.2` and Claude Code `2.1.318`. Both client
-versions match the preceding checks. Synthetic Codex tool, stream, image and
+versions match the preceding checks. The check repeated on the combined 1.3.52
+candidate after the model-switch tool fix. Synthetic Codex tool, stream, image and
 compaction checks passed in four upstream attempts. Claude Code completed two
 sequential Reads, paired results and the final marker in three attempts.
 

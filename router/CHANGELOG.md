@@ -8,6 +8,12 @@
 - Refresh SCG Subagents recommendations against Artificial Analysis Intelligence
   Index v5.0.1 and current model prices.
 
+## 1.3.51
+
+- Keep existing Codex chats usable after model switches by merging repeated
+  tool declarations before assigning names. Promote saved tool-definition blocks
+  into the current tool list instead of forwarding native declarations twice.
+
 ## 1.3.50
 
 - Adapt composed tool parameter roots for Claude models on the Codex OpenRouter
