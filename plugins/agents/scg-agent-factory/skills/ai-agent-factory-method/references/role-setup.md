@@ -25,8 +25,9 @@ another owner's record or make up a chat ID to complete setup.
 
 Start with a Project manager. It can cover several responsibilities and use
 temporary helpers. Add a persistent owner when an area needs continuing,
-distinct ownership. Reuse required independent reviewers without creating a
-permanent QA owner solely for one check.
+distinct ownership; see [Design the team](../SKILL.md#design-the-team).
+Reuse required independent reviewers without creating a permanent QA owner
+solely for one check.
 
 | Starting role | Responsibility | Often combined with |
 | --- | --- | --- |
@@ -51,6 +52,7 @@ evidence; a role label supplies neither expertise nor approval authority.
 For example, a market study can use one manager covering Product and a temporary
 research helper. A continuing integration programme may need a Data owner and
 a Finance specialist. Neither example requires the full library.
+The Factory method's video game example shows a team with several disciplines.
 
 ## Bind an owner to its work
 
@@ -146,7 +148,8 @@ compaction behaviour in Codex and Claude Code.
 ## Verify the setup
 
 Check the actual owner identities, selected duties, instruction routes and
-current-state pointers. Check that the client loads the human-contact routes
+current-state pointers. Confirm that every roster chat exists and that no two
+owners write the same area. Check that the client loads the human-contact routes
 and that each owner can read and write the one shared team board.
 Complete one bounded useful assignment. Confirm that the owner reads the
 current record and acts only within its allocation.

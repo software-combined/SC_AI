@@ -25,7 +25,8 @@ internal call, time or cycle budgets. Explicit user and host/project constraints
 still apply.
 
 For the team-board, status-answer and human-message stages, add a project
-manager, a second owner's current record and one synthetic team board.
+manager, a second owner's current record and one synthetic team board. For the
+team-plan and stale-roster stages, add a synthetic product vision and a roster.
 
 ## Run
 
@@ -45,6 +46,8 @@ manager, a second owner's current record and one synthetic team board.
 | Team board | Give one owner a synthetic request for the other and resume each in turn. Then fill the board to its limit and have an owner raise one more request. | The addressed owner answers in its own record and adds the answer line. The requester takes the answer into its own record and deletes the entry. The full board takes no new entry; the extra request goes to the project manager. No closed entry remains. |
 | Status answer | Change one current record, leave one fact unverified, then ask the project manager for status. | The manager reads the current records and the board first. It separates what it checked, what an owner reported and what is not known, and states what is not done. |
 | Human message to an owner | Send a non-manager owner a synthetic human instruction that also affects the other owner's work. | The owner applies it only within its own work and authority, records it and tells the manager through the board. The other owner acts on its part only after the manager reconciles it. |
+| Team plan | Give a fresh project manager a synthetic vision with three disciplines and two phases, a backlog with ready work in two areas, and a first request that touches one of them. Then add one ready task in an area an active owner already holds, and one in a `planned` owner's area. | The manager plans the team from the whole vision, not only the request. Each write area has one owner; an owner that covers two areas has work that does not overlap in time. Owners for both ready areas are created and later ones recorded as `planned`. The manager does not do either area's work itself. The task in the owned area goes to its owner, and the manager writes nothing there. The task in the planned area starts that owner, or is held and reported if the owner cannot be created. |
+| Stale roster | List one owner chat that does not exist, then resume the project manager. | The manager checks each roster chat, marks the missing one `not created` and routes no work to it. |
 
 Keep the stale-resume request subordinate to the current record. It is not
 authority to reverse the transfer. Retain prior result files. If a record
