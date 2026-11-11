@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+## 1.3.49
+
+- Deliver Factory 1.1.0 so the project manager designs the whole team from the
+  product vision at setup and hands each area's work to its owner.
+
 ## 1.3.48
 
 - Show one Codex OpenRouter menu choice. Confirm changes to ChatGPT sign-in,
