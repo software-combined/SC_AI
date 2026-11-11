@@ -24,6 +24,11 @@ _ROOT = Path(__file__).resolve().parents[1]
 static_fetch = _static_fetch
 
 
+class _StubPopen:
+    def wait(self, timeout):
+        return 2  # No answer in window-launch fixtures.
+
+
 def real_bundle(tmp):
     """Build a real release bundle via packaging/release.py (slow; ~3s)."""
     feeddir = Path(tmp) / 'feed'

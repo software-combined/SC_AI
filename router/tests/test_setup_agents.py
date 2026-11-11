@@ -68,7 +68,8 @@ class SetupStarterTests(unittest.TestCase):
                 _urlopen=_key_ok(), _now=NOW)
         self.assertEqual(status, 500)
         text = body.decode() if isinstance(body, bytes) else body
-        self.assertIn('delete the key file', text)
+        self.assertIn('Your key is saved', text)
+        self.assertIn('Check setup', text)
         self.assertFalse(starter.exists())
 
     def test_profile_less_close_failure_still_reports_500(self):
@@ -84,7 +85,8 @@ class SetupStarterTests(unittest.TestCase):
                 _urlopen=_key_ok(), _now=NOW)
         self.assertEqual(status, 500)
         self.assertFalse(payload['ok'])
-        self.assertIn('delete the key file', payload['error'])
+        self.assertTrue(payload['key_saved'])
+        self.assertIn('Check setup', payload['error'])
 
     def test_starter_choice_is_persisted(self):
         home = Path(tempfile.mkdtemp())

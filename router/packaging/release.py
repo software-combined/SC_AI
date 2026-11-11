@@ -35,7 +35,7 @@ PACKAGING_FILES = (
     # Plan 179: the router carries the agent skills, so a machine needs no
     # git account and no marketplace command to receive them.
     'packaging/agent_skills.py',
-    'packaging/client_executable.py',
+    'packaging/client_executable.py', 'packaging/setup_completion.py',
     'packaging/install_delivery.py', 'packaging/repair_ui.py', 'packaging/native_payload.py',
     'packaging/windows_installation.py',
     'packaging/native_controller.py', 'packaging/native_setup.py', 'packaging/setup_restart.py',

@@ -24,7 +24,6 @@ DISABLE = Path(__file__).resolve().parents[1] / 'tools' / 'disable.py'
 STATE = {'port': 4321, 'token': 'tok'}
 URL = 'http://127.0.0.1:4321/tok/backend-api/codex'
 BEGIN, END = '# BEGIN local mixed model picker\n', '# END local mixed model picker\n'
-SEEDED = 'model = "deepseek/deepseek-v4.1-flash-1017"\nmodel_reasoning_effort = "max"\n'
 # The managed approvals reviewer the default block carries (develop #347).
 REVIEWER = 'approvals_reviewer = "user"\n'
 PROVIDER = {'name': 'SC router', 'base_url': URL, 'wire_api': 'responses'}
@@ -155,7 +154,7 @@ class SwitchFlowTests(unittest.TestCase):
             entry = _entry(home)
             self.assertNotIn('variant', entry)
             self.assertEqual(entry['inserted_block'],
-                             BEGIN + f'openai_base_url = "{url}"\n' + REVIEWER + SEEDED + END)
+                             BEGIN + f'openai_base_url = "{url}"\n' + REVIEWER + END)
             self.assertTrue(config.read_text().startswith(entry['inserted_block']))
 
     def test_every_variant_keeps_one_reviewer_line_and_the_owners_for_detach(self):

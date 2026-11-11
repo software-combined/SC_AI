@@ -37,9 +37,11 @@ class KeyWindowTests(unittest.TestCase):
         for name, mode in attached.items():
             receipts.write_client_receipt(self.home, name, {'claude_mode': mode})
         def saved(*_args, **_kwargs):
+            doc = json.loads(self.state.read_text())
+            doc.pop('setup')
             if answer is not None:
-                doc = json.loads(self.state.read_text())
-                self.state.write_text(json.dumps(dict(doc, claude_mode=answer, anthropic_mode=answer)))
+                doc.update(claude_mode=answer, anthropic_mode=answer)
+            self.state.write_text(json.dumps(doc))
             return SimpleNamespace(returncode=0)
         run = mock.Mock(side_effect=saved)
         self.setup._key(self.source, self.home, run=run)

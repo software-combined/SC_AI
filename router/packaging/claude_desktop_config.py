@@ -341,6 +341,9 @@ def attach(home, state, receipts, data_dir_override=None, env=None, *, python=No
     entry_path = applied_entry_path(data_dir)
     if owned is not None and read_entry(entry_path).get(API_KEY_KEY) != API_KEY_VALUE:
         operational_snapshot(home, state, existing, receipts)
+        mode = state.get('claude_mode', 'subscription')
+        if existing.get('claude_mode', 'subscription') != mode:
+            receipts.write_client_receipt(home, CLIENT_KEY, dict(existing, claude_mode=mode))
         if python is not None:
             _install_switch_launcher(home, python, env)
         return entry_path

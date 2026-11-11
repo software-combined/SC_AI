@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Apply late subscription answers through the installer after saving access,
+  including when the key already exists. Keep setup pending until answers match
+  attached assistants; preserve saved keys and model picks during recovery.
+
+- Keep native model defaults on fresh subscription installs and preserve explicit choices.
 - Show model access in the Router menu and check saved keys before work-account
   provisioning, preserving live keys and keys whose validity is unknown.
 - Adapt composed tool parameter roots for Claude models on the Codex OpenRouter

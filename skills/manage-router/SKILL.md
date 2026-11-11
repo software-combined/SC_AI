@@ -50,4 +50,6 @@ URLs, download cookies or raw configuration bodies.
 
 Reopening setup preserves the existing release channel, key, instructions,
 company policy and disabled plugins. Attaching another assistant is additive.
-Native subscription sign-in stays with its original client. Software downloads do not require sign-in.
+Fresh subscription installs keep the assistant's native model default.
+Existing explicit model choices stay in place. Native subscription sign-in
+stays with its original client. Software downloads do not require sign-in.

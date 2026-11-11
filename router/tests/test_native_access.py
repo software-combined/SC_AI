@@ -47,6 +47,7 @@ class NativeAccessTests(unittest.TestCase):
         skills = mock.Mock()
         skills.plugin_sources.return_value = {'scg-review': Path('/plugin')}
         with mock.patch.object(readiness, 'load', return_value=skills), \
+                mock.patch.object(readiness, 'choices_applied', return_value=True), \
                 mock.patch.object(readiness, 'plugins_available', side_effect=lambda *a, **kw:
                     kw['reasons'].update(codex='found') or True), \
                 mock.patch.object(readiness, 'successful_reply', return_value=True):

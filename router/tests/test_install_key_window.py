@@ -23,6 +23,7 @@ from tests.install_fixtures import (
     _static_fetch,
     install_mod,
 )
+from tests.install_fixtures import _StubPopen
 from tests.test_install_config import _StubStdin, _fake_write_catalogue
 
 @unix_only
@@ -36,7 +37,7 @@ class InstallKeyWindowTests(unittest.TestCase):
             blob, latest = _craft_bundle('1.0.0')
             spawned = []
 
-            class FakePopen:
+            class FakePopen(_StubPopen):
                 def __init__(self, cmd, **kwargs):
                     spawned.append(cmd)
                     self.stdin = _StubStdin()
@@ -68,7 +69,7 @@ class InstallKeyWindowTests(unittest.TestCase):
             blob, latest = _craft_bundle('1.0.0')
             spawned = []
 
-            class FakePopen:
+            class FakePopen(_StubPopen):
                 def __init__(self, cmd, **kwargs):
                     spawned.append(cmd)
                     self.stdin = _StubStdin()
@@ -109,7 +110,7 @@ class InstallKeyWindowTests(unittest.TestCase):
             blob, latest = _craft_bundle('1.0.0')
             spawned = []
 
-            class FakePopen:
+            class FakePopen(_StubPopen):
                 def __init__(self, cmd, **kwargs):
                     spawned.append(cmd)
                     self.stdin = _StubStdin()
@@ -173,7 +174,7 @@ class InstallKeyWindowTests(unittest.TestCase):
             env = {'HOME': str(Path(tmp) / 'fakehome'), 'PATH': '/usr/bin:/bin'}
             spawned = []
 
-            class FakePopen:
+            class FakePopen(_StubPopen):
                 def __init__(self, cmd, **kwargs):
                     spawned.append(cmd)
                     self.stdin = _StubStdin()
@@ -334,7 +335,7 @@ class InstallKeyWindowTests(unittest.TestCase):
             old_blob, old_latest = _craft_bundle('1.0.0')
             spawned = []
 
-            class FakePopen:
+            class FakePopen(_StubPopen):
                 def __init__(self, cmd, **kwargs):
                     spawned.append(cmd)
                     self.stdin = _StubStdin()
@@ -358,7 +359,7 @@ class InstallKeyWindowTests(unittest.TestCase):
             blob, latest = _craft_bundle('1.0.0')
             spawned = []
 
-            class FakePopen:
+            class FakePopen(_StubPopen):
                 def __init__(self, cmd, **kwargs):
                     spawned.append(cmd)
                     self.stdin = _StubStdin()
@@ -404,7 +405,7 @@ class InstallKeyWindowTests(unittest.TestCase):
                 self.assertEqual(
                     install_mod.do_install(args, _fetch=_static_fetch(latest, blob)), 0)
             self.assertNotIn('/setup/', out.getvalue())
-            self.assertIn('could not open the key window', out.getvalue())
+            self.assertIn('Setup is pending', out.getvalue())
 
 
 @unix_only

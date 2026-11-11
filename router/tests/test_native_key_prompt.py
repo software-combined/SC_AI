@@ -46,6 +46,9 @@ class NativeKeyPromptTests(unittest.TestCase):
             def prompt(*args, **kwargs):
                 self.assertTrue(context.__exit__.called)
                 self.assertIn('ai_router.key_prompt', args[0])
+                finished = json.loads(state.read_text())
+                finished.pop('setup')
+                state.write_text(json.dumps(finished))
                 return SimpleNamespace(returncode=0)
 
             run = mock.Mock(side_effect=prompt)
@@ -61,7 +64,10 @@ class NativeKeyPromptTests(unittest.TestCase):
             self.assertIn('Opening key setup', dialog.Progress.call_args.args[0])
             self.assertEqual(run.call_count, 0 if cancelled else 1)
             self.assertEqual(key.read_bytes(), b'synthetic-existing-key')
-            self.assertEqual(state.read_bytes(), before)
+            expected = json.loads(before)
+            if not cancelled:
+                expected.pop('setup')
+            self.assertEqual(json.loads(state.read_text()), expected)
 
     def test_repair_skips_the_key_window_when_the_saved_key_is_usable(self):
         self.check_prompt(usable=True)
@@ -84,8 +90,10 @@ class NativeKeyPromptTests(unittest.TestCase):
             key.write_text('synthetic-saved-key' if usable else '')
             key.chmod(0o600)
             state = home / 'mixed-router-state.json'
-            state.write_text(json.dumps(dict(clients='both', port=1, token='synthetic',
-                                            setup=dict(nonce='test', expires=2000))))
+            saved = dict(clients='both', port=1, token='synthetic')
+            if not usable:
+                saved['setup'] = dict(nonce='test', expires=2000)
+            state.write_text(json.dumps(saved))
             before = state.read_bytes()
             run = mock.Mock(return_value=SimpleNamespace(returncode=code))
             with mock.patch.dict(os.environ, {'OPENROUTER_API_KEY': 'synthetic-shell-key'}), \

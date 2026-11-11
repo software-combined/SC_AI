@@ -1,7 +1,7 @@
-"""Codex-facing defaults the router owns: no Ultra, Max in, steer, DeepSeek.
+"""Codex-facing defaults: no Ultra, native subscription model, external seed.
 
-The served catalogue never carries Ultra, the install seeds the startup
-model and the managed [desktop] preferences, and a detach puts the prior
+The served catalogue never carries Ultra, no-subscription installs seed the
+startup model, all installs manage [desktop], and a detach puts the prior
 desktop values back.
 """
 import importlib.util as _ilu
@@ -168,12 +168,12 @@ class InstallerPreferenceTests(unittest.TestCase):
         run_install(self, tmp, home, static_fetch(latest, blob), ok_run)
         return Path(tmp) / 'fakehome' / '.codex' / 'config.toml'
 
-    def test_install_seeds_the_model_and_the_desktop_preferences(self):
+    def test_subscription_install_keeps_native_model_and_sets_desktop_preferences(self):
         with tempfile.TemporaryDirectory() as tmp:
             home = Path(tmp) / 'home'
             text = self._install(tmp, home).read_text()
-            for expected in (SEEDED, SEEDED_EFFORT,
-                             'followUpQueueMode = "steer"', MANAGED_EFFORTS):
+            self.assertNotIn('model = ', text)
+            for expected in ('followUpQueueMode = "steer"', MANAGED_EFFORTS):
                 self.assertIn(expected, text)
             receipt = json.loads((home / 'activation.json').read_text())
             self.assertIn('desktop', receipt['clients']['codex'])
@@ -245,13 +245,13 @@ class InstallerPreferenceTests(unittest.TestCase):
             self.assertNotIn('enabled-reasoning-efforts', text)
 
     def test_an_owner_pick_inside_the_block_survives_update_and_detach(self):
-        # Codex rewrites the seeded model line in place, so the receipt's
+        # Codex inserts a model line, so the receipt's
         # block copy goes stale; an update must still land and keep the pick.
         with tempfile.TemporaryDirectory() as tmp:
             home = Path(tmp) / 'home'
             config = self._install(tmp, home, '1.0.0')
             config.write_text(config.read_text().replace(
-                SEEDED, 'model = "meta/muse-spark-1.3"'))
+                '# END local', 'model = "meta/muse-spark-1.3"\n# END local'))
             config = self._install(tmp, home, '1.0.1')
             self.assertIn('model = "meta/muse-spark-1.3"', config.read_text())
             env = {**os.environ, 'ROUTER_HOME': str(home),
@@ -269,7 +269,7 @@ class InstallerPreferenceTests(unittest.TestCase):
             home = Path(tmp) / 'home'
             config = self._install(tmp, home, '1.0.0')
             config.write_text(config.read_text().replace(
-                SEEDED, SEEDED + '\nmodel = "meta/muse-spark-1.3"'))
+                '# END local', SEEDED + '\nmodel = "meta/muse-spark-1.3"\n# END local'))
             config = self._install(tmp, home, '1.0.1')
             text = config.read_text()
             self.assertEqual(text.count('model = '), 1)

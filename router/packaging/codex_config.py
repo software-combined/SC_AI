@@ -287,13 +287,13 @@ def removal_plan(config_path, entry):
     return before, after
 
 
-def attach_config(config_path, block, previous=None):
+def attach_config(config_path, block, previous=None, *, seed_external=True):
     """Apply the block and preferences; return their original restore records."""
     _owned.restore_evidence({} if previous is None else previous, (QUEUE_KEY, EFFORTS_KEY))
     recorded = (previous or {}).get('inserted_block')
     previous_block = live_block(_read_text(config_path), recorded)
     block = preserve_picker_selection(config_path, previous_block, block)
-    block = seed_picker_selection(config_path, previous_block, block)
+    block = seed_picker_selection(config_path, previous_block, block) if seed_external else block
     before, removed = replace_config_block(config_path, block, previous_block, recorded)
     current = _read_text(config_path)
     carried = (previous or {}).get('desktop') or {}

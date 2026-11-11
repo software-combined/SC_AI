@@ -108,12 +108,18 @@ their own warning. Choose **Sign in with work account** when model access is mis
 The secure window also offers **Use my own key**. **Manage Router > Replace model key**
 remains available for recovery. A saved key is kept unless the provider confirms
 that it no longer works; an outage or an unknown result does not permit replacement.
+Fresh subscription installs retain the assistant's native model default.
+Explicit model choices and the default for users without a subscription are preserved.
+Setup applies subscription answers to the connected assistants before it asks for a test reply.
 
 Claude desktop can connect without a terminal client. Automatic SC tool delivery
 also needs the Claude Code setup tools from the desktop app's Install page.
 The graphical setup checks this prerequisite before making a desktop attachment.
 It guides existing desktop users there instead of repeating a repair request.
 This does not attach the terminal client or restart an assistant.
+Manual CLI setup waits for the access window after attaching the selected assistants.
+It then applies saved subscription answers. Cancelled or unavailable windows leave
+setup pending. Keep the saved key and choose **Check setup** in SCG Router to finish.
 
 ## Acceptance matrix
 

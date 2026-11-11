@@ -165,9 +165,9 @@ class SetupTests(unittest.TestCase):
         self.assertNotIn('Your work key is ready', message.call_args.args[1])
 
     def test_work_key_confirmation_follows_success_and_names_installed_clients(self):
-        for clients, expected in (('codex', 'Restart Codex'),
-                                  ('claude', 'Restart Claude Code'),
-                                  ('both', 'Quit and reopen Codex, and restart Claude Code'),
+        for clients, expected in (('codex', 'Codex'),
+                                  ('claude', 'Claude Code'),
+                                  ('both', 'Codex and Claude Code'),
                                   ('none', 'Continue installation')):
             with self.subTest(clients), \
                  mock.patch.object(work_account, 'collect', return_value={'key': KEY}), \
@@ -176,7 +176,8 @@ class SetupTests(unittest.TestCase):
                 self.assertEqual(key_prompt.run_window('http://127.0.0.1:1/t/setup/n',
                     tool_path='/dialog', platform_name='linux', work=True, clients=clients), 0)
             text = message.call_args.args[1]
-            self.assertIn('Your work key is ready.', text)
+            self.assertIn('Your work key and choices are saved.', text)
+            self.assertIn('Check setup', text)
             self.assertIn(expected, text)
             if clients == 'claude':
                 self.assertNotIn('Codex', text)
