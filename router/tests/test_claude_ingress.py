@@ -203,7 +203,7 @@ class ClaudeIngressTests(unittest.TestCase):
         self.assertEqual(tiers['anthropic/claude-sonnet-5.5'], 'sonnet')
         self.assertEqual(tiers['anthropic/claude-opus-5.5'], 'opus')
         self.assertEqual(tiers['anthropic/claude-haiku-5.5'], 'haiku')
-        self.assertEqual(tiers['anthropic/claude-fable-5.1'], 'fable')
+        self.assertEqual(tiers['anthropic/claude-fable-5.2'], 'fable')
         for row_id, tier in tiers.items():
             if not row_id.startswith('anthropic/claude-'):
                 self.fail('Another vendor was assigned a Claude family tier')

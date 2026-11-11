@@ -1,6 +1,12 @@
 # Security model selection
 
-Evidence checked **2026-09-12**. These are research-based starting choices for
+Historical security evidence checked **2026-09-12**, with the dated Grok update
+below. The general catalogue refresh on 2026-11-11 did not requalify security
+models or access policies. Some versions below are retired. Use this as a
+historical candidate list; verify current exact versions and qualify them
+before assignment. Never transfer Kimi K3, Opus 5 or Sol 5.6 cyber results to
+their successors. Current prices and general-task evidence live in
+[the catalogue](catalogue.md). These are research-based starting choices for
 authorised work, not a locally validated ranking. Security quality takes priority
 over the cheapest model. Price still matters after accuracy, permitted use,
 data handling and reliable completion meet the task's requirements.

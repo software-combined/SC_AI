@@ -33,7 +33,7 @@ plugin; the installed review plugin's release copy governs a running review.
 3. Select by model capability and comparable published cost, independent of
    subscriptions, account plans or billing routes. Never promote a model because
    it appears free under a plan. Resolve its callable identifier after selection.
-4. Choose the cheapest eligible model likely to pass the task's acceptance check.
+4. Choose the cheapest eligible model and effort likely to pass the task's acceptance check.
    Include parent context, reasoning/output, retries and verification in cost.
    A cheap failed attempt followed by a full redo can cost more than one capable
    attempt. Use observed task success when available, not token prices alone.
@@ -47,19 +47,20 @@ plugin; the installed review plugin's release copy governs a running review.
 
 ## Current starting choices
 
-Evidence checked **2026-09-12**. These are task-specific priors, not local proof.
+Evidence checked **2026-11-11**, using Artificial Analysis Intelligence Index
+v5.0.1. These are task-specific public-evidence priors, not local proof.
 Read [the catalogue evidence](references/catalogue.md) when selecting a model;
 refresh live prices before material spend, long runs, or relying on a promotion.
 
 | Work | Starting point | Escalate when the acceptance check needs it |
 | --- | --- | --- |
-| Bounded text extraction, simple edits, recon | `z-ai/glm-5.3-flash` at `max` | `deepseek/deepseek-v4.1-flash` at `max`; Luna at `max` when its task evidence fits better |
-| Repository investigation, scripts, bounded implementation, tool workflows | `deepseek/deepseek-v4.1-flash` at `max`, or GLM Flash at `max` | `z-ai/glm-5.3` at `max`; Sol or Astra at `max` for difficult debugging |
-| Synthesis, reasoning, business documents and polished deliverables | `meta/muse-spark-1.3` at `max` | `anthropic/claude-opus-5` at `max`; Fable at `max` only for a demonstrated quality need |
-| Independent review of a proposed plan before action | Standard Muse Spark 1.3 at `max`; read [planning advisor](references/planning.md) | Sol at `max` for intricate operational reasoning; domain-specific requirements still apply |
-| UI and frontend | GLM Flash or DeepSeek Flash at `max`; `qwen/qwen3.8-max-0902` at `xhigh` as a stronger visual candidate | `moonshotai/kimi-k3` at `max`, then Astra/Fable at `max` for a difficult focused slice |
-| Images and multimodal reasoning | Verify actual input support; Gemini Flash at `high`, Muse or Luna at `max` according to task and budget | Astra at `max` for harder visual reasoning; use task-specific tests, not text scores |
-| Long-document extraction | Luna or DeepSeek Flash at `max`, with citations and spot checks | Muse at `max`; Kimi at `max` for demanding long-context reasoning |
+| Bounded text extraction, simple edits, recon | Muse Ember `max` for supplied-source, checkable work; GLM Flash `max` is a cheap fixed-token alternative | Terra 6.1 `high` for a higher capability floor; Luna `max` for small mechanical helpers |
+| Repository investigation, scripts, bounded implementation, tool workflows | Ember `max` for investigation; Terra 6.1 `max` for implementation | Sol 6.1 `max`; Kimi K3.1 Pro `max` or Carbon `high` for difficult terminal work. DeepSeek Flash **1017** `max` is economical for tightly specified slices |
+| Synthesis and business documents | Ember `max` for source-grounded prose; Sol 6.1 `high` for complex synthesis | Sonnet 5.5 `max` for demanding polished deliverables; Opus 5.5 `max` for a demonstrated gap. Muse Spark/Wonder remain candidates, not blanket defaults |
+| Independent review of a proposed plan before action | Muse Ember `max` for bounded plans; read [planning advisor](references/planning.md) | GPT-6.1 Sol `max` for intricate reasoning; domain-specific requirements still apply |
+| UI and frontend | Carbon `high` for design direction; DeepSeek Flash 1017 or Terra 6.1 `max` for agreed implementation | Opus 5.5 `max` for a demonstrated visual gap. Qualify taste with rendered references; Fable 5.2's Arena result is at `xhigh`, not `max` |
+| Images and multimodal reasoning | Verify actual input support; Gemini 3.8 Flash `high` or GPT-6.1 Terra `max` | Gemini 4 Carbon `high` or Astra `max`; use modality-specific checks, not text scores |
+| Long-document extraction | DeepSeek Flash 1017 or GPT-6.1 Terra `max`, with citations and spot checks | Kimi K3.1 Pro `max` for demanding long-context reasoning; check the active route's context limit |
 | Pre-commit review | Use the installed review skill and its bundled model routing | Apply its authorized fallbacks; exact user requirements still take precedence |
 
 **Cybersecurity exception:** read [security model selection](references/cybersecurity.md)
@@ -70,12 +71,17 @@ then optimise cost among qualifying models. The cheapest general-purpose row is
 not the default for high-consequence security work. This does not change the
 installed pre-commit review policy.
 
-**One effort per model for general tasks:** use the single prescribed level in the catalogue table,
-normally the highest supported plain reasoning level. Do not lower effort to
-save cost; choose a cheaper capable model instead, unless the user overrides it.
-Astra and GPT-5.6 Sol use `max`: the catalogue's `ultra` adds automatic
-delegation, so it is outside this bounded-child policy. Never invent
-unsupported `max`.
+For persistent owners, combined roles, or a project roster, read
+[roster model selection](references/roster.md). It separates leadership from
+cheap worker jobs, gives role-specific model/effort candidates, qualifies
+visual taste, and distinguishes roster choices from actual chat settings.
+
+**Select effort with the model:** use an explicitly supported, evidenced pair.
+The catalogue table gives comparison defaults; role guidance also uses separately
+measured Sol `high`/`xhigh` and Terra `high`. Never apply a max score to a high
+request, silently downgrade an assigned effort, or assume max is always best
+value. Native GPT-6 Sol is a different version from GPT-6.1 Sol. Do not use an
+automatic delegation mode such as `ultra` for a bounded child or invent an effort.
 
 Pre-commit reviews use their separate model-agnostic review policy, including
 configured supported effort; these general task choices do not constrain them.
@@ -84,12 +90,12 @@ configured supported effort; these general task choices do not constrain them.
 practical tier, per user preference, while preserving the separate measurements.
 This is not a claim of equal scores, latency or billed reasoning.
 Contributor (`meta/muse-spark-1.3-contributor`) uses `xhigh`: $0.10/$0.20
-per million input/output tokens in the snapshot, but its own benchmark identity
+per million input/output tokens on 2026-11-11, but its own benchmark identity
 is unverified and its terms permit training use. Use it only when that data use
 is acceptable and a representative task check passes. Never transfer standard
 Muse scores to Contributor or silently replace the requested route.
 
-Effort names are provider-specific. If the prescribed level is unavailable,
+Effort names are provider-specific. If the selected level is unavailable,
 report that constraint and select another eligible model; do not silently
 change the level or borrow another effort's benchmark score.
 

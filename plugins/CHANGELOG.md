@@ -1,5 +1,18 @@
 # Changelog
 
+## scg-subagents 0.9.0 (2026-11-11)
+
+- Refresh model evidence and prices for Artificial Analysis Intelligence Index
+  v5.0.1, with current snapshots, workload scores, latency and source dates.
+- Add Ember, Wonder, GPT-6.1 Sol/Terra, Gemini 4, Kimi K3.1 Pro and Fable 5.2
+  to the task-specific choices. Keep unmatched versions and efforts unranked.
+- Refresh workload fallbacks and planning advice. Preserve historical security
+  evidence and the separate installed pre-commit reviewer policy.
+- Add self-contained roster guidance for all owner roles, with separate design
+  taste and implementation checks, role-specific effort, worker scope and qualification.
+- Compare measured Sol high/xhigh and Terra high configurations separately;
+  keep endpoint pricing, benchmark costs and actual usage distinct.
+
 ## scg-agent-factory 1.1.0 (2026-11-11)
 
 - Design the whole team at setup from the whole product vision, in five steps:

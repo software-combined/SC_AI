@@ -13,7 +13,7 @@ from tests.harness import (
 from ai_router import claude_compat as compat
 
 
-MODEL = 'anthropic/claude-fable-5.1'
+MODEL = 'anthropic/claude-fable-5.2'
 
 
 def _frame(kind, payload):

@@ -271,7 +271,7 @@ class CatalogueFlagTests(unittest.TestCase):
                          'openai/gpt-6-luna'} <= codex_slugs)
         self.assertNotIn('openai/gpt-5.6-terra', codex_slugs)  # retired from the picker
         self.assertFalse(claude_slugs & {'anthropic/claude-sonnet-5.5',
-                                         'anthropic/claude-fable-5.1',
+                                         'anthropic/claude-fable-5.2',
                                          'anthropic/claude-haiku-5.5',
                                          'anthropic/claude-opus-5.5'})
         self.assertIn('openai/gpt-6-astra', claude_slugs)

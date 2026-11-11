@@ -20,7 +20,7 @@ owner's setup or login applies; it sends a synthetic bearer that
 
 Usage:
     python3.14 tools/probe_claude_code.py --home ~/.codex/mixed-model-router
-    python3.14 tools/probe_claude_code.py --models anthropic/claude-fable-5.1
+    python3.14 tools/probe_claude_code.py --models anthropic/claude-fable-5.2
     python3.14 tools/probe_claude_code.py --candidate z-ai/glm-5.3-flash \
         --deferred
     python3.14 tools/probe_claude_code.py --output results.json --json
