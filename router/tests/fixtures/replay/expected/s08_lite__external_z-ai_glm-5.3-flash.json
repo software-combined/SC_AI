@@ -2,9 +2,7 @@
  "contract": {
   "unknown_top_level": [],
   "violations": {},
-  "warnings": {
-   "item.unverified_type": 1
-  }
+  "warnings": {}
  },
  "wire": {
   "include": [
@@ -20,118 +18,6 @@
     ],
     "role": "developer",
     "type": "message"
-   },
-   {
-    "id": "at_957b6977-d203-527c-bd53-d11061755ada",
-    "role": "developer",
-    "tools": [
-     {
-      "description": "Work with other agents.",
-      "name": "collaboration",
-      "tools": [
-       {
-        "description": "Start a synthetic helper agent.\nWhen all subagent lanes are full, close finished agents, or all of them if needed, then retry spawn.\nPass model and reasoning_effort explicitly for a fresh child; a child on an externally billed model needs fork_turns=\"none\".",
-        "name": "spawn_agent",
-        "parameters": {
-         "additionalProperties": false,
-         "properties": {
-          "message": {
-           "description": "The complete readable assignment or message. Do not encrypt it.",
-           "encrypted": false,
-           "type": "string"
-          },
-          "model": {
-           "type": "string"
-          },
-          "target": {
-           "type": "string"
-          },
-          "task_name": {
-           "type": "string"
-          }
-         },
-         "required": [
-          "message"
-         ],
-         "type": "object"
-        },
-        "strict": true,
-        "type": "function"
-       },
-       {
-        "description": "Message a synthetic agent.",
-        "name": "send_message",
-        "parameters": {
-         "additionalProperties": false,
-         "properties": {
-          "message": {
-           "description": "The complete readable assignment or message. Do not encrypt it.",
-           "encrypted": false,
-           "type": "string"
-          },
-          "target": {
-           "type": "string"
-          }
-         },
-         "required": [
-          "message"
-         ],
-         "type": "object"
-        },
-        "strict": true,
-        "type": "function"
-       },
-       {
-        "description": "Give a synthetic agent more work.",
-        "name": "followup_task",
-        "parameters": {
-         "additionalProperties": false,
-         "properties": {
-          "message": {
-           "description": "The complete readable assignment or message. Do not encrypt it.",
-           "encrypted": false,
-           "type": "string"
-          },
-          "target": {
-           "type": "string"
-          }
-         },
-         "required": [
-          "message"
-         ],
-         "type": "object"
-        },
-        "strict": true,
-        "type": "function"
-       },
-       {
-        "description": "Close a finished synthetic agent.\nWhen all subagent lanes are full, close finished agents, or all of them if needed, then retry spawn.",
-        "name": "close_agent",
-        "parameters": {
-         "additionalProperties": false,
-         "properties": {
-          "message": {
-           "description": "The assignment or message.",
-           "encrypted": true,
-           "type": "string"
-          },
-          "target": {
-           "type": "string"
-          }
-         },
-         "required": [
-          "message"
-         ],
-         "type": "object"
-        },
-        "strict": true,
-        "type": "function"
-       }
-      ],
-      "type": "namespace"
-     }
-    ],
-    "type": "additional_tools"
    },
    {
     "content": [

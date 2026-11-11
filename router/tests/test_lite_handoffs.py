@@ -101,12 +101,14 @@ class LiteHandoffTests(unittest.TestCase):
         self.assertEqual(prepared.tool_names.handoffs, handoffs.HANDOFF_TOOLS)
         projected = json.loads(prepared.body)
         self.assertTrue(projected['tools'])
-        prefix = projected['input'][0]
-        self.assertNotEqual(prefix['id'], original['input'][0]['id'])
+        self.assertFalse(any(item.get('type') == 'additional_tools'
+                             for item in projected['input']))
         retry = provider.prepare('openai/gpt-6.1-sol', '/responses', payload,
             json.dumps(payload).encode(), {}, SimpleNamespace(key_for=lambda _: 'synthetic-key'))
-        self.assertEqual(json.loads(retry.body)['input'][0], prefix)
-        for old, new in zip(original['input'][0]['tools'][0]['tools'], prefix['tools'][0]['tools']):
+        self.assertEqual(json.loads(retry.body), projected)
+        for old in original['input'][0]['tools'][0]['tools']:
+            new = next(tool for tool in projected['tools']
+                       if tool['name'] == 'collaboration__' + old['name'])
             expected = deepcopy(old['parameters'])
             if old['name'] in handoffs.HANDOFF_TOOLS:
                 expected['properties']['message'].update(
