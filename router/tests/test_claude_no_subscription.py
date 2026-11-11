@@ -13,7 +13,7 @@ claude_config = install_mod._claude_config
 
 SONNET = 'anthropic/claude-sonnet-5.5'
 LISTING = {'data': [
-    {'id': 'anthropic/claude-fable-5.1', 'anthropic_family_tier': 'fable'},
+    {'id': 'anthropic/claude-fable-5.2', 'anthropic_family_tier': 'fable'},
     {'id': 'anthropic/claude-haiku-5.5', 'anthropic_family_tier': 'haiku'},
     {'id': 'anthropic/claude-opus-5.5', 'anthropic_family_tier': 'opus'},
     {'id': SONNET, 'anthropic_family_tier': 'sonnet'},

@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Replace Claude Fable 5.1 with Fable 5.2 in the model catalogue and remove the
+  superseded entry from saved pickers on refresh. Existing chats retain a
+  hidden route to their original Fable 5.1 model.
+- Refresh SCG Subagents recommendations against Artificial Analysis Intelligence
+  Index v5.0.1 and current model prices.
+
 ## 1.3.51
 
 - Keep existing Codex chats usable after model switches by merging repeated

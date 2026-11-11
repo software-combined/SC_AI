@@ -18,10 +18,11 @@ Match benchmarks to exact model, version, reasoning effort and harness. Never
 merge a dated snapshot into an alias, a Contributor tier into standard Muse, or
 different harness results without evidence. Keep unknowns
 null, not zero. User policy groups Muse 1.3 xhigh/max for selection, while their
-measurements remain separate evidence rows; standard Muse has one prescribed
-level, `max`. Assign every other model one prescribed level, preferably its
-highest supported plain reasoning level. Preserve these levels across tasks;
-reduce cost by choosing a cheaper model, not by quietly lowering effort.
+measurements remain separate evidence rows; standard Muse defaults to `max`.
+Record a comparison default per model and explicit eligible alternatives when
+role-level evidence supports them. Treat each model/effort as a separate
+candidate. Lower effort can be economical when its own result meets the task's
+floor; never borrow the higher effort's score or silently change an assignment.
 
 ## 2. Sources and benchmark choice
 
@@ -32,9 +33,12 @@ material claims across independent evaluation methods, not several articles
 repeating one release announcement.
 
 - [Artificial Analysis methodology](https://artificialanalysis.ai/methodology/intelligence-benchmarking):
-  record index version, task suite and harness. The 2026-09-12 snapshot uses v4.3,
-  Terminal-Bench v4.0, GDPval-AA v2, AutomationBench-AA and AA-LCR v1.1. Old v4.1
-  or v4.2 composite scores cannot be compared directly with v4.3.
+  record index version, task suite and harness. The 2026-11-11 snapshot uses
+  v5.0.1: Briefcase v1.1, AutomationBench-AA, Terminal-Bench 4.0, FrontierCode-AA
+  2.0, Omniscience v1.1, GDP.pdf, HLE-Diamond, CritPt v2 Hard and Terminal-Bench-
+  Science 0.1. Replace composite scores as a set when the index changes;
+  never combine v4.3 and v5.0.1 in one frontier. GDPval v2.1, SciCode and LCR
+  remain supporting measures, not current index components.
 - [Arena WebDev](https://arena.ai/leaderboard/code): useful for UI preference,
   not a replacement for repository correctness. Record date, exact model/effort,
   votes, confidence bounds and preliminary status. Inspect its Pareto view.
@@ -80,8 +84,9 @@ permissions, context and reliability first. Missing scores do not imply failure.
 Keep separate frontiers for terminal work, documents, UI and other workloads;
 an aggregate frontier cannot disqualify a specialist.
 
-The script filters to the prescribed effort for each model and excludes unknown
-or mismatched measured efforts. Keep those rows as supporting evidence only.
+The script filters to declared eligible efforts per model, falling back to the
+comparison default in `prescribed_efforts`. It excludes unknown or unmatched
+efforts. Keep those rows as supporting evidence only.
 The script can compare AA index against AA benchmark cost/task, or a workload
 score against an explicit fixed-token scenario. The latter is a price sensitivity
 calculation, not measured cost per successful task. Do not compare AA's measured
