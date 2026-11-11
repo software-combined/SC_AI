@@ -55,7 +55,6 @@ class _Home(unittest.TestCase):
         for target, name, value in (
                 (offers, 'APP', self.home / 'Switch Codex.app'),
                 (offers, 'CHATGPT_APP', self.home / 'ChatGPT.app'),
-                (offers, 'which', lambda _tool: '/usr/bin/osascript'),
                 (offers._notice, '_spawn', self._spawn),
                 (offers._notice, '_pid_alive', lambda _pid: True),
                 (offers._notice, 'PROBE_GRACE_S', 0)):
@@ -102,23 +101,18 @@ class _Home(unittest.TestCase):
 
 
 class OfferTests(_Home):
-    def test_an_affected_desktop_episode_is_offered_once(self):
+    def test_an_affected_desktop_episode_is_due_once_per_recorded_offer(self):
         self.record()
-        self.assertEqual(self.run_pass(), offers.SWITCH)
-        self.assertIsNone(self.run_pass(T0 + 120))
-        self.assertEqual(len(self.spawned), 1)
-        script = self.spawned[0][-1]
-        self.assertIn(json.dumps(offers.MESSAGES[offers.SWITCH]), script)
-        self.assertIn('/usr/bin/open " & quoted form of ' + json.dumps(str(offers.APP)), script)
-        self.assertIn(' & " --args --to switched"', script)
+        self.assertEqual(offers.due(self.home, now=T0 + 60, platform_name='darwin')[0], offers.SWITCH)
+        offers._remember(self.home, stamp(T0), ['switch'])
+        self.assertIsNone(offers.due(self.home, now=T0 + 120, platform_name='darwin'))
         self.assertEqual(self.offered(), {'seen_at': stamp(T0), 'offered': ['switch']})
         if os.name != 'nt':
             mode = stat.S_IMODE(os.stat(self.home / offers.OFFERS_FILE).st_mode)
             self.assertEqual(mode, 0o600)
         # A later episode is a new limit period and gets its own offer.
         self.record(now=T0 + HOUR + 10, resets=T0 + 2 * HOUR)
-        self.assertEqual(self.run_pass(T0 + HOUR + 20), offers.SWITCH)
-        self.assertEqual(len(self.spawned), 2)
+        self.assertEqual(offers.due(self.home, now=T0 + HOUR + 20, platform_name='darwin')[0], offers.SWITCH)
 
     def test_the_router_record_is_read_as_the_router_writes_it(self):
         self.assertEqual(offers.EPISODE_FILE, usage_episodes.NAME)
@@ -140,8 +134,7 @@ class OfferTests(_Home):
             ('no ChatGPT subscription', lambda: (self.attach(mode='none'), self.record()), {}),
             ('Codex not attached', lambda: (
                 offers._codex.receipt_path_for(self.home).unlink(), self.record()), {}),
-            ('Linux', self.record, {'platform_name': 'linux'}),
-            ('Windows', self.record, {'platform_name': 'win32'}),
+            ('unsupported platform', self.record, {'platform_name': 'other'}),
             ('already switched', lambda: (self.attach(variant='switched'), self.record()), {}),
             ('episode over', self.record, {'now': T0 + HOUR}),
         )
@@ -161,19 +154,17 @@ class OfferTests(_Home):
     def test_the_way_back_follows_the_end_of_the_episode(self):
         self.attach(variant='switched')
         self.record()
-        self.assertIsNone(self.run_pass(T0 + 60))
-        self.assertEqual(self.run_pass(T0 + HOUR), offers.BACK)
-        self.assertIsNone(self.run_pass(T0 + HOUR + 60))
-        self.assertEqual(len(self.spawned), 1)
-        self.assertIn(json.dumps(offers.MESSAGES[offers.BACK]), self.spawned[0][-1])
+        self.assertIsNone(offers.due(self.home, now=T0 + 60, platform_name='darwin'))
+        self.assertEqual(offers.due(self.home, now=T0 + HOUR, platform_name='darwin')[0], offers.BACK)
+        offers._remember(self.home, stamp(T0), ['back'])
+        self.assertIsNone(offers.due(self.home, now=T0 + HOUR + 60, platform_name='darwin'))
         self.assertEqual(self.offered(), {'seen_at': stamp(T0), 'offered': ['back']})
 
     def test_signed_in_openrouter_gets_the_fallback_offer_but_no_way_back(self):
         self.attach(variant='switched_signed_in')
         self.record()
-        self.assertEqual(self.run_pass(), offers.SWITCH)
-        self.assertIn('--args --to switched', self.spawned[0][-1])
-        self.assertIsNone(self.run_pass(T0 + HOUR))
+        self.assertEqual(offers.due(self.home, now=T0 + 60, platform_name='darwin')[0], offers.SWITCH)
+        self.assertIsNone(offers.due(self.home, now=T0 + HOUR, platform_name='darwin'))
 
     def test_an_active_episode_never_offers_the_way_back_on_version_uncertainty(self):
         for version in (None, '26.917.51855'):
@@ -195,30 +186,25 @@ class OfferTests(_Home):
         with mock.patch.object(offers, 'FIXED_IN', '26.1001.5'):
             self.assertIsNone(self.run_pass())  # the installed app no longer needs it
             self.attach(variant='switched')
-            self.assertEqual(self.run_pass(), offers.BACK)  # the episode is still on
-            self.assertIsNone(self.run_pass(T0 + 120))
-        self.assertEqual(len(self.spawned), 1)
+            self.assertEqual(offers.due(self.home, now=T0 + 60, platform_name='darwin')[0], offers.BACK)
+            offers._remember(self.home, stamp(T0), ['back'])
+            self.assertIsNone(offers.due(self.home, now=T0 + 120, platform_name='darwin'))
 
-    def test_a_missing_or_undrawn_dialog_leaves_the_offer_pending(self):
+    def test_a_missing_worker_leaves_the_offer_pending(self):
         self.record()
-        with mock.patch.object(offers, 'which', lambda _tool: None):
-            self.assertIsNone(self.run_pass())
+        self.assertIsNone(self.run_pass())
         self.assertEqual((self.spawned, self.offered()), ([], None))
-        with mock.patch.object(offers._notice, '_pid_alive', lambda _pid: False):
-            self.assertIsNone(self.run_pass(T0 + 120))
-        self.assertEqual(self.offered()['offered'], [])
-        self.assertEqual(self.run_pass(T0 + 180), offers.SWITCH)
-        self.assertEqual(len(self.spawned), 2)
+        self.assertEqual(offers.due(self.home, now=T0 + 120, platform_name='darwin')[0], offers.SWITCH)
 
-    def test_a_failed_write_or_dialog_never_raises(self):
+    def test_a_failed_worker_or_damaged_receipt_never_raises(self):
         self.record()
-        with mock.patch.object(offers._atomic, 'replace_json',
-                               side_effect=OSError('read-only home')):
-            self.assertIsNone(self.run_pass())
-        self.assertEqual(self.spawned, [], 'an offer it cannot remember is never shown')
+        (self.home / 'control-version').write_text('1.3.47.1')
+        worker = self.home / 'control/1.3.47.1/packaging/codex_switch_offer.py'
+        worker.parent.mkdir(parents=True)
+        worker.touch()
         with mock.patch.object(offers._notice, '_spawn', side_effect=OSError('no tool')):
             self.assertIsNone(self.run_pass())
-        self.assertEqual(self.offered()['offered'], [])
+        self.assertIsNone(self.offered())
         receipt = offers._codex.receipt_path_for(self.home)
         for text in ('not json', json.dumps({'version': offers._codex.RECEIPT_VERSION, 'clients': {
                 'codex': {'inserted_block': 'x', 'openai_mode': 'subscription',
@@ -227,6 +213,7 @@ class OfferTests(_Home):
                 receipt.write_text(text)
                 self.assertIsNone(self.run_pass())
         self.assertEqual(self.spawned, [])
+
 
 
 class UpdaterPassTests(unittest.TestCase):

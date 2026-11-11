@@ -68,13 +68,13 @@ class WindowsDesktopTests(unittest.TestCase):
             version = self.version()
             switcher.switch(home, platform_ops=ops, ready=lambda _: True, run=version)
             prove.assert_called_once_with(str(self.app), app_exe=str(self.exe), command=str(self.cli),
-                                          signed_out=False)
+                                          signed_out=False, provider='openai')
             version.assert_called_once()
             self.assertEqual(ops.app_identity.call_count, 1)
             self.assertEqual(ops.request_stop.call_args.kwargs['identity'], identity)
             self.assertEqual(ops.open_app.call_args.kwargs['identity'], identity)
             entry = switcher._receipts.codex_attachment(home)
-            (home / switcher.MARKER).write_text(json.dumps({'to': 'switched_signed_in', 'entry': entry}))
+            (home / switcher.MARKER).write_text(json.dumps({'to': 'openrouter', 'entry': entry}))
             prove.reset_mock()
             ops.request_stop.reset_mock()
             ops.open_app.reset_mock()
@@ -87,7 +87,7 @@ class WindowsDesktopTests(unittest.TestCase):
             ops.confirm.return_value = True
             switcher.switch(home, platform_ops=ops, ready=lambda _: True, run=self.version())
             prove.assert_called_once_with(str(self.app), app_exe=str(self.exe), command=str(self.cli),
-                                          signed_out=False)
+                                          signed_out=False, provider='openai')
             self.assertEqual(ops.request_stop.call_args.kwargs['identity'], identity)
             self.assertEqual(ops.open_app.call_args.kwargs['identity'], identity)
 

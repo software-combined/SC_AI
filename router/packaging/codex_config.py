@@ -454,7 +454,8 @@ def write_client_receipt(home, client, entry):
 
 
 def write_receipt(home, config_path, block, rules_receipt, mode, before='',
-                  client='codex', desktop=None, variant=None, reviewer=None, repair_notice=None):
+                  client='codex', desktop=None, variant=None, reviewer=None, repair_notice=None,
+                  fallback_return=None):
     """Record one client attachment; existing attachments are preserved."""
     entry = {'config_path': str(config_path), 'inserted_block': block,
              'openai_mode': mode,
@@ -462,10 +463,10 @@ def write_receipt(home, config_path, block, rules_receipt, mode, before='',
     if desktop:
         entry['desktop'] = desktop
     if variant:
-        entry['variant'] = variant  # the Switch Codex block (codex_switch_config)
+        entry['variant'] = variant
+    if fallback_return in ('switched_signed_in', 'openrouter', 'switched_back'):
+        entry['fallback_return'] = fallback_return
     if reviewer:
-        # Owner root lines set aside because the block sets the same key,
-        # restored by tools/disable.py one per key.
         entry['reviewer'] = reviewer
     if rules_receipt:
         # Legacy installs recorded the managed global-instructions block;

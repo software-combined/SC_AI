@@ -326,25 +326,26 @@ manager. Direct `do_install` calls in tests must use the fake `run` seam.
 Open the [SCG Router menu](desktop-menu.md) and choose an explicit Codex connection.
 The existing Mac Switch Codex shortcut remains available for recovery.
 
-Choose **OpenRouter only** to keep your ChatGPT sign-in. Choose **OpenRouter
-for usage limits** to sign out deliberately when Send is blocked. The second
-choice is always available, even when Router has no recorded usage episode.
+Choose **OpenRouter** to use OpenRouter models. The usual connection keeps
+your ChatGPT sign-in. Select the checked **OpenRouter** choice again to change
+the sign-in setting, even when Router has not recorded a usage limit.
 
 From version 26.917.51856, the ChatGPT app (Codex) stops sending messages once
 your ChatGPT subscription reaches its usage limit, even for OpenRouter models.
 Switch Codex keeps your ChatGPT sign-in during normal OpenRouter use, so
-projects and setup choices stay with your account. During an active limit,
+projects, chats and setup choices stay with your account; only the model list
+changes. During an active limit,
 the fallback signs Codex out to keep Send available. Projects and setup
 choices stay separate until you switch back. On Mac, SCG Router adds Switch Codex to your
 Applications folder when Codex uses your ChatGPT subscription and your ChatGPT
 app is affected.
 
 When a limit is recorded, SCG Router offers to switch once. Choose **Open
-Switch Codex** in that notice, or choose **OpenRouter for usage limits** from
-the SCG Router menu. If there is no notice, use the menu: the shortcut alone
-may select a different connection. Switch Codex asks before it changes
-anything, then quits and reopens the ChatGPT app. It keeps the switch only
-after Codex has loaded the new settings, so a switch that fails changes nothing.
+Switch Codex** in that notice, or select **OpenRouter** in the SCG Router menu.
+If OpenRouter is checked and its status says sign-in is required, select it
+again to offer the signed-out connection. If sign-in is already not used,
+leave it selected. Switch Codex asks before it changes anything, then quits and reopens
+the ChatGPT app. It keeps the switch only after Codex loads the new settings.
 
 On Windows, closing the window can leave Codex running in the tray.
 The confirmation explains that Codex will fully close and running tasks will stop.
@@ -352,10 +353,12 @@ Finish active work before choosing Continue. Cancel leaves the app unchanged.
 The switch verifies exit before writing settings and reopening before keeping them.
 If reopening fails, it restores the previous connection and tries to reopen that connection.
 
-When the limit resets, SCG Router offers the way back once. Choose **Open
-Switch Codex** again, or open it yourself. Switching back needs no bundled command or proof.
-Windows still requires a verified app identity and exit before it changes settings.
-On Mac and Linux, an unavailable app can use the manual quit and reopen path.
+After the recorded reset time, SCG Router offers the previous connection once.
+The offer is not proof that every usage limit has reset. Confirm before Codex
+restarts. If the earlier connection is unknown, the offer returns to **ChatGPT
++ OpenRouter**. That return needs no bundled command or proof. Windows still
+requires a verified app identity and exit before it changes settings. On Mac
+and Linux, an unavailable app can use the manual quit and reopen path.
 
 While Codex is switched:
 
@@ -365,7 +368,9 @@ While Codex is switched:
 - a model that needs your ChatGPT subscription answers with a short message
   that says what to pick instead;
 - Codex still asks you before it runs a command that needs approval;
-- conversations you start while switched still open after you switch back.
+- chats you start in the signed-out limit fallback stay in that profile and
+  are not listed after you switch back; normal OpenRouter chats stay with
+  your ChatGPT provider.
 
 Conversation titles and other chat metadata use Luna through the OpenRouter
 key while switched. Your chosen chat model stays unchanged. If Luna is absent

@@ -41,7 +41,6 @@ def _offer():
         'router_codex_switch_offer', _ROOT / 'packaging' / 'codex_switch_offer.py')
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
-    module.which = lambda _tool: '/usr/bin/osascript'
     return module
 
 
@@ -63,7 +62,7 @@ def _popup_text():
             dialog.ASSISTANT_QUESTION, dialog.SURFACE_QUESTION,
             dialog.NO_TOOL_NOTE, dialog.NO_ANSWER_NOTE]
     text += list(dialog.CONFIRM.values())
-    text += [' '.join(offer.command(kind, '/icon.png')) for kind in offer.MESSAGES]
+    text += list(offer.MESSAGES.values()) + [offer.BACK_OPENROUTER]
     text += [label for _key, label in dialog.ASSISTANTS]
     text += [label for _key, label in dialog.SURFACES]
     warning = _warning()
@@ -197,11 +196,15 @@ class PopupStyleTests(unittest.TestCase):
 
     def test_the_codex_offer_shares_the_style(self):
         offer = _offer()
+        spec = importlib.util.spec_from_file_location(
+            'router_offer_platform_style', _ROOT / 'packaging' / 'claude_desktop_platform.py')
+        platform = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(platform)
         for kind in offer.MESSAGES:
             with self.subTest(kind=kind):
-                script = offer.command(kind, '/home/router-icon.png')[-1]
+                script = platform.dialog_script(offer.MESSAGES[kind], True, ('Open Switch Codex', 'Later'))
                 self.assertIn('with title "SCG Router"', script)
-                self.assertIn('with icon (POSIX file "/home/router-icon.png")', script)
+                self.assertIn('router-icon.png', script)
                 self.assertIn('buttons {"Later", "Open Switch Codex"}', script)
                 self.assertIn('cancel button "Later"', script)
                 message = offer.MESSAGES[kind].lower()

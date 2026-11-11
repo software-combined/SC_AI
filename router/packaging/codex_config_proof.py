@@ -99,7 +99,7 @@ def _windows_bin(env, app_root, app_exe, run, record):
 
 
 def prove(app_root, codex_home=None, env=None, timeout=30, *, app_exe=None, command=None,
-          signed_out=True):
+          signed_out=True, provider=None):
     """True when Codex's loader accepts the switched config.toml, else False."""
     env = dict(os.environ if env is None else env)
     command = command or codex_bin(env, app_root, app_exe=app_exe)
@@ -133,7 +133,8 @@ def prove(app_root, codex_home=None, env=None, timeout=30, *, app_exe=None, comm
             return False
         required = _call(child, lines, deadline, 2,
                          'configRequirements/read').get('requirements') or {}
-        return not required.get('modelProvider')
+        managed = required.get('modelProvider')
+        return managed is None or (provider is not None and managed == provider)
     except (OSError, ValueError, AttributeError, queue.Empty):
         return False
     finally:

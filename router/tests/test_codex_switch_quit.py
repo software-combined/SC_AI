@@ -95,14 +95,14 @@ class SwitchCodexQuitTests(unittest.TestCase):
                                     text=True, timeout=5)
         [line] = self.lines()
         self.assertEqual((line['to'], line['result'], line['open']),
-                         ('switched_signed_in', DID_NOT_CLOSE, ['ChatGPT', 'browser_crashpad_handler']))
+                         ('openrouter', DID_NOT_CLOSE, ['ChatGPT', 'browser_crashpad_handler']))
 
     def test_each_run_logs_its_target_and_result_and_a_failed_log_changes_nothing(self):
         self.assertIsNone(self.switch(FakeApp(self.app, confirm=False)))
-        self.assertEqual(self.switch(FakeApp(self.app)), 'switched_signed_in')
+        self.assertEqual(self.switch(FakeApp(self.app)), 'openrouter')
         cancelled, done = self.lines()
-        self.assertEqual((cancelled['to'], cancelled['result']), ('switched_signed_in', 'cancelled'))
-        self.assertEqual((done['to'], done['result']), ('switched_signed_in', 'done'))
+        self.assertEqual((cancelled['to'], cancelled['result']), ('openrouter', 'cancelled'))
+        self.assertEqual((done['to'], done['result']), ('openrouter', 'done'))
         self.assertNotIn('open', done)
         self.assertIsNotNone(datetime.fromisoformat(done['at']).utcoffset())
         self.log.unlink()

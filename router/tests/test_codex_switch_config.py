@@ -69,9 +69,9 @@ class VariantBlockTests(unittest.TestCase):
                     PROVIDER, requires_openai_auth=True,
                     http_headers={'x-scg-codex-route': 'routed',
                                   'x-openai-actor-authorization': 'Bearer tok'})}},
-            'switched_back': {
-                'openai_base_url': URL, 'approvals_reviewer': 'user',
-                'model_providers': {'scg_router': dict(PROVIDER, requires_openai_auth=True)}},
+            'openrouter': {'model_provider': 'openai', 'openai_base_url': URL, 'model_catalog_json': '/r/routed-models.json', 'approvals_reviewer': 'user'},
+            'switched_back': {'openai_base_url': URL, 'approvals_reviewer': 'user',
+                              'model_providers': {'scg_router': dict(PROVIDER, requires_openai_auth=True)}},
         }
         for variant, keys in want.items():
             with self.subTest(variant=variant):
@@ -168,7 +168,7 @@ class SwitchFlowTests(unittest.TestCase):
             config.write_text('approvals_reviewer = "auto_review"\n')
             home, config = self._attached(tmp)
             moved = {'removed': ['approvals_reviewer = "auto_review"']}
-            for variant in ('switched', 'switched_signed_in', 'switched_back', 'switched'):
+            for variant in ('switched', 'switched_signed_in', 'openrouter', 'switched_back', 'switched'):
                 with self.subTest(variant=variant):
                     switch.switch(home, variant)
                     lines = [line for line in config.read_text().splitlines()
@@ -180,7 +180,8 @@ class SwitchFlowTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             home, config = self._attached(tmp)
             for variant, version in (('switched', '1.0.1'),
-                                     ('switched_signed_in', '1.0.2'), ('switched_back', '1.0.3')):
+                                     ('switched_signed_in', '1.0.2'), ('switched_back', '1.0.3'),
+                                     ('openrouter', '1.0.4')):
                 with self.subTest(variant=variant):
                     switch.switch(home, variant)
                     switched = config.read_text()
@@ -195,7 +196,7 @@ class SwitchFlowTests(unittest.TestCase):
             edited = config.read_text().replace('openai_base_url', 'openai_base_url_edited')
             config.write_text(edited)
             with self.assertRaisesRegex(SystemExit, 'edited by hand'):
-                _install(self, tmp, home, '1.0.4')
+                _install(self, tmp, home, '1.0.5')
             self.assertEqual(config.read_text(), edited)
 
     def test_switch_writes_block_and_receipt_together_and_rolls_back(self):
