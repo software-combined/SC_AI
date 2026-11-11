@@ -1,6 +1,12 @@
 # Compatibility
 
-## Router 1.3.50 schema candidate, 11 November 2026 AEDT
+## Router 1.3.50 release checks, 11 November 2026 AEDT
+
+Clients remain Codex desktop `26.1103.60933` (build `25894`), bundled CLI
+`0.167.0-alpha.3.2`, and Claude Code `2.1.318`. Neither client changed since
+the preceding compatibility checks. This release reuses those unchanged-path
+results and the focused schema checks below; it does not claim a new pass
+for the earlier unverified Codex ChatGPT-subscription leg.
 
 The synthetic composed-tool reproducer returned HTTP 400 before adaptation
 and completed a tool call, replay and final marker after adaptation:

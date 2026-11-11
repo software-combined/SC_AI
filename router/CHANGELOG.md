@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 1.3.50
+
 - Adapt composed tool parameter roots for Claude models on the Codex OpenRouter
   route. Preserve native tool arguments and replay history through the existing envelope.
 - Recognise nested provider tool-schema errors instead of reporting an unnamed rejection.
