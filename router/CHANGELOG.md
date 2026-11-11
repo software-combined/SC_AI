@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## 1.3.47
+
+- Add Gemini 4 Carbon to the Codex and Claude Code model choices through OpenRouter.
+- Fix candidate checks that missed visible Claude Code answers after a thinking block.
 - Add Muse Ember to the Codex and Claude Code model choices through OpenRouter.
 - Restore the update behaviour to never switch Codex either way. The
   1.3.45 auto-migration from the signed-out OpenRouter profile to the
