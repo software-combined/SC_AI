@@ -32,7 +32,7 @@ class InstallKeyWindowTests(unittest.TestCase):
         # the install mints the nonce, passes health and spawns the popup
         # instead of stopping with the paste-and-re-run instruction.
         with tempfile.TemporaryDirectory() as tmp:
-            home = Path(tmp) / 'home'
+            home = Path(tmp).resolve() / 'home'
             blob, latest = _craft_bundle('1.0.0')
             spawned = []
 
@@ -64,7 +64,7 @@ class InstallKeyWindowTests(unittest.TestCase):
         # non-secret notice, mints the nonce and spawns the popup while the
         # service environment still carries only ROUTER_HOME.
         with tempfile.TemporaryDirectory() as tmp:
-            home = Path(tmp) / 'home'
+            home = Path(tmp).resolve() / 'home'
             blob, latest = _craft_bundle('1.0.0')
             spawned = []
 
@@ -101,7 +101,7 @@ class InstallKeyWindowTests(unittest.TestCase):
     def test_present_key_file_arms_nothing(self):
         # A configured key file needs no window: no nonce, no popup.
         with tempfile.TemporaryDirectory() as tmp:
-            home = Path(tmp) / 'home'
+            home = Path(tmp).resolve() / 'home'
             home.mkdir(parents=True)
             key_file = home / 'openrouter.key'
             key_file.write_text('sk-file\n')
@@ -133,7 +133,7 @@ class InstallKeyWindowTests(unittest.TestCase):
         # A non-blank key file that fails the owner-only check refuses with
         # the file and the required permission; it never arms a window.
         with tempfile.TemporaryDirectory() as tmp:
-            home = Path(tmp) / 'home'
+            home = Path(tmp).resolve() / 'home'
             home.mkdir(parents=True)
             key_file = home / 'openrouter.key'
             key_file.write_text('sk-wide\n')
@@ -163,7 +163,7 @@ class InstallKeyWindowTests(unittest.TestCase):
         # service restarts with a fresh nonce and the window opens. A plain
         # re-run stays "up to date" and mints nothing new.
         with tempfile.TemporaryDirectory() as tmp:
-            home = Path(tmp) / 'home'
+            home = Path(tmp).resolve() / 'home'
             blob, latest = _craft_bundle('1.0.0')
             _patch_attrs(self, run=lambda cmd, **kwargs: _ok_run(cmd, **kwargs),
                          self_test=lambda *args: None,
@@ -215,7 +215,7 @@ class InstallKeyWindowTests(unittest.TestCase):
         # failed) can only be refreshed through the --setup repair: a plain
         # re-run returns "up to date" before the client stage.
         with tempfile.TemporaryDirectory() as tmp:
-            home = Path(tmp) / 'home'
+            home = Path(tmp).resolve() / 'home'
             blob, latest = _craft_bundle('1.0.0')
             _patch_attrs(self, run=lambda cmd, **kwargs: _ok_run(cmd, **kwargs),
                          self_test=lambda *args: None,
@@ -249,7 +249,7 @@ class InstallKeyWindowTests(unittest.TestCase):
         # --setup must repair a host whose receipt is unreadable, not crash:
         # the snapshot refresh is best-effort.
         with tempfile.TemporaryDirectory() as tmp:
-            home = Path(tmp) / 'home'
+            home = Path(tmp).resolve() / 'home'
             blob, latest = _craft_bundle('1.0.0')
             _patch_attrs(self, run=lambda cmd, **kwargs: _ok_run(cmd, **kwargs),
                          self_test=lambda *args: None,
@@ -274,7 +274,7 @@ class InstallKeyWindowTests(unittest.TestCase):
         # A failed repair reload must not touch the installed release or the
         # current pointer, and must report failure instead of a fake success.
         with tempfile.TemporaryDirectory() as tmp:
-            home = Path(tmp) / 'home'
+            home = Path(tmp).resolve() / 'home'
             blob, latest = _craft_bundle('1.0.0')
             _patch_attrs(self, run=lambda cmd, **kwargs: _ok_run(cmd, **kwargs),
                          self_test=lambda *args: None,
@@ -314,7 +314,7 @@ class InstallKeyWindowTests(unittest.TestCase):
         # --setup must still repair (restart + fresh nonce) and never
         # downgrade to the feed's version.
         with tempfile.TemporaryDirectory() as tmp:
-            home = Path(tmp) / 'home'
+            home = Path(tmp).resolve() / 'home'
             blob, latest = _craft_bundle('1.0.1')
             _patch_attrs(self, run=lambda cmd, **kwargs: _ok_run(cmd, **kwargs),
                          self_test=lambda *args: None,
@@ -354,7 +354,7 @@ class InstallKeyWindowTests(unittest.TestCase):
         # ROUTER_NO_KEY_WINDOW=1 suppresses only the dialog: the nonce is
         # still minted so a keyless service can boot.
         with tempfile.TemporaryDirectory() as tmp:
-            home = Path(tmp) / 'home'
+            home = Path(tmp).resolve() / 'home'
             blob, latest = _craft_bundle('1.0.0')
             spawned = []
 
@@ -384,7 +384,7 @@ class InstallKeyWindowTests(unittest.TestCase):
         # cannot spawn and stdout is not a TTY, only a token-free line is
         # printed.
         with tempfile.TemporaryDirectory() as tmp:
-            home = Path(tmp) / 'home'
+            home = Path(tmp).resolve() / 'home'
             blob, latest = _craft_bundle('1.0.0')
             _patch_attrs(self, run=lambda cmd, **kwargs: _ok_run(cmd, **kwargs),
                          self_test=lambda *args: None,
@@ -413,7 +413,7 @@ class UpdateKeyWindowTests(unittest.TestCase):
         # Scheduled and manual update runs never pop the first-run key
         # window: the installer child inherits ROUTER_NO_KEY_WINDOW=1.
         with tempfile.TemporaryDirectory() as tmp:
-            home = Path(tmp) / 'home'
+            home = Path(tmp).resolve() / 'home'
             home.mkdir(parents=True)
             (home / 'mixed-router-state.json').write_text(
                 json.dumps({'port': 1, 'token': 'x'}))
@@ -443,7 +443,7 @@ class UpdateKeyWindowTests(unittest.TestCase):
         # installs, mints the setup nonce and opens no dialog; the next
         # request opens the window through the request path.
         with tempfile.TemporaryDirectory() as tmp:
-            home = Path(tmp) / 'home'
+            home = Path(tmp).resolve() / 'home'
             home.mkdir(parents=True)
             (home / 'mixed-router-state.json').write_text(
                 json.dumps({'port': 1, 'token': 'x'}))

@@ -263,12 +263,14 @@ def _rollback_failed_install(home, state, backend, latest, previous, catalog_pat
 
 def _open_key_window(python, home, setup_url, clients):
     """Open the native key window; the setup URL prints only on a TTY."""
+    home = Path(home).resolve()
     if sys.stdout.isatty(): print(f'open {setup_url} to connect your OpenRouter key')
     try:  # URL on stdin, never argv; write once, close, never read.
         proc = subprocess.Popen([python, '-m', 'ai_router.key_prompt', '--stdin', '--clients',
                                  clients], cwd=str(current_release_dir(home)),
                                 start_new_session=True, stdin=subprocess.PIPE,
                                 creationflags=getattr(subprocess, 'CREATE_NO_WINDOW', 0),
+                                env={**os.environ, 'ROUTER_HOME': str(home)},
                                 stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         try: proc.stdin.write((setup_url + '\n').encode()); proc.stdin.close()
         except OSError: pass
@@ -292,7 +294,7 @@ def _do_install(args, _fetch=fetch, _run=None, delivery=None):
     _sync_seams()
     if args.version:
         return do_rollback(args)
-    home = Path(args.home).expanduser()
+    home = Path(args.home).expanduser().resolve()
     python = find_python(args.python)
     if python is None:
         if args.install_python and sys.platform == 'darwin' and not args.dry_run:

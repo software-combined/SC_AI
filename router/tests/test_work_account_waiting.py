@@ -1,6 +1,7 @@
 """The sign-in wait remains visible and cancellation never submits a late key."""
 import contextlib
 import os
+import tempfile
 import threading
 import unittest
 from types import SimpleNamespace
@@ -12,6 +13,8 @@ from tests.test_native_setup import module
 
 class WaitingTests(unittest.TestCase):
     def setUp(self):
+        home = self.enterContext(tempfile.TemporaryDirectory())
+        self.enterContext(mock.patch.dict(os.environ, {'ROUTER_HOME': home}))
         self.native = mock.MagicMock()
         self.context = self.native.Progress.return_value
         self.progress = self.context.__enter__.return_value

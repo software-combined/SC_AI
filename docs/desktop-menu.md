@@ -46,7 +46,11 @@ The menu does not switch named human accounts or delete their sign-in credential
 **Running** means the router answered its health check.
 It does not prove that a model has replied in your selected assistant connection.
 Send a new message after switching and check the reply before relying on that connection.
-**Switching…**, **Opening…**, **Updating…** and **Working…** identify work in progress.
+**Key needed** means the router has no usable saved model key.
+Choose **Sign in with work account…**, or use your own key in the secure window.
+**OpenRouter key: Saved** confirms local access is configured; it does not verify the key online or identify its owner.
+**Model access needs attention…** opens the same access window when local key checks fail.
+**Switching…**, **Opening…**, **Connecting…**, **Updating…** and **Working…** identify work in progress.
 If a status check fails, the menu shows **Needs attention** and keeps the last known
 connections, so you can still switch or open an assistant.
 Repeated clicks cannot start another menu action while that work runs.
@@ -58,6 +62,9 @@ previous menu available; use **Update or repair** to retry delivery.
 
 **Manage Router** provides setup checks, repair, assistant attachment, key replacement,
 safe restart and removal. These commands use the same owners as the existing setup tools.
+**Replace model key…** also remains available for a key that no longer works.
+Work-account setup checks a saved key before opening sign-in or requesting another key.
+It preserves the saved key when the provider accepts it or its validity is unknown.
 Restart lets running replies finish before checking that the service has restarted.
 Removal restores owned assistant settings, then closes the menu and removes its
 sign-in entry. See [uninstall](operations.md#uninstall) for what stays open and

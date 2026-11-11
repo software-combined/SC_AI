@@ -378,6 +378,9 @@ def main(argv=None):
     args = parser.parse_args(argv)
     resources = args.resources.resolve()
     try:
+        if args.home.expanduser().is_symlink():
+            raise ValueError('The setup folder is not safe to use.')
+        args.home = args.home.expanduser().resolve()
         metadata(resources)
         os.environ.update(environment(resources))
         if args.status:

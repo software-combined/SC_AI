@@ -96,6 +96,24 @@ class KeyExists(OSError):
     """The key file holds a live key; rotation needs explicit deletion."""
 
 
+def _replaceable(key_path, check_live):
+    try:
+        stored = key_path.read_bytes().strip()
+    except FileNotFoundError:
+        return True
+    except OSError:
+        raise OSError('could not read the saved key') from None
+    return not stored or (check_live is not None
+                          and check_live(stored.decode('utf-8', 'replace')) is False)
+
+
+def replacement_allowed(home, provider_id=provider_defs.DEFAULT_EXTERNAL):
+    """Click-time preflight; unknown liveness preserves the saved key."""
+    with _LOCK:
+        return _replaceable(Path(home) / provider_defs.get(provider_id).key.file,
+            lambda stored: _stored_key_live(provider_id, stored, _open_without_redirects))
+
+
 def store_key(home, key, provider_id=provider_defs.DEFAULT_EXTERNAL, _check_live=None):
     """Write one provider's key through the one shared writer.
 
@@ -105,14 +123,8 @@ def store_key(home, key, provider_id=provider_defs.DEFAULT_EXTERNAL, _check_live
     """
     key_path = Path(home) / provider_defs.get(provider_id).key.file
     with _LOCK:
-        if key_path.exists():
-            try:
-                stored = key_path.read_bytes().strip()
-            except OSError:
-                raise OSError('could not store the key')
-            if stored and not (_check_live is not None
-                               and _check_live(stored.decode('utf-8', 'replace')) is False):
-                raise KeyExists('a key file already exists; delete it to rotate keys')
+        if not _replaceable(key_path, _check_live):
+            raise KeyExists('a key file already exists; delete it to rotate keys')
         replace_text(key_path, key + '\n')
     return key_path
 

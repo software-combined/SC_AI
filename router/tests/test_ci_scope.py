@@ -99,6 +99,7 @@ class InstallerScopeTests(unittest.TestCase):
         self.assertIn('tests.test_claude_desktop_platform', module.installer_tests(windows=True))
         self.assertIn('tests.test_client_choice', module.installer_tests(windows=True))
         self.assertIn('tests.test_windows_client_discovery', module.installer_tests(windows=True))
+        self.assertIn('tests.test_model_access_flow', module.installer_tests(windows=True))
 
 
 if __name__ == '__main__':

@@ -1,6 +1,8 @@
 """Work sign-in preserves identity and keeps credentials out of UI commands."""
 import json
+import os
 import subprocess
+import tempfile
 import unittest
 from unittest import mock
 
@@ -17,6 +19,10 @@ def issued():
 
 
 class ProvisionTests(unittest.TestCase):
+    def setUp(self):
+        home = self.enterContext(tempfile.TemporaryDirectory())
+        self.enterContext(mock.patch.dict(os.environ, {'ROUTER_HOME': home}))
+
     def test_cancelled_signin_never_calls_provisioning_endpoint(self):
         post, authorize = mock.Mock(), mock.Mock()
         checks = iter((False, True))

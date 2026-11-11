@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Show model access in the Router menu and check saved keys before work-account
+  provisioning, preserving live keys and keys whose validity is unknown.
 - Adapt composed tool parameter roots for Claude models on the Codex OpenRouter
   route. Preserve native tool arguments and replay history through the existing envelope.
 - Recognise nested provider tool-schema errors instead of reporting an unnamed rejection.

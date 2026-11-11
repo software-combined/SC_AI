@@ -57,6 +57,12 @@ def menu(facts, *, busy=None, available=None, checked_update=None):
         if client.get('sign_in_status'):
             selected += ' (%s)' % client['sign_in_status']
         rows.append(item(client['label'] + ' — ' + selected, children=options))
+    key_status = facts.get('key_status')
+    if key_status == 'saved':
+        rows.append(item('OpenRouter key: Saved', enabled=False))
+    elif key_status in ('needed', 'attention'):
+        rows.append(item('Sign in with work account…' if key_status == 'needed' else
+                         'Model access needs attention…', 'setup.key', enabled=changing))
     version, running = facts.get('version', 'Unknown'), facts.get('running_version', 'Unknown')
     updates = [item('Installed version ' + version, enabled=False)]
     if running != version:
@@ -78,7 +84,8 @@ def menu(facts, *, busy=None, available=None, checked_update=None):
     rows += [item(''), item('Manage Router', children=[
         item(label, action, enabled=changing) for action, label in (
             ('setup.status', 'Check setup…'), ('setup.resume', 'Update or repair…'),
-            ('setup.add', 'Connect another assistant…'), ('setup.key', 'Replace model key…'),
+            ('setup.add', 'Connect another assistant…'),
+            ('setup.key', 'Sign in with work account…' if key_status == 'needed' else 'Replace model key…'),
             ('router.restart', 'Restart Router…'), ('setup.remove', 'Remove Router…'))]),
         item('Updates', children=updates),
         item('Help', children=[item('Troubleshooting…', 'help.guide', enabled=changing),

@@ -142,7 +142,7 @@ class SwitchFlowTests(unittest.TestCase):
             self.assertNotIn('model_provider', tomllib.loads(config.read_text()))
 
     def _attached(self, tmp, *versions):
-        home = Path(tmp) / 'home'
+        home = Path(tmp).resolve() / 'home'
         for version in versions or ('1.0.0',):
             config, _, _, _ = _install(self, tmp, home, version)
         return home, config

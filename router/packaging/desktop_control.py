@@ -68,8 +68,14 @@ def snapshot(home):
                                           reselect=client == 'codex' and key == 'openrouter' and subscription)
                                      for key, label in DESTINATIONS[client]]))
     health = raw.get('routing_healthy')
+    usable, present = raw.get('service_key_usable'), raw.get('service_key_present')
+    key_status = ('saved' if usable is True else
+                  'attention' if usable is False and present is True else
+                  'needed' if usable is False else 'unknown')
     status = ('Running' if health is True else
               'Router is not running' if health is False else 'Status unknown')
+    if health is True and key_status in ('needed', 'attention'):
+        status = 'Key needed' if key_status == 'needed' else 'Needs attention'
     updates = raw.get('update', {})
     updates = updates if isinstance(updates, dict) else {}
     owner = load('update_status')
@@ -91,7 +97,8 @@ def snapshot(home):
         pass
     return dict(schema=1, status=status, version=version(raw.get('version')),
                 running_version=version(raw.get('running_version')), update=update,
-                clients=clients, autostart=load('desktop_startup').enabled(home), menu_delivery=delivery)
+                clients=clients, autostart=load('desktop_startup').enabled(home),
+                menu_delivery=delivery, key_status=key_status)
 
 
 def _installer(home, flags, run):

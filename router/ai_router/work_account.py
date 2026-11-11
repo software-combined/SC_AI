@@ -7,7 +7,7 @@ import threading
 import uuid
 from pathlib import Path
 
-from . import key_dialog
+from . import key_dialog, key_store, provider_defs, state
 
 MANUAL = object()
 CANCELLED = object()
@@ -51,6 +51,9 @@ def provision(config=None, authorize=None, post=None, *, cancelled=None):
         authorization = {**config, 'scope': config['scope'] + ' openid profile'}
         if cancelled and cancelled():
             return CANCELLED
+        if not key_store.replacement_allowed(state.default_home(), provider_defs.OPENROUTER.id):
+            raise SignInFailed('A key is already saved. SCG Router will keep it. '
+                               'Choose Check setup, or contact IT if access needs attention.')
         session = (authorize(authorization) if authorize else
                    oauth.authorize(authorization, cancelled=cancelled))
         if cancelled and cancelled():

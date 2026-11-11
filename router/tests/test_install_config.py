@@ -79,7 +79,7 @@ def _install(test, tmp, home, version, *extra_args, feed='file:///latest.json',
 class InstallConfigTests(unittest.TestCase):
     def test_default_install_uses_native_model_discovery(self):
         with tempfile.TemporaryDirectory() as tmp:
-            home = Path(tmp) / 'home'
+            home = Path(tmp).resolve() / 'home'
             config, _, _, _ = _install(self, tmp, home, '1.0.0')
             block = config.read_text()
             self.assertIn('openai_base_url = ', block)
@@ -91,7 +91,7 @@ class InstallConfigTests(unittest.TestCase):
 
     def test_none_mode_block_keeps_owner_root_keys_at_root(self):
         with tempfile.TemporaryDirectory() as tmp:
-            home = Path(tmp) / 'home'
+            home = Path(tmp).resolve() / 'home'
             owner = Path(tmp) / 'fakehome' / '.codex' / 'config.toml'
             owner.parent.mkdir(parents=True)
             owner.write_text('approval_policy = "never"\n[desktop]\n')
@@ -111,7 +111,7 @@ class InstallConfigTests(unittest.TestCase):
 
     def test_mode_survives_update_without_flag(self):
         with tempfile.TemporaryDirectory() as tmp:
-            home = Path(tmp) / 'home'
+            home = Path(tmp).resolve() / 'home'
             _install(self, tmp, home, '1.0.0', '--openai-mode', 'none')
             config, _, _, _ = _install(self, tmp, home, '1.0.1')
             block = config.read_text()
@@ -124,7 +124,7 @@ class InstallConfigTests(unittest.TestCase):
         # Owner model lines live inside the managed block; an update must
         # carry them forward, not reset the picker (0.6.7.21 dropped them).
         with tempfile.TemporaryDirectory() as tmp:
-            home = Path(tmp) / 'home'
+            home = Path(tmp).resolve() / 'home'
             config, _, _, _ = _install(self, tmp, home, '1.0.0')
             picked = ('# BEGIN local mixed model picker\n'
                       f'model_catalog_json = "{home}/mixed-models.json"\n'
@@ -146,7 +146,7 @@ class InstallConfigTests(unittest.TestCase):
 
     def test_explicit_flag_flips_mode(self):
         with tempfile.TemporaryDirectory() as tmp:
-            home = Path(tmp) / 'home'
+            home = Path(tmp).resolve() / 'home'
             _install(self, tmp, home, '1.0.0')
             config, _, _, _ = _install(self, tmp, home, '1.0.1', '--openai-mode', 'none')
             self.assertIn('model_provider = "scg_router"', config.read_text())
@@ -163,7 +163,7 @@ class InstallConfigTests(unittest.TestCase):
         # --feed is one-shot: it selects this run's source but must not pin
         # future scheduled updates (pin froze prod on a local file in 0.6.2.4).
         with tempfile.TemporaryDirectory() as tmp:
-            home = Path(tmp) / 'home'
+            home = Path(tmp).resolve() / 'home'
             _install(self, tmp, home, '1.0.0', feed='file:///pinned.json')
             agents = Path(tmp) / 'fakehome' / 'Library' / 'LaunchAgents'
             content = agents / (install_mod.UPDATE_LABEL + '.plist')
@@ -179,7 +179,7 @@ class InstallConfigTests(unittest.TestCase):
 
     def test_update_plist_omits_feed_for_channel_resolution(self):
         with tempfile.TemporaryDirectory() as tmp:
-            home = Path(tmp) / 'home'
+            home = Path(tmp).resolve() / 'home'
             home.mkdir()
             _install(self, tmp, home, '1.0.0', feed=None)
             agents = Path(tmp) / 'fakehome' / 'Library' / 'LaunchAgents'
@@ -193,7 +193,7 @@ class InstallConfigTests(unittest.TestCase):
         # install.py path outlives the release it names: prune that release and
         # the updater keeps firing a deleted installer every 4 hours.
         with tempfile.TemporaryDirectory() as tmp:
-            home = Path(tmp) / 'home'
+            home = Path(tmp).resolve() / 'home'
             home.mkdir()
             _install(self, tmp, home, '1.0.0', feed=None)
             agents = Path(tmp) / 'fakehome' / 'Library' / 'LaunchAgents'
@@ -209,7 +209,7 @@ class InstallConfigTests(unittest.TestCase):
         # Fresh home, updater never loaded: restart_service bootstraps main,
         # then bootstraps the updater only because `launchctl print` misses.
         with tempfile.TemporaryDirectory() as tmp:
-            home = Path(tmp) / 'home'
+            home = Path(tmp).resolve() / 'home'
             blob, latest = _craft_bundle('1.0.0')
             fake_fetch = _static_fetch(latest, blob)
             calls = []
@@ -242,7 +242,7 @@ class InstallConfigTests(unittest.TestCase):
         # Same fresh install but the updater already loaded: no updater
         # bootout/bootstrap churn, only the main service bootstrap.
         with tempfile.TemporaryDirectory() as tmp:
-            home = Path(tmp) / 'home'
+            home = Path(tmp).resolve() / 'home'
             _, calls, _, _ = _install(self, tmp, home, '1.0.0', in_sync=True)
             agents = Path(tmp) / 'fakehome' / 'Library' / 'LaunchAgents'
             main = str(agents / (install_mod.LABEL + '.plist'))
@@ -258,7 +258,7 @@ class InstallConfigTests(unittest.TestCase):
     def test_setup_mode_installs_without_key_and_opens_window(self):
         import time as _time
         with tempfile.TemporaryDirectory() as tmp:
-            home = Path(tmp) / 'home'
+            home = Path(tmp).resolve() / 'home'
             blob, latest = _craft_bundle('1.0.0')
             spawned = []
 
@@ -300,7 +300,7 @@ class InstallConfigTests(unittest.TestCase):
         # The popup child's stdio is detached, so the installer prints the
         # fallback link itself when it has a terminal (SSH and headless runs).
         with tempfile.TemporaryDirectory() as tmp:
-            home = Path(tmp) / 'home'
+            home = Path(tmp).resolve() / 'home'
             blob, latest = _craft_bundle('1.0.0')
 
             class Tty(io.StringIO):
@@ -330,7 +330,7 @@ class InstallConfigTests(unittest.TestCase):
 
     def test_setup_mode_with_key_still_opens_window(self):
         with tempfile.TemporaryDirectory() as tmp:
-            home = Path(tmp) / 'home'
+            home = Path(tmp).resolve() / 'home'
             blob, latest = _craft_bundle('1.0.0')
             spawned = []
 
@@ -358,7 +358,7 @@ class InstallConfigTests(unittest.TestCase):
         # The child can exit before the piped URL lands; a bare
         # BrokenPipeError must not abort an install that already succeeded.
         with tempfile.TemporaryDirectory() as tmp:
-            home = Path(tmp) / 'home'
+            home = Path(tmp).resolve() / 'home'
             blob, latest = _craft_bundle('1.0.0')
 
             class _DeadStdin(_StubStdin):
@@ -389,7 +389,7 @@ class InstallConfigTests(unittest.TestCase):
         # The key window is not a Codex-only step: a Claude-only --setup run
         # must still prompt and pass its own client set through.
         with tempfile.TemporaryDirectory() as tmp:
-            home = Path(tmp) / 'home'
+            home = Path(tmp).resolve() / 'home'
             blob, latest = _craft_bundle('1.0.0')
             spawned = []
 
@@ -423,7 +423,7 @@ class InstallConfigTests(unittest.TestCase):
 
     def test_update_reinvoke_does_not_pin_channel_feed(self):
         with tempfile.TemporaryDirectory() as tmp:
-            home = Path(tmp) / 'home'
+            home = Path(tmp).resolve() / 'home'
             home.mkdir()
             (home / 'mixed-router-state.json').write_text(
                 json.dumps({'port': 1, 'token': 'x'}) + '\n')
