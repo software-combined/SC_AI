@@ -359,6 +359,9 @@ rule: the first external stage and `router.py`'s compaction guard (through the
 `providers.reject_opaque_agent_items` name) both apply it.
 `tool_adapter.prepare_tools(payload, row)` shapes the declarations only and
 returns the tool list to send with the kind and wire-name maps.
+The registry's `json_text_composition` profile envelopes root schema compositions
+for upstreams that reject them. Plain object schemas and nested compositions stay native.
+The model-cache overlay preserves the shipped profile for the same upstream target.
 `tool_history.py` then rewrites the external tool history against them:
 custom pairs, discovery listings, tool-search items, call renames and
 `json_text` arguments, output annotations, then the model-switch boundary.
