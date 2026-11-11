@@ -183,7 +183,8 @@ class NativeReleaseWorkflowTests(unittest.TestCase):
                 ('Native packaging contracts (PowerShell)', command),
                 ('Native ACL contract (PowerShell)', 'python -m unittest tests.test_windows_acl_native')):
             with self.subTest(step=name):
-                self.assertEqual(steps.get(name), ['        shell: pwsh', '        run: ' + run])
+                verbose = run.replace('python -m unittest ', 'python -m unittest -v ', 1)
+                self.assertEqual(steps.get(name), ['        shell: pwsh', '        run: ' + verbose])
 
     def test_native_builds_stay_out_of_public_actions_artifacts(self):
         text = WORKFLOW.read_text()

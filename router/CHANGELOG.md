@@ -4,6 +4,8 @@
 
 ## 1.3.53
 
+- Keep an unchanged current install read-only and recognise macOS home aliases
+  during service handover and active updater release retention.
 - Attach the complete native installer cohort and signed SHA-256 inventories
   to beta prereleases while keeping stable publication gated.
 - Apply late subscription answers through the installer after saving access,

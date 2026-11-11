@@ -276,7 +276,7 @@ def _attach_current(args, home, python):
 
 def _complete_choices(home, python):
     return _completion.reconcile(home, python, _client_choice, _codex_config,
-                                  ensure_state, build_parser, _attach_current)
+                                  _svc._state, build_parser, _attach_current)
 
 
 def _finish_key_setup(args, home, python, url, clients):

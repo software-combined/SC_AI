@@ -268,7 +268,7 @@ class PlatformSwitchTests(unittest.TestCase):
 class OneChoiceUpdateTests(unittest.TestCase):
     def test_update_preserves_prior_connection_without_switching_profile(self):
         with tempfile.TemporaryDirectory() as temporary:
-            home = Path(temporary) / 'home'
+            home = Path(temporary).resolve() / 'home'
             config, _, _, _ = _install(self, temporary, home, '1.0.0')
             blocks = switcher._blocks
             blocks.switch(home, 'openrouter')

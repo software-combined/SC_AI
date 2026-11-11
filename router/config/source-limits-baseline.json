@@ -42,6 +42,7 @@
   "tests/test_install_config.py": 478,
   "tests/test_install_key_window.py": 475,
   "tests/test_install_lifecycle.py": 489,
+  "tests/test_interpreter_resolution.py": 307,
   "tests/test_key_prompt.py": 387,
   "tests/test_launchd.py": 353,
   "tests/test_lifecycle.py": 456,

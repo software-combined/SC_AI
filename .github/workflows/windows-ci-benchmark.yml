@@ -126,12 +126,12 @@ jobs:
       - name: Native installer tests
         if: ${{ !inputs.source_ref }}
         shell: bash
-        run: python -m unittest $(python tools/ci_scope.py --installer-tests)
+        run: python -m unittest -v $(python tools/ci_scope.py --installer-tests)
 
       - name: Recorded Native installer tests
         if: inputs.source_ref
         shell: bash
-        run: python tools/ci_unittest.py --workers 1 --report "${{ runner.temp }}/source-tests-0.json" -- $(python tools/ci_scope.py --installer-tests)
+        run: python tools/ci_unittest.py --workers 1 --report "${{ runner.temp }}/source-tests-0.json" -- -v $(python tools/ci_scope.py --installer-tests)
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: ${{ always() && inputs.source_ref }}
         with:
@@ -167,36 +167,36 @@ jobs:
       - name: Native installer tests
         if: ${{ !inputs.source_ref }}
         shell: bash
-        run: python -m unittest $(python tools/ci_scope.py --installer-tests)
+        run: python -m unittest -v $(python tools/ci_scope.py --installer-tests)
       - name: Recorded Native installer tests
         if: inputs.source_ref
         shell: bash
-        run: python tools/ci_unittest.py --workers 1 --report "${{ runner.temp }}/source-tests-0.json" -- $(python tools/ci_scope.py --installer-tests)
+        run: python tools/ci_unittest.py --workers 1 --report "${{ runner.temp }}/source-tests-0.json" -- -v $(python tools/ci_scope.py --installer-tests)
       - name: Native packaging contracts (PowerShell)
         if: ${{ !inputs.source_ref }}
         shell: pwsh
-        run: python -m unittest tests.test_native_stage tests.test_native_packages tests.test_native_setup tests.test_native_readiness tests.test_native_menu_build
+        run: python -m unittest -v tests.test_native_stage tests.test_native_packages tests.test_native_setup tests.test_native_readiness tests.test_native_menu_build
       - name: Recorded Native packaging contracts (PowerShell)
         if: inputs.source_ref
         shell: pwsh
-        run: python tools/ci_unittest.py --workers 1 --report "${{ runner.temp }}/source-tests-1.json" -- tests.test_native_stage tests.test_native_packages tests.test_native_setup tests.test_native_readiness tests.test_native_menu_build
+        run: python tools/ci_unittest.py --workers 1 --report "${{ runner.temp }}/source-tests-1.json" -- -v tests.test_native_stage tests.test_native_packages tests.test_native_setup tests.test_native_readiness tests.test_native_menu_build
       - name: Failed standard-user launch cleans up its account
         if: ${{ !inputs.source_ref }}
         shell: pwsh
-        run: python -m unittest tests.test_windows_standard_ci.StandardUserLaunchFailureTests
+        run: python -m unittest -v tests.test_windows_standard_ci.StandardUserLaunchFailureTests
       - name: Recorded Failed standard-user launch cleans up its account
         if: inputs.source_ref
         shell: pwsh
-        run: python tools/ci_unittest.py --workers 1 --report "${{ runner.temp }}/source-tests-2.json" -- tests.test_windows_standard_ci.StandardUserLaunchFailureTests
+        run: python tools/ci_unittest.py --workers 1 --report "${{ runner.temp }}/source-tests-2.json" -- -v tests.test_windows_standard_ci.StandardUserLaunchFailureTests
       - name: Native ACL contract (PowerShell)
         if: ${{ !inputs.source_ref }}
         shell: pwsh
-        run: python -m unittest tests.test_windows_acl_native
+        run: python -m unittest -v tests.test_windows_acl_native
 
       - name: Recorded Native ACL contract (PowerShell)
         if: inputs.source_ref
         shell: pwsh
-        run: python tools/ci_unittest.py --workers 1 --report "${{ runner.temp }}/source-tests-3.json" -- tests.test_windows_acl_native
+        run: python tools/ci_unittest.py --workers 1 --report "${{ runner.temp }}/source-tests-3.json" -- -v tests.test_windows_acl_native
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: ${{ always() && inputs.source_ref }}
         with:

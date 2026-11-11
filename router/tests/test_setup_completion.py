@@ -77,6 +77,19 @@ class CompletionTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, 'contact Software Combined IT'):
                 module('native_setup')._complete_choices(home, home)
 
+    def test_completion_refuses_unreadable_state_without_creating_or_repairing_it(self):
+        for contents in (None, '{', '[]'):
+            with self.subTest(contents=contents), tempfile.TemporaryDirectory() as temporary:
+                home = Path(temporary)
+                path = home / 'mixed-router-state.json'
+                if contents is not None:
+                    path.write_text(contents)
+                with mock.patch.object(install_mod, '_attach_current') as attach:
+                    with self.assertRaises(install_mod._svc._state.StateUnreadable):
+                        install_mod._complete_choices(home, 'python')
+                    attach.assert_not_called()
+                self.assertEqual(path.read_text() if path.exists() else None, contents)
+
     def test_claude_only_late_answer_leaves_codex_and_disabled_plugins_untouched(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary).resolve()

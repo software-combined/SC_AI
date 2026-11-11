@@ -70,7 +70,7 @@ jobs:
       - uses: ./.github/actions/setup
       - name: Native installer tests
         shell: bash
-        run: python -m unittest $(python tools/ci_scope.py --installer-tests)
+        run: python -m unittest -v $(python tools/ci_scope.py --installer-tests)
 
   installer-windows:
     name: Installer (Windows)
@@ -85,16 +85,16 @@ jobs:
       - uses: ./.github/actions/setup
       - name: Native installer tests
         shell: bash
-        run: python -m unittest $(python tools/ci_scope.py --installer-tests)
+        run: python -m unittest -v $(python tools/ci_scope.py --installer-tests)
       - name: Native packaging contracts (PowerShell)
         shell: pwsh
-        run: python -m unittest tests.test_native_stage tests.test_native_packages tests.test_native_setup tests.test_native_readiness tests.test_native_menu_build
+        run: python -m unittest -v tests.test_native_stage tests.test_native_packages tests.test_native_setup tests.test_native_readiness tests.test_native_menu_build
       - name: Failed standard-user launch cleans up its account
         shell: pwsh
-        run: python -m unittest tests.test_windows_standard_ci.StandardUserLaunchFailureTests
+        run: python -m unittest -v tests.test_windows_standard_ci.StandardUserLaunchFailureTests
       - name: Native ACL contract (PowerShell)
         shell: pwsh
-        run: python -m unittest tests.test_windows_acl_native
+        run: python -m unittest -v tests.test_windows_acl_native
 
   installer-python39:
     name: Installer (Python 3.9)
@@ -174,6 +174,7 @@ jobs:
         # Failed or cancelled prerequisites must fail this required check,
         # not disappear behind a green gate.
         if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
+        working-directory: .
         run: |
           echo "a required job did not succeed: ${{ join(needs.*.result, ', ') }}"
           exit 1

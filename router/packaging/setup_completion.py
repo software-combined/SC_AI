@@ -41,10 +41,10 @@ def finish(args, home, python, url, clients, open_window, complete):
     print(PENDING)
 
 
-def reconcile(home, python, choice, receipts, ensure_state, parser, attach):
-    """Re-read answers after the popup, then use the real same-version attach."""
+def reconcile(home, python, choice, receipts, state, parser, attach):
+    """Read answers without mutation; attach only when saved modes differ."""
     attached = receipts.read_receipt(home).get('clients', {})
-    flags = choice.mode_flags(ensure_state(home), attached)
+    flags = choice.mode_flags(state.read_strict(state.path(home)), attached)
     if flags:
         args = parser().parse_args(['--home', str(home), *flags])
         args.desktop = 'claude-desktop' in attached

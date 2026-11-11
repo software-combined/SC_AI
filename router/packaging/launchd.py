@@ -220,15 +220,16 @@ def same_interpreter(left, right):
 def command_matches(loaded, rendered):
     """True when launchd's loaded command is the one we intend to run.
 
-    argv[0] is compared by resolved path because two symlink spellings name
-    one interpreter; every later argument must match exactly, so a changed
-    launcher path is never mistaken for no change at all.
+    Resolve the interpreter and script paths so a home alias cannot force
+    a reload. Every later argument stays exact; a different script or
+    argument still requires adoption.
     """
     if not loaded or not rendered or len(loaded) != len(rendered):
         return False
-    if not same_interpreter(loaded[0], rendered[0]):
+    if not all(same_interpreter(left, right)
+               for left, right in zip(loaded[:2], rendered[:2])):
         return False
-    return list(loaded[1:]) == list(rendered[1:])
+    return list(loaded[2:]) == list(rendered[2:])
 
 
 def running_under(label):
@@ -242,11 +243,27 @@ def running_under(label):
 
 
 def plist_differs(path, content):
-    """True when the plist on disk does not already say exactly this."""
+    """Compare managed path identity while keeping all other settings exact."""
     try:
-        return plistlib.loads(Path(path).read_bytes()) != content
+        previous = plistlib.loads(Path(path).read_bytes())
     except (OSError, ValueError):
         return True
+    if not isinstance(previous, dict):
+        return True
+    argv = previous.get('ProgramArguments')
+    if isinstance(argv, list) and all(isinstance(arg, str) for arg in argv):
+        if command_matches(argv, content.get('ProgramArguments')):
+            previous['ProgramArguments'] = content['ProgramArguments']
+    for old, new, keys in (
+            (previous, content, ('StandardOutPath', 'StandardErrorPath')),
+            (previous.get('EnvironmentVariables'), content.get('EnvironmentVariables'), ('ROUTER_HOME',))):
+        if not isinstance(old, dict) or not isinstance(new, dict):
+            continue
+        for key in keys:
+            if isinstance(old.get(key), str) and isinstance(new.get(key), str):
+                if same_interpreter(old[key], new[key]):
+                    old[key] = new[key]
+    return previous != content
 
 
 def main_plist_needs_reload(run, uid, python, home, state, agents=None):
@@ -307,8 +324,11 @@ def loaded_updater_release(run, uid, home):
     scheduled run deliberately defers, because it cannot bootout its own job.
     Pruning that release would leave the updater firing a missing file.
     """
-    prefix = str(Path(home) / 'releases') + os.sep
+    prefix = os.path.realpath(Path(home) / 'releases') + os.sep
     for token in (loaded_command(run, uid, UPDATE_LABEL) or [])[1:]:
+        if not os.path.isabs(token):
+            continue
+        token = os.path.realpath(token)
         if token.startswith(prefix):
             return token[len(prefix):].split(os.sep)[0] or None
     return None

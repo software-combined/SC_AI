@@ -31,7 +31,7 @@ def run_suites(selection='all'):
     for name in names:
         started = time.monotonic()
         worker = {'core-first': 0, 'core-second': 1}.get(name)
-        program = Program(commands['core' if worker is not None else name], worker)
+        program = Program([*commands['core' if worker is not None else name], '-v'], worker)
         recorded = program.report()
         durations = []
         if name.startswith('native'):
