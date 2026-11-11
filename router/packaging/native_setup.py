@@ -10,9 +10,10 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from native_payload import install_arguments, load, metadata, retained, succeeded as _succeeded
+import client_executable
 
 ACTIONS = (('resume', 'Update or repair'), ('status', 'Check setup'),
-           ('add', 'Connect another assistant'), ('key', 'Replace model key'),
+           ('add', 'Connect another assistant'), ('key', 'Set up model access'),
            ('remove', 'Remove router'))
 ASSISTANT_DOWNLOADS = {'codex': 'https://chatgpt.com/download/',
                        'claude': 'https://claude.com/download'}
@@ -89,21 +90,40 @@ def _select(dialog):
     return flags
 
 
-def _missing_assistant(flags, dialog):
+def _missing_assistant(flags, dialog, run=None):
     skills = load('agent_skills')
-    import shutil
     selected = flags[flags.index('--clients') + 1]
     clients = ['codex', 'claude'] if selected == 'both' else [selected]
     if '--desktop' in flags and 'claude' not in clients:
         clients.append('claude')
     for client in clients:
-        if client == 'none' or shutil.which(client, path=skills.client_path()):
+        if client == 'none':
+            continue
+        while True:
+            try:
+                executable = client_executable.resolve(client, path=skills.client_path(), run=run)
+                reason = None
+            except client_executable.DiscoveryError as error:
+                executable, reason = None, error.reason
+            if executable or reason is None:
+                break
+            label = 'Codex' if client == 'codex' else 'Claude Code'
+            detail = ('%s was found, but its included setup tool could not be verified.' % label
+                      if reason == 'bundled_cli_invalid' else
+                      'Windows could not confirm which %s installation to use.' % label)
+            if dialog.confirm_result(
+                    '%s\n\n'
+                    'Try again, or cancel and contact Software Combined IT. '
+                    'Your assistant can stay open.' % detail,
+                    labels=('Try again', 'Cancel')) is not True:
+                return True
+        if executable:
             continue
         label = 'Codex' if client == 'codex' else 'Claude Code'
         if client == 'claude' and '--desktop' in flags:
             label = 'Claude Code setup tools from Claude desktop’s Install page'
-        if dialog.confirm('Install or open %s and sign in first.\n\n'
-                          'Continue opens its download page. Open SCG Router again when it is ready.' % label):
+        if dialog.confirm('%s was not found.\n\n'
+                          'Continue opens its download page. Run SCG Router again after installation.' % label):
             webbrowser.open(ASSISTANT_DOWNLOADS[client])
         return True
     return False
@@ -190,6 +210,12 @@ def _check(resources, home, dialog):
             'Choose Update or repair to continue.' % (facts.get('running_version') or 'Unknown',
             update.get('latest_known_version') or 'Unknown',
             load('update_status').display_time(update.get('last_successful_check_at'))))
+        return
+    if facts.get('service_key_usable') is False:
+        if dialog.confirm_result('Model access needs setup.\n\n'
+                'Sign in with your work account or enter your own key in the secure window.',
+                home, labels=('Set up access', 'Cancel')) is True:
+            _key(resources, home, replace=True)
         return
     if facts['onboarding'].get('ready'):
         dialog.message('Ready. Your assistants are connected and updates are automatic.')

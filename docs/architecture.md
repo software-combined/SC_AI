@@ -63,6 +63,13 @@ choices. It persists Claude choices in `anthropic_mode`; the runtime keeps its
 existing policy reader. Same-version mode changes use the service repair
 lifecycle before client attachment, with prior state restored on reload failure.
 
+`client_executable` owns discovery for setup prerequisites, plugin registration,
+readiness and diagnostic preflight. Existing PATH, npm, local-bin and desktop
+locations retain precedence. Windows Store fallback uses current-user Codex
+identity and the existing contained executable/header/version checks.
+Each lookup is fresh and rechecks package identity after validation.
+Discovery never switches, closes or opens an assistant.
+
 `codex_owned` compares the live marked region with the saved attachment using
 standard-library TOML. It preserves added single-line root settings and comments
 outside the replacement block. Unknown structures and changed connection values

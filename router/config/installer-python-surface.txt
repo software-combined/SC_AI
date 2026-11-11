@@ -31,6 +31,7 @@ load packaging/native_dialog.py
 load packaging/native_setup.py
 load packaging/native_shortcuts.py
 load packaging/native_readiness.py
+load packaging/client_executable.py
 load packaging/atomic_write.py
 load packaging/owned_json.py
 load packaging/client_removal.py

@@ -6,6 +6,12 @@
   route. Preserve native tool arguments and replay history through the existing envelope.
 - Recognise nested provider tool-schema errors instead of reporting an unnamed rejection.
 - Keep shipped tool-schema profiles when an older model cache names the same upstream target.
+- Discover Windows Store Codex consistently during setup, SC plugin delivery,
+  readiness and preflight, without a separate CLI install or PATH changes.
+- Defer plugin registration when saved choices cannot be read, so disabled
+  plugins are not turned back on after a failed check.
+- Guide failed setup through safe diagnosis and verified completion while
+  preserving subscription defaults and the user's restart choice.
 
 ## 1.3.49
 

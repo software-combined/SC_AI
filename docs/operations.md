@@ -309,10 +309,10 @@ first install from a handed-off release directory with
 `python3 packaging/install.py --feed file:///path/to/latest.json`, a
 one-shot pin that is never persisted.
 
-`docs/agent-install-prompt.md` is the paste-to-agent prompt so the user
-asks their own agent to run the bootstrap and verify setup. The prompt
-pins the production home, forbids printing secrets, and leaves client
-restarts to the user.
+`docs/agent-install-prompt.md` guides staff through the native installer
+and permanent SCG Router app. It selects assistants before setup, uses the
+secure work-account route and diagnoses failures through retained tools.
+Credentials, licence/security decisions and assistant restarts stay with the user.
 
 Never run the installer against a scratch `--home` on a live machine:
 service names are machine-wide, so even a /tmp home bootstraps, bootouts,

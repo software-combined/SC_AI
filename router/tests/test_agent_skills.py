@@ -38,7 +38,17 @@ class _Run:
 
     def __call__(self, command, **kwargs):
         self.calls.append(list(command))
+        inventory = _inventory(command)
+        if inventory is not None:
+            return inventory
         return SimpleNamespace(returncode=self.returncode, stdout='', stderr='')
+
+
+def _inventory(command):
+    if command[1:3] == ['plugin', 'list']:
+        body = {'installed': []} if command[0].endswith('codex') else []
+        return SimpleNamespace(returncode=0, stdout=json.dumps(body), stderr='')
+    return None
 
 
 def _which(present):
@@ -147,6 +157,8 @@ class AgentSkillsTest(unittest.TestCase):
 
     def test_a_refused_registration_reports_the_command_and_error(self):
         def refuse(command, **kwargs):
+            if _inventory(command) is not None:
+                return _inventory(command)
             return SimpleNamespace(returncode=1, stdout='',
                                    stderr='Error: plugin manifest invalid')
         line = skills.sync({'clients': 'codex'}, self.plugins, base=self.base,
@@ -157,6 +169,8 @@ class AgentSkillsTest(unittest.TestCase):
 
     def test_a_registration_exec_error_reports_its_cause(self):
         def boom(command, **kwargs):
+            if _inventory(command) is not None:
+                return _inventory(command)
             raise OSError('codex binary vanished')
         line = skills.sync({'clients': 'codex'}, self.plugins, base=self.base,
                            run=boom, which=_which({'codex'}))
@@ -165,6 +179,8 @@ class AgentSkillsTest(unittest.TestCase):
 
     def test_a_refusal_detail_is_collapsed_to_one_bounded_line(self):
         def refuse(command, **kwargs):
+            if _inventory(command) is not None:
+                return _inventory(command)
             if command[2:4] == ['marketplace', 'add']:
                 return SimpleNamespace(returncode=1, stdout='',
                                        stderr='x' * 500 + '\nsecond line')
@@ -181,6 +197,8 @@ class AgentSkillsTest(unittest.TestCase):
         # Codex 0.153 quotes a bad config value in its cause chain; a
         # coloured summary must not bring terminal escapes into the log.
         def refuse(command, **kwargs):
+            if _inventory(command) is not None:
+                return _inventory(command)
             return SimpleNamespace(returncode=1, stdout='', stderr=(
                 '\x1b[31mError:\x1b[0m failed to load bootstrap configuration\n'
                 '\nCaused by:\n    invalid type: string "GH_PAT=stand-in-config-value",'
@@ -194,6 +212,8 @@ class AgentSkillsTest(unittest.TestCase):
     def test_a_refusal_line_survives_a_windows_ansi_pipe(self):
         # Claude Code 2.1.283 opens refusals with U+2718; a cp1252 pipe refuses it.
         def refuse(command, **kwargs):
+            if _inventory(command) is not None:
+                return _inventory(command)
             return SimpleNamespace(returncode=1, stdout='', stderr=(
                 '\u2718 Failed to install plugin "scg-review@scg-agent-plugins"'))
         base = Path(self.tmp.name) / '\u0141ukasz' / 'scg-agent-plugins'
