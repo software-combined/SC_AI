@@ -59,6 +59,50 @@ class MultiReadGateTest(unittest.TestCase):
             2, ['MARKER-1', 'MARKER-2'], report,
             'deepseek/deepseek-v4.1-flash-1017'))
 
+    def test_final_assistant_text_passes_when_result_is_empty(self):
+        report = _stream([
+            {'type': 'assistant', 'message': {'model': 'fake/model',
+                                             'content': [_read('probe-1.txt')]}},
+            {'type': 'user', 'message': {'content': [_result('probe-1.txt')]}},
+            {'type': 'assistant', 'message': {'model': 'fake/model',
+                                             'content': [_read('probe-2.txt')]}},
+            {'type': 'user', 'message': {'content': [_result('probe-2.txt')]}},
+            {'type': 'assistant', 'message': {'model': 'fake/model', 'content': [
+                {'type': 'text', 'text': 'MARKER-1 MARKER-2'}]}},
+            {'type': 'assistant', 'message': {'model': 'fake/model', 'content': [
+                {'type': 'redacted_thinking'}]}},
+            {'type': 'result', 'result': '', 'is_error': False},
+        ])
+        self.assertTrue(probe._accepted(2, ['MARKER-1', 'MARKER-2'],
+                                        report, 'fake/model'))
+
+    def test_stale_assistant_text_before_last_read_cannot_pass(self):
+        report = _stream([
+            {'type': 'assistant', 'message': {'model': 'fake/model', 'content': [
+                {'type': 'text', 'text': 'MARKER-1 MARKER-2'}, _read('probe-1.txt')]}},
+            {'type': 'user', 'message': {'content': [_result('probe-1.txt')]}},
+            {'type': 'assistant', 'message': {'model': 'fake/model',
+                                             'content': [_read('probe-2.txt')]}},
+            {'type': 'user', 'message': {'content': [_result('probe-2.txt')]}},
+            {'type': 'assistant', 'message': {'model': 'fake/model', 'content': [
+                {'type': 'redacted_thinking'}]}},
+            {'type': 'result', 'result': '', 'is_error': False},
+        ])
+        self.assertFalse(probe._accepted(2, ['MARKER-1', 'MARKER-2'],
+                                         report, 'fake/model'))
+
+    def test_missing_result_event_cannot_pass_from_assistant_text(self):
+        report = _stream([
+            {'type': 'assistant', 'message': {'content': [_read('probe-1.txt')]}},
+            {'type': 'user', 'message': {'content': [_result('probe-1.txt')]}},
+            {'type': 'assistant', 'message': {'content': [_read('probe-2.txt')]}},
+            {'type': 'user', 'message': {'content': [_result('probe-2.txt')]}},
+            {'type': 'assistant', 'message': {'content': [
+                {'type': 'text', 'text': 'MARKER-1 MARKER-2'}]}},
+        ])
+        self.assertFalse(probe._accepted(2, ['MARKER-1', 'MARKER-2'],
+                                         report, 'fake/model'))
+
     def test_reversed_reads_fail_the_order_gate(self):
         report = _stream([
             {'type': 'assistant', 'message': {'model': 'deepseek/deepseek-v4.1-flash-1017',

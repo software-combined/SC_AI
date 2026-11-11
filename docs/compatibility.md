@@ -1,5 +1,30 @@
 # Compatibility
 
+## Gemini 4 Carbon candidate, 11 November 2026 AEDT
+
+Clients: Codex desktop `26.1103.60933` (build `25894`), bundled CLI
+`0.167.0-alpha.3.2`, and Claude Code `2.1.318`. Neither client changed
+since the 1.3.44 candidate checks. The owner waived the exhausted Codex
+ChatGPT-subscription leg for this release; it remains unverified.
+
+The isolated candidate tested `google/gemini-4-carbon` at Low effort with
+synthetic data. Codex passed the tool, stream, image and compaction checks
+in four upstream attempts. Claude Code passed two sequential Reads with
+matched tool results and a final answer in three attempts. Both routes
+reported the requested model. Codex reported Low effort; Claude's served
+effort was not exposed. These reports do not attest model weights or delivery.
+
+Two earlier candidate checks passed Codex but failed Claude's answer gate.
+The client emitted the correct answer before a trailing thinking block, but
+the probe read only the empty result field. The probe now also checks visible
+assistant text after the last tool result. The acceptance ledger retains both
+failures and the later complete pass. The probe capped attempts at twelve,
+input at 512 KiB and output at 65,536 tokens per request. Claude's budget
+was USD 0.25 per candidate run. A subsequent onboarding fix changed the
+runtime fingerprint, so both route checks ran again and passed. The ledger
+records that final candidate. Live release and installed delivery remain
+separate checks.
+
 ## Router 1.3.44 candidate, 10 November 2026 AEDT
 
 Clients: Codex desktop `26.1103.60933` (build `25894`), bundled CLI

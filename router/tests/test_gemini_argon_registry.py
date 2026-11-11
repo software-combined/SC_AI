@@ -1,7 +1,7 @@
 """Pin the live Argon capability projection and retained Gemini rows."""
 import unittest
 
-from ai_router.catalogue import external_entry
+from ai_router.catalogue import external_entry, merge
 from ai_router.clients import visible_for
 from ai_router.registry import by_slug
 
@@ -25,6 +25,22 @@ class GeminiArgonRegistryTests(unittest.TestCase):
         self.assertEqual(projected['slug'], row.slug)
         self.assertEqual(projected['default_reasoning_level'], 'low')
         self.assertEqual(projected['context_window'], 1048576)
+
+    def test_carbon_exposes_verified_capabilities_to_both_clients(self):
+        row = by_slug('google/gemini-4-carbon')
+        self.assertIsNotNone(row)
+        self.assertEqual((row.provider, row.tier, row.listed),
+                         ('openrouter', 'verified', True))
+        self.assertEqual(row.reasoning, ('low', 'medium', 'high'))
+        self.assertEqual(row.context_window, 1048576)
+        self.assertEqual(row.max_output_tokens, 943718)
+        self.assertEqual(row.modalities, ('text', 'image', 'audio'))
+        self.assertEqual(row.protocols, ())
+        for client in ('codex', 'claude'):
+            self.assertTrue(visible_for(row, client), client)
+        merged = {entry['slug'] for entry in merge({'models': []})['models']}
+        self.assertIn(row.slug, merged)
+        self.assertIn('google/gemini-4-argon', merged)
 
     def test_existing_gemini_rows_remain_without_verified_supersession(self):
         for slug in ('google/gemini-3.1-pro-preview', 'google/gemini-3.8-flash'):

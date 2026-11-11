@@ -13,6 +13,10 @@ from tests.test_models_cmd import LIVE
 
 
 class PromotionTests(unittest.TestCase):
+    def test_acceptance_ledger_path_uses_repository_docs(self):
+        expected = Path(models.__file__).resolve().parents[2] / 'docs' / 'acceptance-ledger.json'
+        self.assertEqual(models.EVIDENCE_PATH, expected)
+
     def test_incomplete_failed_stale_and_scalar_proof_stay_preview(self):
         for defect in ('missing_route', 'failed_route', 'stale_runtime', 'scalar'):
             with self.subTest(defect=defect), tempfile.TemporaryDirectory() as folder:

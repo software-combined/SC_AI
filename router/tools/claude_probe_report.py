@@ -45,6 +45,8 @@ def stream_report(stdout):
     served, result = set(), {}
     read_paths, read_steps, tool_steps = [], [], []
     call_ids, result_ids, names = [], [], []
+    assistant_text = []
+    last_result_step = -1
     tool_errors = False
     for step, line in enumerate(stdout.splitlines()):
         try:
@@ -56,7 +58,11 @@ def stream_report(stdout):
             if message.get('model'):
                 served.add(message['model'])
             for part in _content(event):
-                if not isinstance(part, dict) or part.get('type') != 'tool_use':
+                if not isinstance(part, dict):
+                    continue
+                if part.get('type') == 'text' and isinstance(part.get('text'), str):
+                    assistant_text.append((step, part['text']))
+                if part.get('type') != 'tool_use':
                     continue
                 call_ids.append(part.get('id'))
                 names.append(part.get('name'))
@@ -73,6 +79,7 @@ def stream_report(stdout):
             for part in _content(event):
                 if isinstance(part, dict) and part.get('type') == 'tool_result':
                     result_ids.append(part.get('tool_use_id'))
+                    last_result_step = step
                     tool_errors = tool_errors or bool(part.get('is_error'))
         elif event.get('type') == 'result':
             result = event
@@ -83,6 +90,9 @@ def stream_report(stdout):
     paired = (len(call_ids) == len(result_ids)
               and all(isinstance(identifier, str) and identifier for identifier in call_ids)
               and len(set(call_ids)) == len(call_ids) and result_ids == call_ids)
+    if result and not result.get('result'):
+        result['result'] = ''.join(text for step, text in assistant_text
+                                   if step > last_result_step)
     result.update(tool_calls=len(call_ids), read_calls=names.count('Read'),
                   tool_names=names, tool_errors=tool_errors,
                   deferred_sequence=len(tool_steps) == 2 and tool_steps[1][1] > tool_steps[0][1],

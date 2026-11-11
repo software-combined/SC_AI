@@ -34,6 +34,38 @@ def _free_port():
         return probe.getsockname()[1]
 
 
+def _include_probe_candidate(catalog_path, row):
+    """Expose an unlisted row only in the disposable Codex probe catalogue."""
+    from . import catalogue
+
+    path = Path(catalog_path)
+    catalog = json.loads(path.read_text())
+    models = catalog.get('models')
+    if not isinstance(models, list):
+        raise SystemExit('isolated probe catalogue has no model list')
+    if any(model.get('slug') == row.slug for model in models):
+        return
+    visible, _hidden = catalogue._visible_rows('codex', None)
+    instructions = catalogue.instructions_for([*visible, row])
+    # Render in a fresh interpreter: `models add` wrote the preview row after
+    # this process imported the registry and its derived capability maps.
+    code = ('import json,sys; from ai_router import catalogue,registry; '
+            'row=registry.by_slug(sys.argv[1]); '
+            'print(json.dumps(catalogue.external_entry(row,sys.argv[2])))')
+    env = dict(os.environ, PYTHONPATH=str(ROOT))
+    rendered = subprocess.run([sys.executable, '-c', code, row.slug, instructions],
+                              cwd=str(ROOT), env=env, capture_output=True, text=True, timeout=30)
+    if rendered.returncode:
+        raise SystemExit('isolated probe could not project its candidate')
+    candidate = json.loads(rendered.stdout)
+    index = next((i for i, model in enumerate(models)
+                  if type(model.get('priority')) is int
+                  and model['priority'] > row.priority), len(models))
+    models.insert(index, candidate)
+    from .atomic_write import replace_json
+    replace_json(path, catalog)
+
+
 class IsolatedRouter:
     """Throwaway router plus catalogue; close() always tears it down."""
 
@@ -80,6 +112,8 @@ class IsolatedRouter:
         if merged.returncode != 0:
             self.close()
             raise SystemExit('isolated probe could not merge its catalogue')
+        if entry is not None and not entry.listed:
+            _include_probe_candidate(catalog, entry)
         self.state, self.catalog = state, catalog
         return self._spawn()
 
