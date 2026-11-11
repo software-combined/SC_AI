@@ -1,5 +1,35 @@
 # Compatibility
 
+## Router 1.3.52 candidate checks, 11 November 2026 AEDT
+
+Clients are Codex desktop `26.1103.60933` (build `25894`), bundled CLI
+`0.167.0-alpha.3.2`, and Claude Code `2.1.318`.
+
+An earlier isolated native Codex subscription attempt used reviewed runtime
+`52c5593`, before the combined tool-declaration changes. It requested
+`gpt-6.1-sol` at Low effort and stopped with a local `RuntimeError` before
+account confirmation. There were zero upstream sends and no HTTP status,
+tool result or final marker. The cause remains unknown; child cleanup completed.
+
+Two authorised diagnostics also stopped before initialization completed.
+The original configuration exited with an unknown cause. Temporary process-level
+database and log paths changed this to an initialization timeout, with an
+operating-system permission error (`errno 1`). The blocked resource remains
+unknown. Both diagnostics allowed zero model sends and made zero upstream
+requests. Their child processes were cleaned up. No further attempt is authorised.
+
+The native ChatGPT-subscription leg remains unverified. These attempts provide
+no quota result, approved waiver or compatibility pass for this combined candidate.
+The [saved-tool checks](compatibility/saved-tool-declarations-2026-11-11.md)
+used direct provider HTTP comparisons and native Codex with a simulated upstream.
+They preceded the later unnamed-built-in correction and provide prior-contract
+evidence only. No new native-client or model attempt ran for this candidate.
+
+Beta publication requires exact-candidate continuous integration and package
+qualification. Native Windows desktop acceptance gates stable promotion and
+the download page. Earlier results can be reused only where exact source and
+dependency evidence supports that reuse.
+
 ## Router 1.3.50 release checks, 11 November 2026 AEDT
 
 Clients remain Codex desktop `26.1103.60933` (build `25894`), bundled CLI

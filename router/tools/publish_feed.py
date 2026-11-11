@@ -213,6 +213,8 @@ def main(argv=None):
     parser.add_argument('--native-resources', type=Path,
                         help='validated native Resources archives from all five release runners')
     parser.add_argument('--dry-run', action='store_true')
+    parser.add_argument('--prepare-only', action='store_true',
+                        help='write signed local documents without publishing')
     parser.add_argument('--sign', metavar='SEEDFILE',
                         help='sign the served feed bytes; publishing without it is refused')
     args = parser.parse_args(argv)
@@ -247,6 +249,8 @@ def main(argv=None):
     _fv = _ilu.module_from_spec(_spec)
     _spec.loader.exec_module(_fv)
     (dist / FEED_SIG_DOCUMENT).write_text(_fv.sign_hex(seed, feed_bytes) + '\n')
+    if args.prepare_only:
+        return 0
     outcome = publish_bundle(args.bucket, BUNDLE_PREFIX + bundle, path, latest['sha256'])
     for row in native.values():
         name = row['url'].rsplit('/', 1)[1]

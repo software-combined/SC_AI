@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## 1.3.52
+
+- Attach the complete native installer cohort and signed SHA-256 inventories
+  to beta prereleases while keeping stable publication gated.
 - Apply late subscription answers through the installer after saving access,
   including when the key already exists. Keep setup pending until answers match
   attached assistants; preserve saved keys and model picks during recovery.
