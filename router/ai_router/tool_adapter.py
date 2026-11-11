@@ -54,11 +54,12 @@ def _wrap_string_envelope(tool, noun):
                           'required': ['arguments_json'], 'additionalProperties': False}
     tool['strict'] = True
 
-def _grok_needs_envelope(parameters):
-    """True when xAI would reject the parameter root without a string envelope."""
+def _root_needs_envelope(parameters, compositions=False):
+    """True when the configured schema profile rejects the parameter root."""
     if not isinstance(parameters, dict):
         return False
-    if parameters.get('type') != 'object':
+    if parameters.get('type') != 'object' or (compositions and any(
+            key in parameters for key in ('anyOf', 'oneOf', 'allOf'))):
         return True
     for key in ('anyOf', 'oneOf'):
         branches = parameters.get(key)
@@ -120,13 +121,10 @@ def prepare_tools(payload, row):
                 and has_recursive_refs(tool.get('parameters', {}))):
             _wrap_string_envelope(tool, 'object')
             names[(namespace, tool['name'])] = 'json_text'
-        elif (_quirk(row, 'schema_mode') == 'json_text_root'
-                and _grok_needs_envelope(tool.get('parameters'))):
-            # xAI rejects non-object parameter roots, including object roots
-            # with an anyOf/oneOf union holding a non-object branch (e.g. the
-            # automation tool). Same string envelope as json_text, but the
-            # value may be any JSON type the original schema accepts.
-            # Object-only unions stay native.
+        elif (_quirk(row, 'schema_mode') in ('json_text_root', 'json_text_composition')
+                and _root_needs_envelope(tool.get('parameters'),
+                    compositions=_quirk(row, 'schema_mode') == 'json_text_composition')):
+            # Anthropic rejects all root compositions; xAI keeps object-only unions.
             _wrap_string_envelope(tool, 'value')
             names[(namespace, tool['name'])] = 'json_text_root'
     wire_names = tool_aliases.bind(entries)

@@ -185,7 +185,8 @@ def _provider_reason(body, dialect=None):
         if isinstance(raw, str):
             try:
                 inner = json.loads(raw)
-                text = inner.get('error') if isinstance(inner, dict) else raw
+                text = inner.get('error', inner.get('message')) if isinstance(inner, dict) else raw
+                text = text.get('message') if isinstance(text, dict) else text
             except ValueError:
                 text = raw
     inner_error = inner.get('error') if isinstance(inner, dict) else None
@@ -198,7 +199,8 @@ def _provider_reason(body, dialect=None):
     if match:
         tool = match.group(0).rstrip(':,.')
     lowered = text.lower()
-    if 'invalid_client_tool_schema' in lowered or 'must be an object' in lowered:
+    if ('invalid_client_tool_schema' in lowered or 'must be an object' in lowered
+            or 'input_schema does not support' in lowered):
         reason = 'the tool schema was rejected'
     elif 'invalid' in lowered and 'tool' in lowered:
         reason = 'a tool call was rejected'
