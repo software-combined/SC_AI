@@ -1,5 +1,26 @@
 # Compatibility
 
+## Fable 5.2 candidate, 11 November 2026 AEDT
+
+The isolated candidate tested `anthropic/claude-fable-5.2` at Low effort with
+Codex bundled CLI `0.167.0-alpha.3.2` and Claude Code `2.1.318`. Both client
+versions match the preceding checks. Synthetic Codex tool, stream, image and
+compaction checks passed in four upstream attempts. Claude Code completed two
+sequential Reads, paired results and the final marker in three attempts.
+
+Both routes reported the requested model. Codex reported Low effort; Claude's
+served effort was not exposed. The content-free acceptance ledger binds this
+result to the candidate capability and runtime fingerprints. These are provider
+reports and isolated client checks, not model-weight attestation or installed
+delivery. No client settings changed.
+
+The probe capped both routes at twelve total attempts, 512 KiB input and
+65,536 output tokens per request. Claude's client budget was USD 0.25. The
+Fable 5.1 picker entry retires, while its hidden route preserves saved chats
+on the original upstream model. The successor does not inherit 5.1's evidence.
+Both-route saved 5.1 request routing passed offline checks. A live saved-chat
+resume after hiding its picker entry was not exercised.
+
 ## Router 1.3.50 release checks, 11 November 2026 AEDT
 
 Clients remain Codex desktop `26.1103.60933` (build `25894`), bundled CLI

@@ -11,7 +11,7 @@ from tests.test_agent_handoffs import KEY
 
 
 MODELS = ('anthropic/claude-haiku-5.5', 'anthropic/claude-opus-5.5',
-          'anthropic/claude-sonnet-5.5', 'anthropic/claude-fable-5.1')
+          'anthropic/claude-sonnet-5.5', 'anthropic/claude-fable-5.2')
 BRANCHES = [
     {'type': 'object', 'properties': {'code': {'type': 'string'}},
      'required': ['code'], 'additionalProperties': False},

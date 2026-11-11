@@ -8,7 +8,7 @@ from tests.fakes import FakeUpstream, install_fake
 from tests.harness import auth_file, post, start_server, test_state, tmp_home
 
 LUNA = 'openai/gpt-6-luna'
-FABLE = 'anthropic/claude-fable-5.1'
+FABLE = 'anthropic/claude-fable-5.2'
 ALIASES = {'gpt-6-luna', 'gpt-5.6-luna'}
 ROUTED = {'X-SCG-Codex-Route': 'routed'}
 HELPER = {'X-Codex-Turn-Metadata': json.dumps({'thread_source': 'thread_title'})}

@@ -8,15 +8,15 @@ domain-specific checks or user authorization.
 
 ## Model choice
 
-Evidence refreshed 2026-09-13. These are provisional choices, not measured local
+Evidence refreshed 2026-11-11. These are provisional choices, not measured local
 plan-review success rates. Choose capability and comparable cost independently
 of subscriptions or account billing.
 
 | Situation | Model and fixed effort | Reason |
 | --- | --- | --- |
-| General planning advisor | Standard `meta/muse-spark-1.3` at `max` | Strong professional synthesis and broad reasoning proxies at a moderate price |
-| Concrete repository/tool plan, bounded and low consequence | `deepseek/deepseek-v4.1-flash` at `max` | Cheap tool-workflow reasoning with objective verification |
-| Intricate operational plan or unresolved material finding | `openai/gpt-5.6-sol` at `max` | Stronger terminal/document proxies and targeted debugging fit |
+| Bounded general planning advisor | `meta/muse-ember` at `max` | Inexpensive reasoning and automation candidate; no direct plan-critique result |
+| Concrete repository/tool plan, bounded and low consequence | `deepseek/deepseek-v4.1-flash-1017` at `max` | Cheap tool-workflow reasoning with objective verification |
+| Intricate operational plan or unresolved material finding | `openai/gpt-6.1-sol` at `max` | Stronger current reasoning and terminal proxies |
 | Remaining high-impact uncertainty after Sol | `openai/gpt-6-astra` at `max` | Focused escalation when the consequence justifies the premium |
 
 Read [security selection](cybersecurity.md) for any security plan; its
@@ -26,8 +26,9 @@ No advisor can issue an authorization or integrity acceptance on their behalf.
 
 For availability, use the applicable [workload fallback order](fallbacks.md),
 preserving domain requirements and fixed effort. Resolve the actual callable
-identifier from the active tools. A failed external transport may leave native
-`gpt-5.6-sol` as the usable fallback; never infer availability from a picker row.
+identifier from the active tools. Use a matching GPT subscription route first
+when host instructions require it. Native `gpt-6-sol` is a different version
+from GPT-6.1 Sol; never transfer scores or infer access from a picker row.
 Do not automatically substitute Muse Contributor: its data-use terms and exact
 tier qualification differ. Record requested and served identity; absent serving
 identity is `unverified`. Stop cycling models on a shared transport failure.
@@ -62,22 +63,13 @@ follow-up only when material uncertainty remains; avoid repeated full reviews.
 
 ## Evidence and qualification
 
-The bounded research found no robust head-to-head benchmark of these exact models
-critiquing supplied plans. [Artificial Analysis](https://artificialanalysis.ai/models/muse-spark-1-3)
-reports Muse's Intelligence Index around 48 at $1.25/$4.25 per million input/output
-tokens; [Sol](https://artificialanalysis.ai/models/gpt-5-6-sol) scores around 47
-and lists $4/$20 on that reference route. These are broad proxies and dated route
-prices, not expected cost per accepted plan. The [catalogue](catalogue.md) keeps
-separate OpenRouter prices and workload scores; refresh the selected route before
-material spend. GLM Flash remains a cheap general alternative, but lacks direct
-plan-review qualification. Full GLM's technical gains do not establish better
-plan criticism than Muse.
-
-[Meta's release evidence](https://research.meta.ai/blog/introducing-muse-spark-1-3)
-supports long-horizon planning and requirement retention, but is vendor evidence.
-The [Agent Planning Benchmark](https://arxiv.org/html/2606.04874) motivates separate
-checks for constraints, ordering and impossible tasks; it does not rank these
-exact current models. No local comparative evaluation was run for this guide.
+The refresh found no direct head-to-head qualification of these exact models
+critiquing supplied plans. [Ember](https://artificialanalysis.ai/models/muse-ember)
+scores 36.02 on Intelligence Index v5.0.1, with 68.08% on AutomationBench-AA.
+[Sol 6.1](https://artificialanalysis.ai/models/gpt-6-1-sol) scores 54.61 and
+56.06% on Terminal-Bench 4.0. These are broad proxies, not plan-review accuracy
+or cost per accepted plan. The [catalogue](catalogue.md) records current prices,
+workload evidence and exclusions. No paid comparative evaluation was run.
 
 Before promoting a model on local evidence, compare the same small frozen set
 of sanitized flawed and valid plans with hidden, human-checked ground truth.

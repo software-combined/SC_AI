@@ -208,7 +208,7 @@ child with the Agent tool and picks its model like this:
 - A router model in a session attached to the router (an attached terminal
   session, or the desktop gateway profile): use an agent definition
   (`.claude/agents/<name>.md`) whose `model:` is the router listing id and
-  whose `effort:` is the model's prescribed effort. Router workers'
+  whose `effort:` is the explicitly selected role or task effort. Router workers'
   `router_worker.py --list` prints each listing id as `id`. Start the child by
   its `subagent_type` and leave the Agent tool's `model` out, because that
   would override the definition. `model: inherit` keeps the parent's router

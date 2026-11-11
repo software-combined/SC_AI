@@ -1,7 +1,7 @@
 # Model-unavailable fallback
 
 A fallback preserves the task, acceptance checks and data constraints while
-changing the model. It is not permission to lower the prescribed reasoning
+changing the model. It is not permission to silently lower the assigned reasoning
 level, change accounts/credentials, broaden tool authority or relax a required
 review gate. Choose by workload and comparable model cost, independently of
 subscriptions and billing arrangements.
@@ -12,8 +12,8 @@ subscriptions and billing arrangements.
   supported aliases. Resolve the selected model's callable id; if unavailable,
   move to a different eligible model below. A hidden picker row is not proof of
   availability, and a model name in a prompt is not served-identity evidence.
-- **Unsupported prescribed effort:** choose another model with its own fixed
-  level. Do not silently downgrade the same model's effort.
+- **Unsupported selected effort:** choose another eligible model/effort pair.
+  Do not silently downgrade the same model's effort.
 - **Model-specific rate/capacity limit or transient provider error:** respect a
   supplied retry delay if waiting is practical; otherwise use the next eligible
   model. Do not repeat immediate retries or continue after a known budget limit.
@@ -42,12 +42,13 @@ These are availability ladders, not claims that every successor is more capable.
 
 | Workload | Ordered candidates, each with its fixed effort |
 | --- | --- |
-| Extraction, simple edits, reconnaissance | GLM 5.3 Flash `max` → DeepSeek V4.1 Flash `max` → GPT-5.6 Luna `max` → Muse Spark 1.3 `max` |
-| Repository work, scripts, tool workflows | DeepSeek V4.1 Flash `max` → GLM 5.3 Flash `max` → GPT-5.6 Luna `max` for bounded work → GLM 5.3 `max` or GPT-5.6 Sol `max` when stronger reasoning is required |
-| Business analysis, synthesis, documents | Muse Spark 1.3 `max` → GLM 5.3 `max` for text/tool work → GPT-5.6 Sol `max` → Claude Opus 5 `max` only when the quality need justifies it |
-| UI and frontend | GLM 5.3 Flash `max` → DeepSeek V4.1 Flash `max` → Qwen3.8 Max 0902 `xhigh` → Kimi K3 `max`; preserve the requested visual quality floor |
-| Images or other multimodal input | Gemini 3.8 Flash `high` → Muse Spark 1.3 `max` → GPT-5.6 Luna `max` → GPT-6 Astra `max`; each candidate must actually accept the required input through the current tools |
-| Long-document extraction/reasoning | DeepSeek V4.1 Flash `max` → GPT-5.6 Luna `max` → Muse Spark 1.3 `max` → Kimi K3 `max`; retain source citations and context-capacity checks |
+| Extraction, simple edits, reconnaissance | Muse Ember `max` → GLM Flash `max` → DeepSeek Flash 1017 `max` → Luna `max` for mechanical work → Terra 6.1 `high` |
+| Repository work, scripts, tool workflows | Terra 6.1 `max` → Sol 6.1 `max` → Kimi K3.1 Pro `max` or Carbon `high`; Ember or DeepSeek 1017 `max` only for bounded worker scope |
+| Business analysis, synthesis, documents | Ember `max` → Sol 6.1 `high` → Sonnet 5.5 `max` → Opus 5.5 `max`; skip draft-only candidates for demanding polished deliverables |
+| UI design direction | Carbon `high` → Opus 5.5 `max` → Sol 6.1 `max`; qualify visual judgement and preserve human taste decisions |
+| UI implementation from an agreed design | DeepSeek Flash 1017 `max` → Terra 6.1 `max` → Sol 6.1 `max`; preserve design references and rendered acceptance |
+| Images or other multimodal input | Gemini 3.8 Flash `high` → GPT-6.1 Terra `max` → Gemini 4 Carbon `high` → GPT-6 Astra `max`; each candidate must actually accept the required input through the current tools |
+| Long-document extraction/reasoning | DeepSeek Flash 1017 `max` → GPT-6.1 Terra `max` → GPT-6.1 Sol `max` → Kimi K3.1 Pro `max`; retain source citations and context-capacity checks |
 
 For a premium model that is unavailable, reconsider the workload's cheapest
 eligible candidate rather than automatically moving to another premium model.

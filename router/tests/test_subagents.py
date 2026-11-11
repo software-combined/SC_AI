@@ -50,6 +50,21 @@ class SubagentsTest(unittest.TestCase):
         self.assertEqual(rows[0]['score'], 0)
         self.assertEqual(excluded, [])
 
+    def test_role_efforts_keep_their_own_scores_and_costs(self):
+        rows = [{'id': 'worker', 'effort': effort, 'aa_eligible': True,
+                 'scores': {'intelligence': score}, 'aa_task_usd': cost}
+                for effort, score, cost in [('high', 42, .26), ('max', 51, .96),
+                                            ('unknown', 99, .01)]]
+        data = {'models': rows, 'prescribed_efforts': {'worker': 'max'},
+                'eligible_efforts': {'worker': ['high', 'max']}}
+        included, excluded = pareto.candidates(data, 'intelligence', 'aa_task', 0, 0)
+        self.assertEqual([(row['model'], row['score'], row['cost_usd']) for row in included],
+                         [('worker / high', 42, .26), ('worker / max', 51, .96)])
+        self.assertEqual(len(excluded), 1)
+        del data['eligible_efforts']
+        included, _ = pareto.candidates(data, 'intelligence', 'aa_task', 0, 0)
+        self.assertEqual([row['model'] for row in included], ['worker / max'])
+
     def test_every_model_has_one_prescribed_effort_in_evidence_and_catalogue(self):
         data = json.loads((SKILL / 'references/model-evidence.json').read_text())
         self.assertEqual(set(data['prescribed_efforts']), {r['id'] for r in data['models']})

@@ -8,7 +8,7 @@ from ai_router.catalogue import RETIRED_SLUGS, merge
 from ai_router.providers import ExternalResponsesProvider, PreparationError, select
 from ai_router.registry import MODELS, by_slug
 
-PINNED_CLAUDE = ('anthropic/claude-fable-5.1', 'anthropic/claude-haiku-5.5',
+PINNED_CLAUDE = ('anthropic/claude-fable-5.2', 'anthropic/claude-haiku-5.5',
                  'anthropic/claude-opus-5.5', 'anthropic/claude-sonnet-5.5')
 RETIRED_LATEST = ('~anthropic/claude-sonnet-latest', '~anthropic/claude-fable-latest',
                   '~anthropic/claude-haiku-latest', '~anthropic/claude-opus-latest',
@@ -128,6 +128,41 @@ class ModelRosterTests(unittest.TestCase):
         merged = {m['slug'] for m in merge(stale)['models']}
         self.assertNotIn(RETIRED_TERRA, merged)
         self.assertIn(SUBSCRIPTION_TERRA, merged)
+
+    def test_fable_replacement_removes_stale_picker_and_preserves_tool_profile(self):
+        slug, retired = 'anthropic/claude-fable-5.2', 'anthropic/claude-fable-5.1'
+        fable = by_slug(slug)
+        self.assertEqual(fable.display_name, 'Anthropic: Claude Fable 5.2 · OpenRouter')
+        self.assertEqual((fable.context_window, fable.max_output_tokens), (1000000, 128000))
+        self.assertEqual(fable.reasoning, ('low', 'medium', 'high', 'xhigh', 'max'))
+        self.assertEqual((fable.schema_mode, fable.history_mode, fable.apply_patch),
+                         ('json_text_composition', 'native', 'freeform'))
+        compatibility = by_slug(retired)
+        self.assertFalse(compatibility.listed)
+        self.assertEqual(compatibility.upstream_id or compatibility.slug, retired)
+        self.assertIn(retired, RETIRED_SLUGS)
+        merged = merge({'models': [{'slug': retired}, {'slug': 'gpt-6-astra'}]})
+        entries = {row['slug']: row for row in merged['models']}
+        self.assertNotIn(retired, entries)
+        self.assertIn(slug, entries)
+        self.assertIn('gpt-6-astra', entries)
+
+    def test_saved_fable_chats_keep_their_exact_external_model_on_both_routes(self):
+        from ai_router import claude, request_context
+        from tests.harness import stub_credentials
+        slug = 'anthropic/claude-fable-5.1'
+        context = request_context.resolve(slug, request_context.capture())
+        for selector, path, content in (
+                (select, '/responses', {'input': 'Continue the saved task.'}),
+                (claude.select, '/v1/messages', {'messages': [
+                    {'role': 'user', 'content': 'Continue the saved task.'}]})):
+            with self.subTest(path=path):
+                payload = {'model': slug, **content}
+                adapter = selector(slug, path, catalogue=context.catalogue)
+                prepared = adapter.prepare(slug, path, payload, json.dumps(payload).encode(),
+                                           {}, stub_credentials(), context=context)
+                self.assertEqual(json.loads(prepared.body)['model'], slug)
+                self.assertEqual(prepared.provider, 'openrouter')
 
     def test_haiku_replacement_retires_stale_picker_row_and_preserves_reasoning(self):
         slug, retired = 'anthropic/claude-haiku-5.5', 'anthropic/claude-haiku-4.5'
