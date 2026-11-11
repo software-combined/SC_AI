@@ -4,6 +4,7 @@ import os
 import re
 import shutil
 import subprocess
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -50,6 +51,17 @@ class AcceptancePipelineTests(unittest.TestCase):
         self.assertIn('-Suite ${{ matrix.suite }}', job)
         self.assertIn('runs-on: windows-latest', job)
         self.assertIn('windows-standard', pipeline['test'])
+
+    @unittest.skipUnless(os.name == 'posix' and shutil.which('bash'), 'gate runs on Ubuntu')
+    def test_failed_prerequisite_guard_runs_before_checkout_in_an_empty_workspace(self):
+        guard = jobs()['test'].split('      - name: Required jobs\n', 1)[1].split('      - uses:', 1)[0]
+        self.assertIn('        working-directory: .\n', guard)
+        command = run_block('Required jobs', CHECK.read_text())
+        command = command.replace("${{ join(needs.*.result, ', ') }}", 'failure, success')
+        with tempfile.TemporaryDirectory() as workspace:
+            result = subprocess.run(['bash', '-c', command], cwd=workspace, capture_output=True, text=True)
+        self.assertEqual(result.returncode, 1)
+        self.assertIn('a required job did not succeed: failure, success', result.stdout)
 
     def test_diagnostic_graph_preserves_checks_without_release_authority(self):
         diagnostic = (CHECK.parent / 'windows-ci-benchmark.yml').read_text()

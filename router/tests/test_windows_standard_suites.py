@@ -30,7 +30,8 @@ class SuiteSelectionTests(unittest.TestCase):
         owner = tool()
         def program(args, worker):
             self.assertIsNone(worker)
-            selected = list(leaves(unittest.defaultTestLoader.loadTestsFromNames(args[2:])))
+            selected = list(leaves(unittest.defaultTestLoader.loadTestsFromNames(
+                [arg for arg in args[2:] if arg != '-v'])))
             inventory = [case.id() for case in selected]
             self.assertTrue(inventory)
             report = dict(complete=True, inventory=inventory, selected=inventory,
@@ -74,7 +75,8 @@ class SuiteSelectionTests(unittest.TestCase):
                          [{k: v for k, v in row.items() if k != 'elapsed_s'} for row in split])
         self.assertEqual(commands, calls)
         self.assertIn('discover', commands[0])
-        self.assertEqual(commands[1][-4:], [
+        self.assertEqual(commands[1][-1], '-v')
+        self.assertEqual(commands[1][-5:-1], [
             'tests.test_windows_native_lifecycle', 'tests.test_windows_acl_native',
             'tests.test_windows_task_cohort', 'tests.test_windows_shortcut_recovery'])
 
@@ -99,12 +101,14 @@ class SuiteSelectionTests(unittest.TestCase):
             def test_skip(self): pass
             def test_fail(self): self.fail('synthetic failure')
         suite = lambda: unittest.TestSuite([Cases('test_pass'), Cases('test_pass'), Cases('test_skip')])
-        with redirect_stderr(io.StringIO()), \
+        with redirect_stderr(io.StringIO()) as output, \
                 mock.patch.object(unittest.defaultTestLoader, 'discover', side_effect=lambda *_a, **_k: suite()):
             report = owner.run_suites('core')[0]
         self.assertTrue(report['success'])
         self.assertEqual(report['tests'], 3)
         self.assertEqual(report['skipped'], 1)
+        self.assertIn('test_pass', output.getvalue())
+        self.assertIn("skipped 'synthetic skip'", output.getvalue())
         self.assertNotIn('/synthetic/profile', json.dumps(report))
         self.assertEqual(len(report['events']), 2)
         self.assertEqual(collections.Counter(report['inventory']),

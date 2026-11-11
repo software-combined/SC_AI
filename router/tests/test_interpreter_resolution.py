@@ -193,6 +193,8 @@ class HandoverTests(unittest.TestCase):
     def test_upgrade_hands_over_with_term_not_bootout(self):
         with tempfile.TemporaryDirectory() as tmp:
             home = Path(tmp) / 'home'
+            (Path(tmp) / 'real-home').mkdir()
+            home.symlink_to(Path(tmp) / 'real-home', target_is_directory=True)
             prev = home / 'releases' / '0.2.0'
             (prev / 'packaging').mkdir(parents=True)
             (prev / 'packaging' / 'VERSION').write_text('0.2.0\n')
@@ -270,6 +272,35 @@ class PortableOrderTests(unittest.TestCase):
                     mock.patch.object(svc.shutil, 'which', lambda name: None):
                 self.assertIsNone(svc.find_python())
                 self.assertEqual(tried, want)
+
+
+@unix_only
+class HomeAliasTests(unittest.TestCase):
+    def test_loaded_scripts_follow_home_alias_without_hiding_command_drift(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp).resolve()
+            home, alias = root / 'home', root / 'alias'
+            home.mkdir()
+            alias.symlink_to(home, target_is_directory=True)
+            loaded = ['/python', str(alias / 'update_launch.py')]
+            rendered = ['/python', str(home / 'update_launch.py')]
+            self.assertTrue(svc._launchd.command_matches(loaded, rendered))
+            self.assertFalse(svc._launchd.command_matches(loaded, ['/python', str(home / 'other.py')]))
+            self.assertFalse(svc._launchd.command_matches(loaded + ['old'], rendered + ['new']))
+            definition = svc.render_plist('/python', alias, {'port': 1})
+            path = root / 'router.plist'
+            svc.write_plist(path, definition)
+            target = svc.render_plist('/python', home, {'port': 1})
+            self.assertFalse(svc._launchd.plist_differs(path, target))
+            definition['Sockets']['Listeners']['SockServiceName'] = '2'
+            svc.write_plist(path, definition)
+            self.assertTrue(svc._launchd.plist_differs(path, target))
+            LAUNCHD.reset(commands={svc.UPDATE_LABEL: [
+                '/python', str(alias / 'releases/1.0.0/packaging/install.py')]})
+            self.addCleanup(LAUNCHD.reset)
+            self.assertEqual(svc._launchd.loaded_updater_release(LAUNCHD, 501, home), '1.0.0')
+            LAUNCHD.reset(commands={svc.UPDATE_LABEL: ['/python', str(root / 'outside/install.py')]})
+            self.assertIsNone(svc._launchd.loaded_updater_release(LAUNCHD, 501, home))
 
 
 if __name__ == '__main__':

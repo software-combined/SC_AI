@@ -99,7 +99,7 @@ class InstallCatalogueTests(unittest.TestCase):
             home, _, fake_fetch = _setup(self, tmp)[:3]
             config = _install(self, tmp, home, fake_fetch,
                               _recording_run([]), '--static-catalogue')
-            self.assertIn(f'model_catalog_json = "{home}/mixed-models.json"', config.read_text())
+            self.assertIn(f'model_catalog_json = "{home.resolve()}/mixed-models.json"', config.read_text())
 
     def test_install_generates_working_picker_catalogue(self):
         with tempfile.TemporaryDirectory() as tmp:

@@ -84,7 +84,7 @@ class UpdaterAdoptionTests(unittest.TestCase):
             self.assertTrue(updater, 'a changed updater command must be reloaded')
             self.assertEqual(
                 LAUNCHD.commands[UPDATE_LABEL],
-                [LAUNCHD.DEFAULT_PROGRAM, str(home / 'update_launch.py')],
+                [LAUNCHD.DEFAULT_PROGRAM, str(home.resolve() / 'update_launch.py')],
                 'launchd must end up running the release-independent launcher')
 
     def test_never_boots_out_the_job_this_installer_is_running_inside(self):
@@ -173,7 +173,7 @@ class UpdaterAdoptionTests(unittest.TestCase):
                         args, _fetch=_static_fetch(latest, blob), _run=fake_run), 0)
             self.assertEqual(
                 LAUNCHD.commands[UPDATE_LABEL],
-                [LAUNCHD.DEFAULT_PROGRAM, str(home / 'update_launch.py')])
+                [LAUNCHD.DEFAULT_PROGRAM, str(home.resolve() / 'update_launch.py')])
 
 
 class InstallLockTests(unittest.TestCase):
