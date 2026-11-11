@@ -27,8 +27,8 @@ only. Keep the project's existing owners and workflow.
 When asked to use Factory, first read the applicable project and repository
 instructions, such as `AGENTS.md` or the host's equivalent. Every role follows
 them. For work without a repository, use the project's existing instruction
-sources. Resolve the requested outcome, current owners, work records and
-authority before changing the team.
+sources. Resolve the requested outcome, the whole vision, current owners,
+work records and authority before changing the team.
 
 Use the [project role guide](references/role-setup.md) for setup or a role change.
 It contains ten optional starting roles and a compact owner brief. Read only
@@ -41,37 +41,85 @@ Keep stable role duties separate from changing assignments. They can be
 sections in existing records; new folders and files are optional. Give each
 owner an explicit role and a route to its current work. Directory names,
 chat titles and Markdown links alone do not establish identity or loading.
-Verify setup with one useful result before extending the team.
+Verify each new owner with one useful result before extending its work.
+
+## Design the team
+
+Design the whole team at setup from the whole vision, so it is ready before
+work starts. Do not plan it from the first request alone, improvise it later or
+default to the manager doing everything.
+
+1. **Understand the whole vision.** Read what the product is meant to become:
+   vision, design documents, roadmap and the human's stated goals. If the
+   vision is unclear, ask the human once, with grouped questions, before
+   fixing the team. Record a short summary with the roster.
+2. **List the work.** From the vision, list the disciplines involved, the
+   files, folders or records each one writes, and the project's phases from
+   first build to launch or handover.
+3. **Give each write area one owner.** When work needs a change in another
+   owner's area, request it on the team board; that owner makes it. One owner
+   can cover several areas whose work does not overlap in time. A code-writing
+   owner works in its own worktree and branch.
+4. **Decide who works now.** Work in an area that has an owner always goes to
+   that owner. Ready work in a `planned` or `parked` owner's area starts or
+   resumes that owner. If the owner cannot be created or resumed yet, hold the
+   work and tell the human why; do not do it yourself. For areas without an
+   owner: when two or more have continuing
+   ready work, give each a persistent owner and assign the work to it. The
+   project manager coordinates; it does not do that work itself. When only one
+   has ready work, the manager can deliver it directly or with temporary
+   subagents. A one-off task in such an area goes to a temporary subagent, not
+   a new owner.
+5. **Record the team plan in the roster.** List each owner, its write area and
+   the phase that needs it. Create the owners that step 4 puts to work, within
+   what the human's request and the host permit. Record
+   later owners as `planned`, with the event that starts them, such as a phase
+   opening. Show the plan to the human with the first acknowledgement. The
+   human's first request sets the first priority within this plan; it does not
+   shrink the plan to that request.
+
+Name roles for the work. Research, Finance, Operations and Content are as valid
+as Engineering. Do not create roles to fill a template, and do not add a
+separate product-owner or coordination agent by default. Each owner verifies
+its own area and remains responsible for its temporary workers.
+
+When several disciplines build one product, keep discipline owners and route
+each feature as a card in the existing backlog. The card states the outcome,
+acceptance, each discipline's slice and the dependencies between slices, so a
+slice can wait for another without a board entry. Each owner takes its slice
+into its own record, and one named owner integrates and verifies the whole
+feature. Do not create a persistent owner per feature.
+
+For example, a video game might start with Game Design (design documents,
+levels and balance data), Art (art sources and exported assets) and Engineering
+(game code and build). Audio and QA are `planned` for production, and Release
+for launch. A new enemy is one card: Design, Art and Engineering each take a
+slice, and Engineering integrates and verifies it in the build.
+
+A larger software project might use an Engineering Lead, combining software
+leadership and delivery coordination, and add Architecture, UX/Design, QA or
+DevOps/Release owners only where needed. They collaborate as peers; an
+Architect is not a required approval step above implementation or release.
+Independent reviewers must not have written the work they check, whether or not
+the project has a separate QA owner. Existing project gates still apply.
+
+Adjust the team as the work changes:
+
+- Start a `planned` owner when its event occurs or ready work reaches its area.
+- Split an owner only by write area. When two of its areas have ready work at
+  the same time, or their work starts to queue, move one area to a new owner
+  through the handoff steps below. Parallel work inside one area stays with its owner,
+  using temporary workers.
+- Park an owner with no assigned work. Record it as `parked`, with its last
+  state and the event that resumes it. Keep its chat and history, and resume it
+  rather than creating a replacement.
 
 ## Keep durable owners
 
 Use one persistent project manager as the human's single front door. It turns
 human direction into priorities, coordinates owners, resolves cross-area
-conflicts and brings back progress and reserved decisions.
-
-For projects with several active workstreams, the project manager normally
-delegates substantial execution to existing owners and stays available for
-coordination and human decisions. It can handle short, bounded tasks directly.
-Avoid making it the relay for routine updates; existing approval gates still apply.
-
-Start with the smallest team that can deliver the outcome:
-
-- A small project can use just the project manager, working directly or with
-  temporary subagents. Do not add a separate product-owner or coordination
-  agent by default.
-- Add a persistent role owner only for an area that needs continuing,
-  distinct ownership. One owner can cover several areas; split them when
-  the work needs separate ownership. Each owner verifies its own area and
-  remains responsible for its temporary workers.
-- Name roles for the work. Research, Finance, Operations and Content are as
-  valid as Engineering. Do not create roles to fill a template.
-
-A larger software project might use an Engineering Lead, combining software
-leadership and delivery coordination. Add Architecture, UX/Design, QA or
-DevOps/Release owners only where needed. They collaborate as peers; an
-Architect is not a required approval step above implementation or release.
-Independent reviewers must not have written the work they check, whether
-or not the project has a separate QA owner. Existing project gates still apply.
+conflicts and brings back progress and reserved decisions. Avoid making it the
+relay for routine updates; existing approval gates still apply.
 
 Owners collaborate directly through shared state and evidence. Bring
 priorities, scope conflicts and decisions needing the human to the project
@@ -98,17 +146,26 @@ for a title change. Verify the saved title and roster link, then keep them
 stable. Put the current assignment in shared state. Subagent titles describe
 their project and actual role; internal tool IDs keep the host's required format.
 
+Before creating or resuming an owner, save the plan, roster and its current
+record in the project's permitted records where it can read them, such as a
+commit on its base branch for repository work. A new owner
+session or worktree starts from the last saved shared state; unsaved edits in
+the manager's checkout are invisible to it.
+
 Record actual owner chat links or IDs in the existing role roster. If the host
 cannot create or resume persistent chats, report the limitation and proposed
-roster rather than claiming the team exists. Do not make a feature chat or
-role owner into a second project manager. A role or title change does not
-grant new tools, production access or decision authority.
+roster rather than claiming the team exists. On setup and resume, check through
+the host that every owner chat in the roster exists before relying on it. Mark
+a missing chat `not created` and route no work to it until it exists.
+
+Do not make a feature chat or role owner into a second project manager. A role
+or title change does not grant new tools, production access or decision
+authority.
 
 ## Work from current state
 
 Reuse the project's backlog, tracker, repository, checks and release path.
 Do not create a competing work list or a runtime framework to use this method.
-For a new team, prove one useful outcome in one area before expanding it.
 
 Keep one current record per outcome in the existing roster, plan, tracker or issue,
 and link it from the role roster. Store only what another actor needs to act

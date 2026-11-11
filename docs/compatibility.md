@@ -1,5 +1,13 @@
 # Compatibility
 
+## Router 1.3.49 release, 11 November 2026 AEDT
+
+This release changes no Router code. It delivers Factory 1.1.0, whose changes
+are Markdown agent guidance only. The installed clients are Codex desktop
+`26.1103.60933` (build `25894`) and Claude Code `2.1.318`, unchanged since the
+Gemini 4 Carbon candidate checks below, so no new paid probe ran. Those results
+carry over, including the waived and unverified Codex ChatGPT subscription leg.
+
 ## Gemini 4 Carbon candidate, 11 November 2026 AEDT
 
 Clients: Codex desktop `26.1103.60933` (build `25894`), bundled CLI

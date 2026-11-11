@@ -1,5 +1,22 @@
 # Changelog
 
+## scg-agent-factory 1.1.0 (2026-11-11)
+
+- Design the whole team at setup from the whole product vision, in five steps:
+  understand the vision, list the work, give each write area one owner, decide
+  who works now and record the team plan in the roster.
+- Give a clear rule for when the project manager hands work to owners. Work in
+  an owned area always goes to its owner, starting a `planned` one. Two or more
+  unowned areas with continuing ready work each get an owner. Owners are drawn
+  around what they write, each code writer in its own worktree.
+- Record later owners as `planned`, start them on their event, split an
+  overloaded owner by write area and park a quiet one rather than deleting it.
+- Route features across disciplines as backlog cards that owners slice, with
+  a video game example.
+- Check every roster chat exists on resume and mark missing ones `not created`.
+  Save the plan before creating an owner, because it starts from saved state.
+- Add team-plan and stale-roster stages to the continuity check.
+
 ## scg-agent-factory 1.0.0 (2026-11-10)
 
 - Give the human one trusted contact. The project manager acknowledges and
