@@ -1,8 +1,8 @@
 [
   {
-    "slug": "anthropic/claude-fable-5.1",
+    "slug": "anthropic/claude-fable-5.2",
     "provider": "openrouter",
-    "display_name": "Anthropic: Claude Fable 5.1 · OpenRouter",
+    "display_name": "Anthropic: Claude Fable 5.2 · OpenRouter",
     "vendor": "Anthropic",
     "reasoning": [
       "low",
@@ -28,7 +28,40 @@
     "apply_patch": "freeform",
     "experimental_tools": [],
     "web_search": true,
-    "tier": "verified"
+    "tier": "verified",
+    "listed": true
+  },
+  {
+    "slug": "anthropic/claude-fable-5.1",
+    "provider": "openrouter",
+    "display_name": "Anthropic: Claude Fable 5.1 · OpenRouter",
+    "vendor": "Anthropic",
+    "reasoning": [
+      "low",
+      "medium",
+      "high",
+      "xhigh",
+      "max"
+    ],
+    "default_reasoning": "low",
+    "modalities": [
+      "text",
+      "image"
+    ],
+    "excluded_efforts": [],
+    "schema_mode": "json_text_composition",
+    "history_mode": "native",
+    "max_tools": null,
+    "drop_images": false,
+    "context_window": 1000000,
+    "priority": 99,
+    "max_output_tokens": 128000,
+    "reasoning_summary": "none",
+    "apply_patch": "freeform",
+    "experimental_tools": [],
+    "web_search": true,
+    "tier": "verified",
+    "listed": false
   },
   {
     "slug": "anthropic/claude-haiku-5.5",

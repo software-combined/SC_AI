@@ -269,7 +269,8 @@ class VisibilityIntegrationTests(unittest.TestCase):
         # hides: both filters apply at once.
         import json as _json
         roster = external_slugs()
-        gated = sorted(roster)[:3]
+        # Hidden saved-session routes remain routable but never enter the picker.
+        gated = sorted(m.slug for m in MODELS if m.slug in roster and m.listed)[:3]
         with tempfile.TemporaryDirectory() as tmp:
             (Path(tmp) / 'model-policy.json').write_text(_json.dumps(
                 {'portco': 'acme', 'allowed_models': gated}))

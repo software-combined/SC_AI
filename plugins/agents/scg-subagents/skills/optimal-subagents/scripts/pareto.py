@@ -5,7 +5,7 @@ import json
 import math
 from pathlib import Path
 
-METRICS = ('intelligence', 'terminal', 'automation', 'briefcase', 'gdpval',
+METRICS = ('intelligence', 'terminal', 'frontiercode', 'automation', 'briefcase', 'gdpval',
            'pdf', 'lcr', 'scicode', 'vision', 'omniscience', 'webdev')
 
 
@@ -21,6 +21,7 @@ def candidates(data, metric, cost, input_tokens, output_tokens):
     included, excluded = [], []
     for row in data['models']:
         prescribed_effort = data['prescribed_efforts'][row['id']]
+        eligible_efforts = data.get('eligible_efforts', {}).get(row['id'], [prescribed_effort])
         label = row['id'] + ' / ' + row['effort']
         if metric == 'webdev':
             evidence = row.get('webdev') or {}
@@ -33,9 +34,9 @@ def candidates(data, metric, cost, input_tokens, output_tokens):
         else:
             excluded.append(label + ': no exact AA identity')
             continue
-        if measured_effort != prescribed_effort:
-            excluded.append(label + ': measured effort does not match prescribed '
-                            + prescribed_effort)
+        if measured_effort not in eligible_efforts:
+            excluded.append(label + ': measured effort not eligible: '
+                            + ', '.join(eligible_efforts))
             continue
         if cost == 'aa_task':
             dollars = row.get('aa_task_usd')

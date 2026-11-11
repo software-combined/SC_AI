@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-## 1.3.52
+## 1.3.53
 
 - Attach the complete native installer cohort and signed SHA-256 inventories
   to beta prereleases while keeping stable publication gated.
@@ -19,6 +19,14 @@
   plugins are not turned back on after a failed check.
 - Guide failed setup through safe diagnosis and verified completion while
   preserving subscription defaults and the user's restart choice.
+
+## 1.3.52
+
+- Replace Claude Fable 5.1 with Fable 5.2 in the model catalogue and remove the
+  superseded entry from saved pickers on refresh. Existing chats retain a
+  hidden route to their original Fable 5.1 model.
+- Refresh SCG Subagents recommendations against Artificial Analysis Intelligence
+  Index v5.0.1 and current model prices.
 
 ## 1.3.51
 

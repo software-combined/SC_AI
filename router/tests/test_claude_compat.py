@@ -20,7 +20,7 @@ from ai_router import claude as claude_mod
 from ai_router import claude_compat as compat
 from ai_router import provider_defs
 
-FABLE = 'anthropic/claude-fable-5.1'
+FABLE = 'anthropic/claude-fable-5.2'
 BILLING = 'x-anthropic-billing-header: cc_version=2.1.223.aeb; cc_entrypoint=sdk-cli;'
 # Captured live from Claude Code 2.1.223 with ENABLE_TOOL_SEARCH=true: the
 # deferred catalogue arrives as a placeholder, a released definition keeps its
