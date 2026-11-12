@@ -111,9 +111,14 @@ To preview a per-portco subset in CI without touching runtime policy:
 followed by the same `--allowed` with `--check`. Runtime enforcement
 reads `<home>/model-policy.json` alone; the flag never widens it.
 
+Gemini 4 Hydrogen (`google/gemini-4-hydrogen`) is listed after both isolated
+client checks passed; its route evidence is in the acceptance ledger. Its
+published file and video inputs do not widen the existing Codex projection,
+which supports text, image and audio.
+
 The current roster pins exact ids from the
 [OpenRouter model list](https://openrouter.ai/api/v1/models): Claude Opus 5.5,
-Sonnet 5.5, Fable 5.2 and Haiku 5.5; Gemini 4 Carbon and Argon, Gemini 3.8 Flash and
+Sonnet 5.5, Fable 5.2 and Haiku 5.5; Gemini 4 Carbon, Argon and Hydrogen, Gemini 3.8 Flash and
 Gemini 3.1 Pro Preview; Grok 4.7; the Xiaomi MiMo 2.6 Pro and Flash rows; and the DeepSeek
 V4.1 Flash (newest Flash, image-capable) and V4 Pro 0813 (newest Pro,
 text-only) rows; MoonshotAI Kimi K3.1 Pro; and StepFun Step 5 Preview. The router does not follow

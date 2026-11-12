@@ -4171,5 +4171,126 @@
       "result": "pass"
     }
   ]
+},
+{
+  "kind": "model_routes_v1",
+  "observed_at": "2026-11-12T21:33:48.217265+00:00",
+  "model": "google/gemini-4-hydrogen",
+  "provider": "openrouter",
+  "capability_fingerprint": "4e4260e7d9c23f6a13060702cb1ad967669e85b061a436300ae137e007b818c2",
+  "runtime_fingerprint": "e34427934f158a5a1a76c19d75955bb3b4e0d62af120e5bfb7b1adf2fee070f2",
+  "router_version": "1.3.55",
+  "router_revision": "dceae0a1b54b72073376470fca94a3a68110187b",
+  "routes": [
+    {
+      "protocol": "responses",
+      "client": "codex",
+      "client_version": "0.167.0-alpha.3.2",
+      "requested_effort": "low",
+      "served_models": [
+        {
+          "value": "google/gemini-4-hydrogen",
+          "source": "response.created.response.model"
+        },
+        {
+          "value": "google/gemini-4-hydrogen",
+          "source": "response.in_progress.response.model"
+        },
+        {
+          "value": "google/gemini-4-hydrogen",
+          "source": "response.completed.response.model"
+        },
+        {
+          "value": "google/gemini-4-hydrogen",
+          "source": "response.created.response.model"
+        },
+        {
+          "value": "google/gemini-4-hydrogen",
+          "source": "response.in_progress.response.model"
+        },
+        {
+          "value": "google/gemini-4-hydrogen",
+          "source": "response.completed.response.model"
+        },
+        {
+          "value": "google/gemini-4-hydrogen",
+          "source": "response.created.response.model"
+        },
+        {
+          "value": "google/gemini-4-hydrogen",
+          "source": "response.in_progress.response.model"
+        },
+        {
+          "value": "google/gemini-4-hydrogen",
+          "source": "response.completed.response.model"
+        }
+      ],
+      "served_efforts": [
+        {
+          "value": "low",
+          "source": "response.created.response.reasoning.effort"
+        },
+        {
+          "value": "low",
+          "source": "response.in_progress.response.reasoning.effort"
+        },
+        {
+          "value": "low",
+          "source": "response.completed.response.reasoning.effort"
+        },
+        {
+          "value": "low",
+          "source": "response.created.response.reasoning.effort"
+        },
+        {
+          "value": "low",
+          "source": "response.in_progress.response.reasoning.effort"
+        },
+        {
+          "value": "low",
+          "source": "response.completed.response.reasoning.effort"
+        },
+        {
+          "value": "low",
+          "source": "response.created.response.reasoning.effort"
+        },
+        {
+          "value": "low",
+          "source": "response.in_progress.response.reasoning.effort"
+        },
+        {
+          "value": "low",
+          "source": "response.completed.response.reasoning.effort"
+        }
+      ],
+      "calls": 4,
+      "conformance": "pass",
+      "result": "pass"
+    },
+    {
+      "protocol": "messages",
+      "client": "claude",
+      "client_version": "2.1.318",
+      "requested_effort": "low",
+      "served_models": [
+        {
+          "value": "google/gemini-4-hydrogen",
+          "source": "message_start.message.model"
+        },
+        {
+          "value": "google/gemini-4-hydrogen",
+          "source": "message_start.message.model"
+        },
+        {
+          "value": "google/gemini-4-hydrogen",
+          "source": "message_start.message.model"
+        }
+      ],
+      "served_efforts": [],
+      "calls": 3,
+      "conformance": "pass",
+      "result": "pass"
+    }
+  ]
 }
 ]
