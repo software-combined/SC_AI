@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+## 1.3.55
+
+- Add Google Gemini 4 Hydrogen through OpenRouter to both Codex and Claude Code
+  pickers after isolated client qualification. Offer low, medium, high and xhigh
+  reasoning while keeping subscription defaults and saved model choices unchanged.
+
 ## 1.3.54
 
 - Windows package installs use their verified bundle and channel for upgrades
