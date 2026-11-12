@@ -27,10 +27,10 @@ Uninstallable=no
 Source: "{#ResourcesDir}\*"; DestDir: "{app}"; Flags: recursesubdirs createallsubdirs ignoreversion
 
 [Icons]
-Name: "{group}\Install SCG Router"; Filename: "{app}\runtime\python\pythonw.exe"; Parameters: """{app}\router\packaging\native_setup.py"" --resources ""{app}"""
+Name: "{group}\Install SCG Router"; Filename: "{app}\runtime\python\pythonw.exe"; Parameters: """{app}\router\packaging\native_setup.py"" --resources ""{app}"" --action install"
 
 [Run]
-Filename: "{app}\runtime\python\pythonw.exe"; Parameters: """{app}\router\packaging\native_setup.py"" --resources ""{app}"""; Description: "Set up SCG Router"; Flags: postinstall skipifsilent
+Filename: "{app}\runtime\python\pythonw.exe"; Parameters: """{app}\router\packaging\native_setup.py"" --resources ""{app}"" --action install"; Description: "Set up SCG Router"; Flags: postinstall skipifsilent
 
 [Code]
 procedure InitializeWizard;

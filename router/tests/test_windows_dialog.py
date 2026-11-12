@@ -54,6 +54,46 @@ class WindowsDialogTests(unittest.TestCase):
             self.dialog.show('Switch Codex?', self.home, True, run)
         run.assert_not_called()
 
+    def test_setup_confirmations_and_ready_use_the_verified_home_helper(self):
+        native = module('native_dialog')
+        with mock.patch.object(native, 'sys', SimpleNamespace(platform='win32')), \
+                mock.patch.object(native.platform, '_windows_dialogs', self.dialog), \
+                mock.patch.object(native.dialog, 'tool', return_value=None):
+            for code, marker, expected in ((0, 'accept', True), (1, 'cancel', False),
+                                            (0, '', None)):
+                run = mock.Mock(return_value=SimpleNamespace(returncode=code,
+                    stdout='SCG_ROUTER_DIALOG_RESULT=' + marker + '\n'))
+                self.assertIs(native.confirm_result('Finish setup?', self.home, run,
+                    labels=('Finish setup', 'Cancel')), expected)
+                self.assertEqual(run.call_args.args[0][0], str(self.helper))
+                self.assertEqual(json.loads(run.call_args.kwargs['input'])['labels'],
+                                 ['Finish setup', 'Cancel'])
+            with mock.patch.object(native.platform, 'show_message') as show:
+                native.message('Ready.', home=self.home)
+            show.assert_called_once_with('Ready.', 'win32', home=self.home)
+
+    def test_setup_ready_forwards_its_home_to_the_message(self):
+        native = module('native_setup')
+        dialog = mock.Mock()
+        with mock.patch.object(native, 'status', return_value=dict(serving=True,
+                onboarding=dict(ready=True, clients={}))), \
+                mock.patch.object(native, 'load', return_value=dialog):
+            native._check(self.source, self.home, dialog)
+        dialog.message.assert_called_once_with(
+            'Ready. Your assistants are connected and updates are automatic.', home=self.home)
+
+    def test_first_setup_progress_keeps_the_existing_fallback_without_a_retained_helper(self):
+        native = module('native_dialog')
+        (self.home / 'setup-current').unlink()
+        child = mock.Mock()
+        child.poll.return_value = None
+        with mock.patch.object(native, 'sys', SimpleNamespace(platform='win32')), \
+                mock.patch.object(native.platform, '_windows_dialogs', self.dialog), \
+                mock.patch.object(native.subprocess, 'Popen', return_value=child) as popen:
+            with native.Progress(home=self.home) as progress:
+                self.assertIs(progress.process, child)
+        self.assertEqual(popen.call_args.args[0][0], 'powershell')
+
     def test_waiting_window_uses_the_same_verified_native_helper(self):
         child = mock.Mock()
         with mock.patch.object(self.dialog.subprocess, 'Popen', return_value=child) as popen:

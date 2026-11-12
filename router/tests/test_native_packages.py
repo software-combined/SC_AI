@@ -67,6 +67,7 @@ class NativePackageTests(unittest.TestCase):
         script = (ROOT / 'packaging/native/windows.iss').read_text()
         self.assertIn('Filename: "{app}\\runtime\\python\\pythonw.exe"', script)
         self.assertIn('--resources ""{app}""', script)
+        self.assertEqual(script.count('--action install'), 2)
         self.assertIn('DestDir: "{app}"', script)
         self.assertNotIn('python.exe"; Parameters:', script)
         self.assertIn("WizardForm.Caption := 'SCG Router'", script)

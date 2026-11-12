@@ -70,6 +70,7 @@ def validate(expected, *, api=None):
 
 def snapshot(identity, tracked, names, *, api=None, retention=None, terminate=False):
     """Query owners only for package trees, named writers and tracked processes."""
+    tracked = dict(tracked)
     api = api or bindings()
     with contextlib.ExitStack() as local:
         scope, pinned = retention if retention is not None else (local, {})
