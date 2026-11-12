@@ -1,8 +1,8 @@
 [
   {
-    "slug": "anthropic/claude-fable-5.2",
+    "slug": "anthropic/claude-fable-5.1",
     "provider": "openrouter",
-    "display_name": "Anthropic: Claude Fable 5.2 · OpenRouter",
+    "display_name": "Anthropic: Claude Fable 5.1 \u00b7 OpenRouter",
     "vendor": "Anthropic",
     "reasoning": [
       "low",
@@ -29,12 +29,12 @@
     "experimental_tools": [],
     "web_search": true,
     "tier": "verified",
-    "listed": true
+    "listed": false
   },
   {
-    "slug": "anthropic/claude-fable-5.1",
+    "slug": "anthropic/claude-fable-5.2",
     "provider": "openrouter",
-    "display_name": "Anthropic: Claude Fable 5.1 · OpenRouter",
+    "display_name": "Anthropic: Claude Fable 5.2 \u00b7 OpenRouter",
     "vendor": "Anthropic",
     "reasoning": [
       "low",
@@ -54,20 +54,20 @@
     "max_tools": null,
     "drop_images": false,
     "context_window": 1000000,
-    "priority": 99,
+    "priority": 101,
     "max_output_tokens": 128000,
     "reasoning_summary": "none",
     "apply_patch": "freeform",
     "experimental_tools": [],
     "web_search": true,
     "tier": "verified",
-    "listed": false
+    "listed": true
   },
   {
     "slug": "anthropic/claude-haiku-5.5",
     "provider": "openrouter",
     "upstream_id": "",
-    "display_name": "Anthropic: Claude Haiku 5.5 · OpenRouter",
+    "display_name": "Anthropic: Claude Haiku 5.5 \u00b7 OpenRouter",
     "vendor": "Anthropic",
     "reasoning": [
       "low",
@@ -90,39 +90,6 @@
     "max_output_tokens": 128000,
     "reasoning_summary": "none",
     "apply_patch": "none",
-    "experimental_tools": [],
-    "web_search": true,
-    "tier": "verified",
-    "listed": true,
-    "priority": 101
-  },
-  {
-    "slug": "anthropic/claude-opus-5.5",
-    "provider": "openrouter",
-    "upstream_id": "",
-    "display_name": "Anthropic: Claude Opus 5.5 · OpenRouter",
-    "vendor": "Anthropic",
-    "reasoning": [
-      "low",
-      "medium",
-      "high",
-      "xhigh",
-      "max"
-    ],
-    "default_reasoning": "low",
-    "modalities": [
-      "text",
-      "image"
-    ],
-    "excluded_efforts": [],
-    "schema_mode": "json_text_composition",
-    "history_mode": "native",
-    "max_tools": null,
-    "drop_images": false,
-    "context_window": 1000000,
-    "max_output_tokens": 128000,
-    "reasoning_summary": "none",
-    "apply_patch": "freeform",
     "experimental_tools": [],
     "web_search": true,
     "tier": "verified",
@@ -130,10 +97,43 @@
     "priority": 102
   },
   {
+    "slug": "anthropic/claude-opus-5.5",
+    "provider": "openrouter",
+    "upstream_id": "",
+    "display_name": "Anthropic: Claude Opus 5.5 \u00b7 OpenRouter",
+    "vendor": "Anthropic",
+    "reasoning": [
+      "low",
+      "medium",
+      "high",
+      "xhigh",
+      "max"
+    ],
+    "default_reasoning": "low",
+    "modalities": [
+      "text",
+      "image"
+    ],
+    "excluded_efforts": [],
+    "schema_mode": "json_text_composition",
+    "history_mode": "native",
+    "max_tools": null,
+    "drop_images": false,
+    "context_window": 1000000,
+    "max_output_tokens": 128000,
+    "reasoning_summary": "none",
+    "apply_patch": "freeform",
+    "experimental_tools": [],
+    "web_search": true,
+    "tier": "verified",
+    "listed": true,
+    "priority": 103
+  },
+  {
     "slug": "anthropic/claude-sonnet-5.5",
     "provider": "openrouter",
     "upstream_id": "",
-    "display_name": "Anthropic: Claude Sonnet 5.5 · OpenRouter",
+    "display_name": "Anthropic: Claude Sonnet 5.5 \u00b7 OpenRouter",
     "vendor": "Anthropic",
     "reasoning": [
       "low",
@@ -160,7 +160,7 @@
     "web_search": true,
     "tier": "verified",
     "listed": true,
-    "priority": 103
+    "priority": 104
   },
   {
     "provider": "bedrock",
@@ -181,7 +181,7 @@
     "listed": false,
     "slug": "bedrock/anthropic.claude-sonnet-5",
     "upstream_id": "anthropic.claude-sonnet-5",
-    "display_name": "Anthropic: Claude Sonnet 5 · AWS Bedrock",
+    "display_name": "Anthropic: Claude Sonnet 5 \u00b7 AWS Bedrock",
     "vendor": "Anthropic",
     "reasoning": [
       "none"
@@ -189,7 +189,7 @@
     "default_reasoning": "none",
     "context_window": 200000,
     "max_output_tokens": 64000,
-    "priority": 104,
+    "priority": 105,
     "protocols": [
       "messages"
     ]
@@ -197,7 +197,7 @@
   {
     "slug": "deepseek/deepseek-v4-pro-0813",
     "provider": "openrouter",
-    "display_name": "DeepSeek: V4 Pro 0813 · OpenRouter",
+    "display_name": "DeepSeek: V4 Pro 0813 \u00b7 OpenRouter",
     "vendor": "DeepSeek",
     "reasoning": [
       "low",
@@ -214,7 +214,7 @@
     "max_tools": null,
     "drop_images": false,
     "context_window": 1048576,
-    "priority": 105,
+    "priority": 106,
     "max_output_tokens": 384000,
     "reasoning_summary": "none",
     "apply_patch": "freeform",
@@ -225,37 +225,7 @@
   {
     "slug": "deepseek/deepseek-v4.1-flash-1017",
     "provider": "openrouter",
-    "display_name": "DeepSeek: V4.1 Flash 1017 · OpenRouter",
-    "vendor": "DeepSeek",
-    "reasoning": [
-      "none",
-      "low",
-      "high",
-      "max"
-    ],
-    "default_reasoning": "low",
-    "modalities": [
-      "text",
-      "image"
-    ],
-    "excluded_efforts": [],
-    "schema_mode": "native",
-    "history_mode": "native",
-    "max_tools": null,
-    "drop_images": false,
-    "context_window": 1048576,
-    "priority": 106,
-    "max_output_tokens": 393216,
-    "reasoning_summary": "none",
-    "apply_patch": "freeform",
-    "experimental_tools": [],
-    "web_search": false,
-    "tier": "verified"
-  },
-  {
-    "slug": "deepseek/deepseek-v4.1-flash",
-    "provider": "openrouter",
-    "display_name": "DeepSeek: V4.1 Flash compatibility 1017 · OpenRouter",
+    "display_name": "DeepSeek: V4.1 Flash 1017 \u00b7 OpenRouter",
     "vendor": "DeepSeek",
     "reasoning": [
       "none",
@@ -280,25 +250,23 @@
     "apply_patch": "freeform",
     "experimental_tools": [],
     "web_search": false,
-    "tier": "verified",
-    "listed": false,
-    "upstream_id": "deepseek/deepseek-v4.1-flash-1017"
+    "tier": "verified"
   },
   {
-    "slug": "google/gemini-3.1-pro-preview",
+    "slug": "deepseek/deepseek-v4.1-flash",
     "provider": "openrouter",
-    "display_name": "Google: Gemini 3.1 Pro Preview · OpenRouter",
-    "vendor": "Google",
+    "display_name": "DeepSeek: V4.1 Flash compatibility 1017 \u00b7 OpenRouter",
+    "vendor": "DeepSeek",
     "reasoning": [
+      "none",
       "low",
-      "medium",
-      "high"
+      "high",
+      "max"
     ],
     "default_reasoning": "low",
     "modalities": [
       "text",
-      "image",
-      "audio"
+      "image"
     ],
     "excluded_efforts": [],
     "schema_mode": "native",
@@ -307,17 +275,19 @@
     "drop_images": false,
     "context_window": 1048576,
     "priority": 108,
-    "max_output_tokens": 65536,
+    "max_output_tokens": 393216,
     "reasoning_summary": "none",
     "apply_patch": "freeform",
     "experimental_tools": [],
-    "web_search": true,
-    "tier": "verified"
+    "web_search": false,
+    "tier": "verified",
+    "listed": false,
+    "upstream_id": "deepseek/deepseek-v4.1-flash-1017"
   },
   {
-    "slug": "google/gemini-3.8-flash",
+    "slug": "google/gemini-3.1-pro-preview",
     "provider": "openrouter",
-    "display_name": "Google: Gemini 3.8 Flash · OpenRouter",
+    "display_name": "Google: Gemini 3.1 Pro Preview \u00b7 OpenRouter",
     "vendor": "Google",
     "reasoning": [
       "low",
@@ -345,10 +315,40 @@
     "tier": "verified"
   },
   {
+    "slug": "google/gemini-3.8-flash",
+    "provider": "openrouter",
+    "display_name": "Google: Gemini 3.8 Flash \u00b7 OpenRouter",
+    "vendor": "Google",
+    "reasoning": [
+      "low",
+      "medium",
+      "high"
+    ],
+    "default_reasoning": "low",
+    "modalities": [
+      "text",
+      "image",
+      "audio"
+    ],
+    "excluded_efforts": [],
+    "schema_mode": "native",
+    "history_mode": "native",
+    "max_tools": null,
+    "drop_images": false,
+    "context_window": 1048576,
+    "priority": 110,
+    "max_output_tokens": 65536,
+    "reasoning_summary": "none",
+    "apply_patch": "freeform",
+    "experimental_tools": [],
+    "web_search": true,
+    "tier": "verified"
+  },
+  {
     "slug": "google/gemini-4-argon",
     "provider": "openrouter",
     "upstream_id": "",
-    "display_name": "Google: Gemini 4 Argon · OpenRouter",
+    "display_name": "Google: Gemini 4 Argon \u00b7 OpenRouter",
     "vendor": "Google",
     "reasoning": [
       "low",
@@ -374,13 +374,13 @@
     "web_search": true,
     "tier": "verified",
     "listed": true,
-    "priority": 110
+    "priority": 111
   },
   {
     "slug": "google/gemini-4-carbon",
     "provider": "openrouter",
     "upstream_id": "",
-    "display_name": "Google: Gemini 4 Carbon · OpenRouter",
+    "display_name": "Google: Gemini 4 Carbon \u00b7 OpenRouter",
     "vendor": "Google",
     "reasoning": [
       "low",
@@ -406,12 +406,45 @@
     "web_search": true,
     "tier": "verified",
     "listed": true,
-    "priority": 111
+    "priority": 112
+  },
+  {
+    "slug": "google/gemini-4-hydrogen",
+    "provider": "openrouter",
+    "upstream_id": "",
+    "display_name": "Google: Gemini 4 Hydrogen \u00b7 OpenRouter",
+    "vendor": "Google",
+    "reasoning": [
+      "low",
+      "medium",
+      "high",
+      "xhigh"
+    ],
+    "default_reasoning": "low",
+    "modalities": [
+      "text",
+      "image",
+      "audio"
+    ],
+    "excluded_efforts": [],
+    "schema_mode": "native",
+    "history_mode": "native",
+    "max_tools": null,
+    "drop_images": false,
+    "context_window": 1048576,
+    "max_output_tokens": 943718,
+    "reasoning_summary": "none",
+    "apply_patch": "none",
+    "experimental_tools": [],
+    "web_search": true,
+    "tier": "verified",
+    "listed": true,
+    "priority": 113
   },
   {
     "slug": "google/veo-3.1-fast",
     "provider": "openrouter",
-    "display_name": "Google: Veo 3.1 Fast · OpenRouter",
+    "display_name": "Google: Veo 3.1 Fast \u00b7 OpenRouter",
     "vendor": "Google",
     "reasoning": [
       "none"
@@ -427,7 +460,7 @@
     "max_tools": null,
     "drop_images": false,
     "context_window": 0,
-    "priority": 112,
+    "priority": 114,
     "max_output_tokens": 32768,
     "reasoning_summary": "none",
     "apply_patch": "none",
@@ -440,7 +473,7 @@
   {
     "slug": "google/veo-3.1",
     "provider": "openrouter",
-    "display_name": "Google: Veo 3.1 · OpenRouter",
+    "display_name": "Google: Veo 3.1 \u00b7 OpenRouter",
     "vendor": "Google",
     "reasoning": [
       "none"
@@ -456,7 +489,7 @@
     "max_tools": null,
     "drop_images": false,
     "context_window": 0,
-    "priority": 113,
+    "priority": 115,
     "max_output_tokens": 32768,
     "reasoning_summary": "none",
     "apply_patch": "none",
@@ -470,7 +503,7 @@
     "slug": "meta/muse-ember",
     "provider": "openrouter",
     "upstream_id": "",
-    "display_name": "Meta: Muse Ember · OpenRouter",
+    "display_name": "Meta: Muse Ember \u00b7 OpenRouter",
     "vendor": "Meta",
     "reasoning": [
       "minimal",
@@ -499,12 +532,12 @@
     "web_search": true,
     "tier": "verified",
     "listed": true,
-    "priority": 114
+    "priority": 116
   },
   {
     "slug": "meta/muse-spark-1.3-contributor",
     "provider": "openrouter",
-    "display_name": "Meta: Muse Spark 1.3 Contributor · OpenRouter",
+    "display_name": "Meta: Muse Spark 1.3 Contributor \u00b7 OpenRouter",
     "vendor": "Meta",
     "reasoning": [
       "minimal",
@@ -527,7 +560,7 @@
     "max_tools": null,
     "drop_images": false,
     "context_window": 1048576,
-    "priority": 115,
+    "priority": 117,
     "max_output_tokens": 943718,
     "reasoning_summary": "none",
     "apply_patch": "none",
@@ -538,7 +571,7 @@
   {
     "slug": "meta/muse-spark-1.3",
     "provider": "openrouter",
-    "display_name": "Meta: Muse Spark 1.3 · OpenRouter",
+    "display_name": "Meta: Muse Spark 1.3 \u00b7 OpenRouter",
     "vendor": "Meta",
     "reasoning": [
       "minimal",
@@ -560,7 +593,7 @@
     "max_tools": null,
     "drop_images": false,
     "context_window": 1048576,
-    "priority": 116,
+    "priority": 118,
     "max_output_tokens": 943718,
     "reasoning_summary": "none",
     "apply_patch": "none",
@@ -572,7 +605,7 @@
     "slug": "meta/muse-wonder",
     "provider": "openrouter",
     "upstream_id": "",
-    "display_name": "Meta: Muse Wonder · OpenRouter",
+    "display_name": "Meta: Muse Wonder \u00b7 OpenRouter",
     "vendor": "Meta",
     "reasoning": [
       "minimal",
@@ -601,13 +634,13 @@
     "web_search": true,
     "tier": "verified",
     "listed": true,
-    "priority": 117
+    "priority": 119
   },
   {
     "slug": "minimax/minimax-m3.1-flash",
     "provider": "openrouter",
     "upstream_id": "",
-    "display_name": "MiniMax: M3.1 Flash · OpenRouter",
+    "display_name": "MiniMax: M3.1 Flash \u00b7 OpenRouter",
     "vendor": "MiniMax",
     "reasoning": [
       "low",
@@ -634,13 +667,13 @@
     "web_search": false,
     "tier": "verified",
     "listed": true,
-    "priority": 118
+    "priority": 120
   },
   {
     "slug": "moonshotai/kimi-k3.1-pro",
     "provider": "openrouter",
     "upstream_id": "",
-    "display_name": "MoonshotAI: Kimi K3.1 Pro · OpenRouter",
+    "display_name": "MoonshotAI: Kimi K3.1 Pro \u00b7 OpenRouter",
     "vendor": "MoonshotAI",
     "reasoning": [
       "none",
@@ -666,12 +699,12 @@
     "web_search": false,
     "tier": "verified",
     "listed": true,
-    "priority": 119
+    "priority": 121
   },
   {
     "slug": "openai/gpt-6-astra",
     "provider": "openrouter",
-    "display_name": "OpenAI: GPT-6 Astra · OpenRouter",
+    "display_name": "OpenAI: GPT-6 Astra \u00b7 OpenRouter",
     "vendor": "OpenAI",
     "reasoning": [
       "low",
@@ -691,7 +724,7 @@
     "max_tools": null,
     "drop_images": false,
     "context_window": 1050000,
-    "priority": 120,
+    "priority": 122,
     "max_output_tokens": 128000,
     "reasoning_summary": "none",
     "apply_patch": "freeform",
@@ -703,7 +736,7 @@
     "slug": "openai/gpt-6-luna",
     "provider": "openrouter",
     "upstream_id": "",
-    "display_name": "OpenAI: GPT-6 Luna · OpenRouter",
+    "display_name": "OpenAI: GPT-6 Luna \u00b7 OpenRouter",
     "vendor": "OpenAI",
     "reasoning": [
       "none",
@@ -731,13 +764,13 @@
     "web_search": true,
     "tier": "verified",
     "listed": true,
-    "priority": 121
+    "priority": 123
   },
   {
     "slug": "openai/gpt-6.1-sol",
     "provider": "openrouter",
     "upstream_id": "",
-    "display_name": "OpenAI: GPT-6.1 Sol · OpenRouter",
+    "display_name": "OpenAI: GPT-6.1 Sol \u00b7 OpenRouter",
     "vendor": "OpenAI",
     "reasoning": [
       "low",
@@ -764,13 +797,13 @@
     "web_search": true,
     "tier": "verified",
     "listed": true,
-    "priority": 122
+    "priority": 124
   },
   {
     "slug": "openai/gpt-6.1-terra",
     "provider": "openrouter",
     "upstream_id": "",
-    "display_name": "OpenAI: GPT-6.1 Terra · OpenRouter",
+    "display_name": "OpenAI: GPT-6.1 Terra \u00b7 OpenRouter",
     "vendor": "OpenAI",
     "reasoning": [
       "none",
@@ -798,70 +831,12 @@
     "web_search": true,
     "tier": "verified",
     "listed": true,
-    "priority": 123
+    "priority": 125
   },
   {
     "slug": "openai/gpt-image-2",
     "provider": "openrouter",
-    "display_name": "OpenAI: GPT Image 2 · OpenRouter",
-    "vendor": "OpenAI",
-    "reasoning": [
-      "none"
-    ],
-    "default_reasoning": "none",
-    "modalities": [
-      "text",
-      "image"
-    ],
-    "excluded_efforts": [],
-    "schema_mode": "native",
-    "history_mode": "native",
-    "max_tools": null,
-    "drop_images": false,
-    "context_window": 0,
-    "priority": 124,
-    "max_output_tokens": 32768,
-    "reasoning_summary": "none",
-    "apply_patch": "none",
-    "experimental_tools": [],
-    "web_search": false,
-    "tier": "preview",
-    "listed": false,
-    "media_kind": "image"
-  },
-  {
-    "slug": "openai/gpt-image-2.5-flare",
-    "provider": "openrouter",
-    "display_name": "OpenAI: GPT Image 2.5 Flare · OpenRouter",
-    "vendor": "OpenAI",
-    "reasoning": [
-      "none"
-    ],
-    "default_reasoning": "none",
-    "modalities": [
-      "text",
-      "image"
-    ],
-    "excluded_efforts": [],
-    "schema_mode": "native",
-    "history_mode": "native",
-    "max_tools": null,
-    "drop_images": false,
-    "context_window": 0,
-    "priority": 125,
-    "max_output_tokens": 32768,
-    "reasoning_summary": "none",
-    "apply_patch": "none",
-    "experimental_tools": [],
-    "web_search": false,
-    "tier": "preview",
-    "listed": false,
-    "media_kind": "image"
-  },
-  {
-    "slug": "openai/gpt-image-2.5-sunburst",
-    "provider": "openrouter",
-    "display_name": "OpenAI: GPT Image 2.5 Sunburst · OpenRouter",
+    "display_name": "OpenAI: GPT Image 2 \u00b7 OpenRouter",
     "vendor": "OpenAI",
     "reasoning": [
       "none"
@@ -878,6 +853,64 @@
     "drop_images": false,
     "context_window": 0,
     "priority": 126,
+    "max_output_tokens": 32768,
+    "reasoning_summary": "none",
+    "apply_patch": "none",
+    "experimental_tools": [],
+    "web_search": false,
+    "tier": "preview",
+    "listed": false,
+    "media_kind": "image"
+  },
+  {
+    "slug": "openai/gpt-image-2.5-flare",
+    "provider": "openrouter",
+    "display_name": "OpenAI: GPT Image 2.5 Flare \u00b7 OpenRouter",
+    "vendor": "OpenAI",
+    "reasoning": [
+      "none"
+    ],
+    "default_reasoning": "none",
+    "modalities": [
+      "text",
+      "image"
+    ],
+    "excluded_efforts": [],
+    "schema_mode": "native",
+    "history_mode": "native",
+    "max_tools": null,
+    "drop_images": false,
+    "context_window": 0,
+    "priority": 127,
+    "max_output_tokens": 32768,
+    "reasoning_summary": "none",
+    "apply_patch": "none",
+    "experimental_tools": [],
+    "web_search": false,
+    "tier": "preview",
+    "listed": false,
+    "media_kind": "image"
+  },
+  {
+    "slug": "openai/gpt-image-2.5-sunburst",
+    "provider": "openrouter",
+    "display_name": "OpenAI: GPT Image 2.5 Sunburst \u00b7 OpenRouter",
+    "vendor": "OpenAI",
+    "reasoning": [
+      "none"
+    ],
+    "default_reasoning": "none",
+    "modalities": [
+      "text",
+      "image"
+    ],
+    "excluded_efforts": [],
+    "schema_mode": "native",
+    "history_mode": "native",
+    "max_tools": null,
+    "drop_images": false,
+    "context_window": 0,
+    "priority": 128,
     "max_output_tokens": 32768,
     "reasoning_summary": "none",
     "apply_patch": "none",
@@ -905,7 +938,7 @@
     "listed": false,
     "slug": "bedrock/openai.gpt-oss-120b",
     "upstream_id": "openai.gpt-oss-120b",
-    "display_name": "OpenAI: GPT OSS 120B · AWS Bedrock",
+    "display_name": "OpenAI: GPT OSS 120B \u00b7 AWS Bedrock",
     "vendor": "OpenAI",
     "reasoning": [
       "low",
@@ -915,7 +948,7 @@
     "default_reasoning": "low",
     "context_window": 131072,
     "max_output_tokens": 32768,
-    "priority": 127,
+    "priority": 129,
     "protocols": [
       "responses"
     ]
@@ -924,7 +957,7 @@
     "slug": "openrouter/auto-code",
     "provider": "openrouter",
     "upstream_id": "",
-    "display_name": "OpenRouter: Auto Code · OpenRouter",
+    "display_name": "OpenRouter: Auto Code \u00b7 OpenRouter",
     "vendor": "OpenRouter",
     "reasoning": [
       "none"
@@ -946,13 +979,13 @@
     "web_search": false,
     "tier": "verified",
     "listed": true,
-    "priority": 128
+    "priority": 130
   },
   {
     "slug": "openrouter/auto",
     "provider": "openrouter",
     "upstream_id": "",
-    "display_name": "OpenRouter: Auto Router · OpenRouter",
+    "display_name": "OpenRouter: Auto Router \u00b7 OpenRouter",
     "vendor": "OpenRouter",
     "reasoning": [
       "none"
@@ -974,12 +1007,12 @@
     "web_search": false,
     "tier": "verified",
     "listed": true,
-    "priority": 129
+    "priority": 131
   },
   {
     "slug": "qwen/qwen3.8-max-0902",
     "provider": "openrouter",
-    "display_name": "Qwen: Qwen3.8 Max (0902) · OpenRouter",
+    "display_name": "Qwen: Qwen3.8 Max (0902) \u00b7 OpenRouter",
     "vendor": "Qwen",
     "reasoning": [
       "minimal",
@@ -999,7 +1032,7 @@
     "max_tools": null,
     "drop_images": false,
     "context_window": 1000000,
-    "priority": 130,
+    "priority": 132,
     "max_output_tokens": 131072,
     "reasoning_summary": "none",
     "apply_patch": "none",
@@ -1010,7 +1043,7 @@
   {
     "slug": "x-ai/grok-4.7",
     "provider": "openrouter",
-    "display_name": "SpaceXAI: Grok 4.7 · OpenRouter",
+    "display_name": "SpaceXAI: Grok 4.7 \u00b7 OpenRouter",
     "vendor": "SpaceXAI",
     "reasoning": [
       "low",
@@ -1029,7 +1062,7 @@
     "max_tools": 350,
     "drop_images": true,
     "context_window": 500000,
-    "priority": 131,
+    "priority": 133,
     "max_output_tokens": 450000,
     "reasoning_summary": "none",
     "apply_patch": "none",
@@ -1041,7 +1074,7 @@
     "slug": "stepfun/step-5-preview",
     "provider": "openrouter",
     "upstream_id": "",
-    "display_name": "StepFun: Step 5 Preview · OpenRouter",
+    "display_name": "StepFun: Step 5 Preview \u00b7 OpenRouter",
     "vendor": "StepFun",
     "reasoning": [
       "low",
@@ -1066,12 +1099,12 @@
     "web_search": false,
     "tier": "verified",
     "listed": true,
-    "priority": 132
+    "priority": 134
   },
   {
     "slug": "xiaomi/mimo-v2.6-flash",
     "provider": "openrouter",
-    "display_name": "Xiaomi: MiMo V2.6 Flash · OpenRouter",
+    "display_name": "Xiaomi: MiMo V2.6 Flash \u00b7 OpenRouter",
     "vendor": "Xiaomi",
     "reasoning": [
       "none",
@@ -1093,7 +1126,7 @@
     "max_tools": null,
     "drop_images": false,
     "context_window": 1048576,
-    "priority": 133,
+    "priority": 135,
     "max_output_tokens": 131072,
     "reasoning_summary": "none",
     "apply_patch": "none",
@@ -1104,7 +1137,7 @@
   {
     "slug": "xiaomi/mimo-v2.6-pro",
     "provider": "openrouter",
-    "display_name": "Xiaomi: MiMo V2.6 Pro · OpenRouter",
+    "display_name": "Xiaomi: MiMo V2.6 Pro \u00b7 OpenRouter",
     "vendor": "Xiaomi",
     "reasoning": [
       "none",
@@ -1127,7 +1160,7 @@
     "drop_images": false,
     "context_window": 1048576,
     "auto_compact_token_limit": 400000,
-    "priority": 134,
+    "priority": 136,
     "max_output_tokens": 131072,
     "reasoning_summary": "none",
     "apply_patch": "none",
@@ -1138,7 +1171,7 @@
   {
     "slug": "z-ai/glm-5.3-flash",
     "provider": "openrouter",
-    "display_name": "Z.ai: GLM 5.3 Flash · OpenRouter",
+    "display_name": "Z.ai: GLM 5.3 Flash \u00b7 OpenRouter",
     "vendor": "Z.ai",
     "reasoning": [
       "low",
@@ -1156,7 +1189,7 @@
     "max_tools": 128,
     "drop_images": false,
     "context_window": 1310720,
-    "priority": 135,
+    "priority": 137,
     "max_output_tokens": 131072,
     "reasoning_summary": "none",
     "apply_patch": "freeform",
@@ -1167,7 +1200,7 @@
   {
     "slug": "z-ai/glm-5.3",
     "provider": "openrouter",
-    "display_name": "Z.ai: GLM 5.3 · OpenRouter",
+    "display_name": "Z.ai: GLM 5.3 \u00b7 OpenRouter",
     "vendor": "Z.ai",
     "reasoning": [
       "low",
@@ -1184,7 +1217,7 @@
     "max_tools": 128,
     "drop_images": false,
     "context_window": 1310720,
-    "priority": 136,
+    "priority": 138,
     "max_output_tokens": 943718,
     "reasoning_summary": "none",
     "apply_patch": "freeform",

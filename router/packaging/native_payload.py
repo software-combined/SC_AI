@@ -36,6 +36,16 @@ def succeeded(result):
     return result.returncode == 0 and not any(line.startswith('deferred:') for line in output.splitlines())
 
 
+def read_json(path):
+    try:
+        doc = json.loads(Path(path).read_text())
+    except FileNotFoundError:
+        return {}
+    if not isinstance(doc, dict):
+        raise ValueError('The saved setup cannot be read. Contact Software Combined IT.')
+    return doc
+
+
 def target():
     system = {'Darwin': 'darwin', 'Windows': 'windows', 'Linux': 'linux'}.get(
         platform.system())
@@ -121,7 +131,7 @@ def retained(resources, home, expected_target=None, *, repair=False):
     return destination
 
 
-def install_arguments(resources, home, state=None, *, choose=False, key=False, repair=False):
+def install_arguments(resources, home, state=None, *, choose=False, key=False, repair=False, package=False):
     """Use permanent Python and a local bundle, preserving existing clients."""
     resources, home = Path(resources), Path(home)
     doc = metadata(resources)
@@ -138,6 +148,21 @@ def install_arguments(resources, home, state=None, *, choose=False, key=False, r
         args.append('--repair')
     elif choose or not state:
         args.append('--choose-clients')
-    else:
+    elif not package:
         args += ['--clients', state.get('clients', 'codex')]
     return args
+
+
+def record_channel(resources, home, *, existing=False, package=False):
+    """An explicit package adopts its channel only after its core has landed."""
+    home = Path(home)
+    doc = metadata(resources)
+    if package:
+        if load('service').current_version(home) != doc['version']:
+            raise ValueError('The packaged router version was not installed.')
+        if load('update_status').channel(home) != doc['channel']:
+            (home / 'feed-serial').unlink(missing_ok=True)
+    elif (home / 'channel').exists():
+        return
+    load('atomic_write').replace_text(home / 'channel',
+        (doc['channel'] if package or not existing else 'stable') + '\n')

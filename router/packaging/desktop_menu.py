@@ -241,6 +241,7 @@ def run_menu(home, resources, *, autostart=False, after_update=False, offer_warn
                     elif action in control.ACTIONS and not busy:
                         busy = ('Opening…' if action.endswith('.open') else
                                 'Switching…' if action.startswith(('codex.', 'claude.')) else
+                                'Connecting…' if action == 'setup.key' else
                                 'Updating…' if action == 'updates.install' else 'Working…')
                         job = worker.submit(_control, home, resources, action)
             except (BrokenPipeError, ConnectionResetError):

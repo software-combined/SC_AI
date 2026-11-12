@@ -158,7 +158,8 @@ class NativePayloadTests(unittest.TestCase):
                     invoke(*args, run=run)), mock.patch.object(setup.time, 'time', return_value=1000), \
                     mock.patch.object(setup, 'load', side_effect=lambda name:
                         dialog if name == 'native_dialog' else load(name)):
-                setup._key(source, home, replace=True, run=run)
+                with self.assertRaises(ValueError):  # The saved key survives unreadable attachments.
+                    setup._key(source, home, replace=True, run=run)
             first, key = run.call_args_list
             self.assertEqual(first.args[0].count('--setup'), 1)
             self.assertFalse(set(first.args[0]) & {'--clients', '--choose-clients', '--desktop'})

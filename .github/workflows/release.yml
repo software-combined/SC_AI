@@ -202,6 +202,35 @@ jobs:
           trap 'rm -f "$SEED_FILE"' EXIT
           aws secretsmanager get-secret-value --secret-id "$FEED_SIGNING_SEED_ARN" \
             --query SecretString --output text > "$SEED_FILE"
+          if [ "$CHANNEL" = beta ]; then
+            if [ "$NATIVE_INSTALLERS_ACCEPTED" != 'true' ]; then
+              echo "beta native installers require full platform acceptance"; exit 1
+            fi
+            python tools/publish_native_installers.py --artifacts native-artifacts --channel beta \
+              --dist dist --stage-beta beta-assets --sign "$SEED_FILE"
+            python tools/publish_feed.py --dist dist --channel beta --bucket "$FEED_BUCKET" \
+              --sign "$SEED_FILE" --native-resources native-artifacts --prepare-only
+            cp dist/release-latest.json dist/latest-beta.json
+            BETA_ASSETS=(dist/*.tar.gz dist/latest-beta.json dist/feed-latest.json.sig beta-assets/*)
+            RELEASE_TAGS=$(gh api "repos/$GITHUB_REPOSITORY/releases" --paginate --jq '.[].tag_name')
+            if printf '%s\n' "$RELEASE_TAGS" | grep -Fxq -- "$GITHUB_REF_NAME"; then
+              EXISTING="$(mktemp -d)"
+              trap 'rm -f "$SEED_FILE"; rm -rf "$EXISTING"' EXIT
+              PATTERNS=()
+              for ASSET in "${BETA_ASSETS[@]}"; do
+                PATTERNS+=(--pattern "${ASSET##*/}")
+              done
+              gh release download "$GITHUB_REF_NAME" --dir "$EXISTING" "${PATTERNS[@]}"
+              for ASSET in "${BETA_ASSETS[@]}"; do
+                if ! cmp -s "$ASSET" "$EXISTING/${ASSET##*/}"; then
+                  echo "existing beta asset is missing or different: ${ASSET##*/}"; exit 1
+                fi
+              done
+              rm -rf "$EXISTING"
+              trap 'rm -f "$SEED_FILE"' EXIT
+              echo "Existing beta assets match the verified release."
+            fi
+          fi
           python tools/publish_feed.py --dist dist --channel "$CHANNEL" \
             --bucket "$FEED_BUCKET" --distribution-id "$FEED_DISTRIBUTION_ID" \
             --sign "$SEED_FILE" --native-resources native-artifacts
@@ -220,6 +249,11 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          set -e
+          if [ "$CHANNEL" = beta ]; then
+            cp dist/release-latest.json dist/latest-beta.json
+            BETA_ASSETS=(dist/*.tar.gz dist/latest-beta.json dist/feed-latest.json.sig beta-assets/*)
+          fi
           # A publish-job rerun can advertise the same verified Mac package
           # after device acceptance. Keep the existing release and its assets.
           if gh release view "$GITHUB_REF_NAME" --json tagName >/dev/null 2>&1; then
@@ -230,6 +264,5 @@ jobs:
             cp dist/release-latest.json dist/latest.json
             gh release create "$GITHUB_REF_NAME" dist/*.tar.gz dist/latest.json dist/feed-latest.json.sig --verify-tag --title "$GITHUB_REF_NAME" --generate-notes --latest
           else
-            cp dist/release-latest.json dist/latest-beta.json
-            gh release create "$GITHUB_REF_NAME" dist/*.tar.gz dist/latest-beta.json dist/feed-latest.json.sig --verify-tag --title "$GITHUB_REF_NAME" --prerelease --generate-notes
+            gh release create "$GITHUB_REF_NAME" "${BETA_ASSETS[@]}" --verify-tag --title "$GITHUB_REF_NAME" --prerelease --generate-notes
           fi

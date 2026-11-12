@@ -72,6 +72,9 @@ def resolve(args, home, state, receipts, write_state, repair=False):
         # The service-only repair leaves unreadable client settings and receipts alone.
         attached = {}
     explicit = args.clients is not None or args.client is not None or args.desktop
+    if (attached and args.clients is None and args.client is None
+            and any((args.openai_mode, args.claude_mode, args.anthropic_mode))):
+        explicit = False  # Mode-only completion follows every retained attachment.
     client = (args.client or 'codex') if explicit else state.get('client', 'codex')
     if client not in ('codex', 'none'):
         raise SystemExit('client must be codex or none')
@@ -129,6 +132,17 @@ def any_attached(home, receipts):
         return True
 
 
+def mode_flags(state, attached):
+    """Mode-only completion arguments for attached clients with saved answers."""
+    flags = []
+    for clients, key in ((('codex',), 'openai_mode'), (('claude', 'claude-desktop'), 'claude_mode')):
+        mode = state.get('anthropic_mode', state.get(key)) if key == 'claude_mode' else state.get(key)
+        if mode in ('subscription', 'none') and any(
+                client in attached and attached[client].get(key, 'subscription') != mode for client in clients):
+            flags += ['--' + key.replace('_', '-'), mode]
+    return flags
+
+
 def _connected(names):
     """One client-aware closing line; never names a client that is not served."""
     return '%s connected; %s to use the router.' % (
@@ -149,13 +163,13 @@ def attach_codex(home, state, mode, codex_config, previous=None,
         previous = codex_config.codex_attachment(home)
     config_path = Path.home() / '.codex' / 'config.toml'
     variant = _switch.recorded(previous)
-    if previous.get('openai_mode') not in (None, mode):
+    if variant != _switch.DEFAULT and previous.get('openai_mode') not in (None, mode):
         variant = _switch.SWITCHED_BACK
     block = _switch.build(home, state, mode, static_catalogue, variant)
     # Global instructions are install-once via the setup window's starter
     # choice: this installer never writes, rewrites, or re-enforces them.
     rules_receipt = previous.get('global_instructions')
-    stamp = time.strftime('%Y%m%d-%H%M%S', time.gmtime())
+    stamp = time.strftime('%Y%m%d-%H%M%S', time.gmtime()) + '-' + uuid.uuid4().hex[:8]
     (home / f'config-before-{stamp}.toml').write_bytes(
         (config_path.read_text() if config_path.exists() else '').encode())
     try:
@@ -163,7 +177,7 @@ def attach_codex(home, state, mode, codex_config, previous=None,
     except OSError:
         pass
     block, before, desktop, reviewer = codex_config.attach_config(
-        config_path, block, previous)
+        config_path, block, previous, seed_external=mode == 'none' or variant in _switch.ROUTED_VARIANTS)
     after = codex_config._owned.read(config_path)
     codex_config._owned.inspect(after, block)
     event = previous.get('repair_notice') if after == before else None
@@ -222,7 +236,7 @@ def attach_current(args, home, *, codex, desktop, claude, write_state, resolve,
     state = ensure_state(home)
     previous = state.copy()
     _, clients, _, mode = resolve(args, home, state)
-    saved = desktop.saved_profile(home, codex) if getattr(args, 'repair', False) else None
+    saved = desktop.saved_profile(home, codex) if args.desktop or getattr(args, 'repair', False) else None
     if args.choose_clients and args.clients is None:
         # The chooser was asked for but could not ask (no dialog tool, or an
         # unattended run): attach nothing rather than guessing.

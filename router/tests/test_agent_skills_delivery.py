@@ -57,7 +57,7 @@ class _Client:
                 {'marketplaces': [{'name': 'openai-curated', 'root': '/elsewhere'},
                                   {'name': 'scg-agent-plugins', 'root': '/x',
                                    'marketplaceSource': self.source}]})
-        if command[0] == 'codex':
+        if command[0] == 'codex' or command[0].endswith('codex.cmd'):
             return json.dumps({'installed': [{'pluginId': p['id'], 'enabled': p['enabled']}
                                              for p in self.installed]})
         return json.dumps(self.installed)
@@ -213,7 +213,8 @@ class DeliveryTest(unittest.TestCase):
         (bin_dir / 'scg-test-node').write_text(
             '#!/bin/sh\nname=$(basename "$1"); shift\n'
             f'printf "%s %s\\n" "$name" "$*" >> "{log}"\n'
-            'case "$*" in *"marketplace list"*) echo \'{"marketplaces": []}\';; esac\n')
+            'case "$*" in *"marketplace list"*) echo \'{"marketplaces": []}\';; '
+            '*"plugin list"*) case "$name" in codex) echo \'{"installed": []}\';; *) echo \'[]\';; esac;; esac\n')
         for client in ('codex', 'claude'):
             (bin_dir / client).write_text('#!/usr/bin/env scg-test-node\n')
         for script in bin_dir.iterdir():

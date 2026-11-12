@@ -24,6 +24,11 @@ _ROOT = Path(__file__).resolve().parents[1]
 static_fetch = _static_fetch
 
 
+class _StubPopen:
+    def wait(self, timeout):
+        return 2  # No answer in window-launch fixtures.
+
+
 def real_bundle(tmp):
     """Build a real release bundle via packaging/release.py (slow; ~3s)."""
     feeddir = Path(tmp) / 'feed'
@@ -51,6 +56,7 @@ def install_mod_factory():
     module.PLATFORM = 'darwin'
     module._updater.sys = SimpleNamespace(platform='darwin', executable=sys.executable, exc_info=sys.exc_info)
     module._delivery.sys = SimpleNamespace(platform='darwin')
+    module._completion.sys = SimpleNamespace(platform='darwin')
     # Installer tests must never open the real client chooser. Tests that
     # exercise the chooser replace these seams with their own fake dialog.
     module._client_choice._dialog.tool = lambda *args, **kwargs: None

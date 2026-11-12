@@ -104,8 +104,9 @@ def _submit(state, home, form, _urlopen):
         key_path = key_store.store_key(
             home, key, provider_id,
             _check_live=lambda stored: key_store._stored_key_live(provider_id, stored, _fetch))
-    except key_store.KeyExists as exc:
-        return 409, {'ok': False, 'error': str(exc)}
+    except key_store.KeyExists:
+        return 409, {'ok': False, 'error':
+                     'A key is already saved. Open SCG Router and choose Check setup.'}
     except OSError:
         return 500, {'ok': False, 'error': 'could not store the key'}
     if _ON_WINDOWS:
@@ -134,9 +135,9 @@ def _submit(state, home, form, _urlopen):
     if not _finish_setup(state, home, mode, profile, claude_mode):
         if profile is not None:
             _agents.revert(starter)
-        return 500, {'ok': False, 'error':
-                     'key stored but setup could not be closed; '
-                     'delete the key file and run the installer again'}
+        return 500, {'ok': False, 'key_saved': True, 'error':
+                     'Your key is saved, but setup needs attention. '
+                     'Open SCG Router and choose Check setup, or contact Software Combined IT.'}
     line = _agents.describe(starter)
     return 200, {'ok': True, 'label': label, 'limit': limit, 'usage': usage,
                  'mode': mode, 'claude_mode': claude_mode or '', 'starter': line}

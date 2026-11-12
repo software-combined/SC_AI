@@ -8,8 +8,9 @@ assistant settings and adds a background service and automatic update jobs.
 
 - Install the assistant you want to use. Keep its subscription sign-in for
   Codex or Claude Code in the terminal.
-- Have an OpenRouter key for models billed to OpenRouter. Enter it only in the
-  setup window; a coding agent must never handle it.
+- Use **Sign in with work account** in the setup window when your organisation
+  enables it. If you choose your own OpenRouter key, enter it only in that
+  window; a coding agent must never handle it.
 - Optional: an AWS Bedrock API key enables the Bedrock models. Create it in
   the AWS console for one region, enable the models you want in that
   region, and enter the key only in the setup window when the router asks
@@ -31,9 +32,14 @@ Ubuntu may require allowing execution in the file's Properties window.
 No separate FUSE installation is needed. These packages have no paid publisher
 certificate. Device policy can still block them; contact IT if that happens.
 
+Windows Store Codex needs no separate CLI install or PATH change. Router
+discovers its current package for setup and SC tools, including scheduled updates.
+An unclear or denied lookup offers **Try again** and **Cancel**, without another
+download instruction. Subscription choices and disabled plugins stay preserved.
+
 The SCG Router app saves setup in your user account. After setup, you can
 delete the download or eject the disk image. Reopen SCG Router to check setup,
-repair it, connect another assistant, replace your key, renew download sign-in
+repair it, connect another assistant, replace your key
 or remove the router. Reopening preserves the existing channel and settings.
 With the same or an older download, **Update or repair** restores the service
 using its installed release. **Connect another assistant** adds your selection

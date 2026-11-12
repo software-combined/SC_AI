@@ -25,8 +25,9 @@ SECONDS_BUDGET = 10.0
 
 
 def _synthetic_rows(count):
-    base = json.loads(
-        Path(registry.__file__).with_name('models.json').read_text())[0]
+    rows = json.loads(Path(registry.__file__).with_name('models.json').read_text())
+    base = next(row for row in rows
+                if row['provider'] == 'openrouter' and row.get('listed', True))
     return [{**base, 'slug': f'bench/model-{i:03d}',
              'display_name': f'Bench: Model {i:03d} \u00b7 OpenRouter',
              'priority': 100 + i} for i in range(count)]

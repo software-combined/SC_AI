@@ -81,6 +81,27 @@ def _lock(target, blob):
 
 
 class NativeStageTests(unittest.TestCase):
+    def test_real_core_helpers_survive_windows_resources_staging_and_retention(self):
+        from tests.test_packaging import _release_module
+        from tests.test_native_setup import module
+        release, payload = _release_module(), module('native_payload')
+        dist = self.root / 'dist'
+        release.main(['--out', str(dist), '--channel', 'beta'])
+        core = next(dist.glob('*.tar.gz'))
+        target = 'windows/x86_64'
+        bundle, runtime, lock = self._inputs(target, bundle=core.read_bytes())
+        resources = self.root / 'Resources'
+        stage.stage(bundle, runtime, target, 'beta', resources, lock_path=lock)
+        permanent = payload.retained(resources, self.root / 'home', expected_target=target)
+        with tarfile.open(permanent / 'payload/bundle.tar.gz', 'r:gz') as archive:
+            manifest = json.load(archive.extractfile('MANIFEST.json'))
+            for name in ('client_executable.py', 'setup_completion.py'):
+                member = 'packaging/' + name
+                expected = (ROOT / member).read_bytes()
+                self.assertEqual(archive.extractfile(member).read(), expected)
+                self.assertEqual((permanent / 'router' / member).read_bytes(), expected)
+                self.assertEqual(manifest['files'][member], hashlib.sha256(expected).hexdigest())
+
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self.tmp.cleanup)

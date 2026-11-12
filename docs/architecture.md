@@ -62,6 +62,17 @@ have separate events. `assistant_status` shares attachment classification with o
 choices. It persists Claude choices in `anthropic_mode`; the runtime keeps its
 existing policy reader. Same-version mode changes use the service repair
 lifecycle before client attachment, with prior state restored on reload failure.
+Its pure mode comparison also drives native readiness. `setup_completion` owns
+the installer's bounded key-window wait after attachment and applies late answers
+through the same current-install lifecycle. The runtime only saves answers.
+An unfinished access window keeps readiness pending, including after a partial key save.
+
+`client_executable` owns discovery for setup prerequisites, plugin registration,
+readiness and diagnostic preflight. Existing PATH, npm, local-bin and desktop
+locations retain precedence. Windows Store fallback uses current-user Codex
+identity and the existing contained executable/header/version checks.
+Each lookup is fresh and rechecks package identity after validation.
+Discovery never switches, closes or opens an assistant.
 
 `codex_owned` compares the live marked region with the saved attachment using
 standard-library TOML. It preserves added single-line root settings and comments
@@ -683,7 +694,9 @@ API field only for an existing receipt-bound route. It requires a complete
 typed restore snapshot, the exact written map, applied entry, provider,
 credential kind and full loopback URL. Duplicate JSON keys, changed routes,
 bootstrap settings and invalid modes refuse. Repeated opaque attachment keeps
-the entry and receipt bytes unchanged. Classification and every switch recheck
+the entry and restore evidence unchanged. A late subscription answer updates only
+the receipt's saved mode. An unchanged answer keeps the receipt bytes unchanged.
+Classification and every switch recheck
 use this proof; it proves routing ownership, never decrypted plaintext.
 `client_removal.json_plan` restores an opaque field only after this route proof
 passes and an exact private entry copy is retained under Router home. The

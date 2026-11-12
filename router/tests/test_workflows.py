@@ -1,4 +1,5 @@
 """Offline execution of the release workflow's shell contract."""
+import hashlib
 import json
 import os
 import re
@@ -9,6 +10,10 @@ import tempfile
 import textwrap
 import unittest
 from pathlib import Path
+from types import SimpleNamespace
+from unittest import mock
+
+from tests.test_native_beta_assets import NATIVE_NAMES, publish
 
 ROOT = Path(__file__).resolve().parents[1]
 WORKFLOWS = ROOT.parent / '.github/workflows'
@@ -59,6 +64,25 @@ class ReleaseShellTests(unittest.TestCase):
                                  f'https://github.com/example/router/releases/download/{tag}/'
                                  f'ai-router-{base}.42.tar.gz')
                 shutil.copy(work / 'dist/latest.json', work / 'dist/release-latest.json')
+                if channel == 'beta':
+                    native = work / 'native-artifacts'
+                    native.mkdir()
+                    for target, fixture_name in NATIVE_NAMES.items():
+                        name = fixture_name.replace('1.2.3.4', latest['version'])
+                        body = target.encode()
+                        (native / name).write_bytes(body)
+                        (native / (name + '.json')).write_text(json.dumps(dict(
+                            artifact=name, target=target, version=latest['version'], channel='beta',
+                            native_signature='unsigned', sha256=latest['sha256'],
+                            artifact_sha256=hashlib.sha256(body).hexdigest())))
+                    seed, public = publish.verify.generate_keypair()
+                    sign = work / 'synthetic-signing-seed'
+                    sign.write_text(seed)
+                    with mock.patch.object(publish.verify, 'FEED_PUBLIC_KEY', public):
+                        publish.stage_beta(SimpleNamespace(artifacts=native, dist=work / 'dist',
+                            stage_beta=work / 'beta-assets', sign=sign, channel='beta',
+                            macos_arm64_only=False, dry_run=False))
+                    (work / 'dist/feed-latest.json.sig').write_bytes(b'synthetic feed signature')
                 subprocess.run(['bash', '-e', '-c', run_block('Create release')],
                                cwd=work, env=env, check=True, capture_output=True)
                 args = json.loads((work / 'gh-args.json').read_text())
@@ -74,16 +98,24 @@ class ReleaseShellTests(unittest.TestCase):
                                            ('', '1', False)]:
             with self.subTest(remote=remote), tempfile.TemporaryDirectory() as tmp:
                 env = {**os.environ, 'GITHUB_SHA': sha, 'TAG_RESPONSE': remote,
+                       'CHANNEL': 'beta', 'NATIVE_INSTALLERS_ACCEPTED': 'true',
                        'TAG_STATUS': status, 'GITHUB_REPOSITORY': 'example/router',
                        'GITHUB_REF_NAME': 'v0.6.123-beta'}
                 stubs = '''
                     gh() {
+                      if [ "$1" != api ]; then return 1; fi
+                      case "$2" in */releases) return 0;; esac
                       printf '%s\\n' "$*" > api-args
                       printf '%s\\n' "$TAG_RESPONSE"
                       return "$TAG_STATUS"
                     }
                     aws() { printf 'seed-bytes\\n'; }
-                    python() { touch published; }
+                    python() {
+                      case "$*" in
+                        *--prepare-only*) mkdir -p dist; touch dist/release-latest.json;;
+                        *publish_feed.py*) touch published;;
+                      esac
+                    }
                 '''
                 result = subprocess.run(
                     ['bash', '-e', '-c', textwrap.dedent(stubs)

@@ -1,5 +1,4 @@
 """Installer lifecycle: backup-before-replace, fail-closed uninstall, rollback.
-
 Brief defects 4-5: config replacement must back up before truncating, a
 failed restore must not stop services, --version rolls back from installed
 releases (never the JSON feed), and a failed first install must not read
@@ -140,10 +139,11 @@ class InstallLifecycleTests(unittest.TestCase):
             config = Path(env['HOME']) / '.codex' / 'config.toml'
             first_config = config.read_text()
             config.write_text('other = 1\n' + first_config)
+            before = set(home.glob('config-before-*.toml'))
             _run_install(self, tmp, home, '1.0.1')
-            backups = sorted(home.glob('config-before-*.toml'))
-            self.assertTrue(backups)
-            self.assertEqual(backups[-1].read_text(), 'other = 1\n' + first_config)
+            backups = set(home.glob('config-before-*.toml')) - before
+            self.assertEqual(len(backups), 1)
+            self.assertEqual(backups.pop().read_text(), 'other = 1\n' + first_config)
 
     def test_uninstall_aborts_when_restore_fails(self):
         with tempfile.TemporaryDirectory() as tmp:

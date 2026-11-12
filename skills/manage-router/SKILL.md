@@ -19,12 +19,13 @@ files, provider keys, subscription sign-in or assistant configuration.
    authority; do not add another generic approval question.
 2. If the permanent **SCG Router** app is installed, open it through the active
    runtime's available application tools. The app offers setup, repair, status,
-   another assistant, key replacement, download sign-in and removal.
+   another assistant, model access and removal.
 3. Otherwise direct the user to the approved staff route at
    `https://hub.softwarecombined.com/install`. Never substitute an unverified
    package or a plugin-cache install.
-4. Let the user sign in with their Microsoft work account in the installer,
-   or choose **Use my own key** in its secure window.
+4. When model access is missing, let the user sign in with their Microsoft
+   work account in the installer's secure window, or choose **Use my own key**.
+   A saved key stays in place unless the provider confirms that it no longer works.
    Never ask for the key, subscription credentials or a setup URL in chat.
 5. Keep unfinished setup pending until a fresh assistant session produces a
    routed reply and its enabled SC tools work. Installation health alone does
@@ -49,5 +50,6 @@ URLs, download cookies or raw configuration bodies.
 
 Reopening setup preserves the existing release channel, key, instructions,
 company policy and disabled plugins. Attaching another assistant is additive.
-Native subscription sign-in stays with its original client. A missing or
-expired download sign-in keeps the router and last good model list available.
+Fresh subscription installs keep the assistant's native model default.
+Existing explicit model choices stay in place. Native subscription sign-in
+stays with its original client. Software downloads do not require sign-in.

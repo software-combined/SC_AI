@@ -1,10 +1,15 @@
 """Interactive roster and request contracts for the pinned-model roster."""
 import json
 import unittest
+from copy import deepcopy
+from dataclasses import replace
 from types import SimpleNamespace
+from unittest import mock
 
+from ai_router import availability, catalogue, claude, registry, request_context
 from ai_router.apply_catalogue import apply
 from ai_router.catalogue import RETIRED_SLUGS, merge
+from ai_router.clients import models_for
 from ai_router.providers import ExternalResponsesProvider, PreparationError, select
 from ai_router.registry import MODELS, by_slug
 
@@ -37,6 +42,78 @@ RETIRED_TERRA, SUBSCRIPTION_TERRA = 'openai/gpt-5.6-terra', 'gpt-5.6-terra'
 
 
 class ModelRosterTests(unittest.TestCase):
+    def test_hydrogen_pins_public_metadata_and_qualified_status(self):
+        model = by_slug('google/gemini-4-hydrogen')
+        self.assertIsNotNone(model)
+        self.assertEqual((model.provider, model.upstream_id, model.vendor), ('openrouter', '', 'Google'))
+        self.assertEqual(model.display_name, 'Google: Gemini 4 Hydrogen · OpenRouter')
+        self.assertEqual(model.reasoning, ('low', 'medium', 'high', 'xhigh'))
+        self.assertEqual(model.default_reasoning, 'low')
+        self.assertEqual((model.context_window, model.max_output_tokens), (1048576, 943718))
+        self.assertEqual(model.modalities, ('text', 'image', 'audio'))
+        self.assertEqual((model.schema_mode, model.history_mode), ('native', 'native'))
+        self.assertEqual((model.tier, model.listed, model.apply_patch), ('verified', True, 'none'))
+        self.assertFalse(model.drop_images)
+        self.assertNotIn(model.slug, RETIRED_SLUGS)
+
+    def test_hydrogen_is_visible_to_both_clients_and_routes_on_both_protocols(self):
+        from tests.harness import stub_credentials
+        slug = 'google/gemini-4-hydrogen'
+        model = by_slug(slug)
+        for client in ('codex', 'claude'):
+            self.assertIn(model, models_for(MODELS, client))
+        with mock.patch.object(availability, 'combined_ids', return_value={slug}):
+            self.assertIn(slug, {row['id'] for row in claude.models_listing()['data']})
+        context = request_context.resolve(slug, request_context.capture())
+        for selector, path, content in (
+                (select, '/responses', {'input': 'Synthetic routing check.'}),
+                (claude.select, '/v1/messages', {'messages': [
+                    {'role': 'user', 'content': 'Synthetic routing check.'}]})):
+            with self.subTest(path=path):
+                payload = {'model': slug, **content}
+                adapter = selector(slug, path, catalogue=context.catalogue)
+                prepared = adapter.prepare(slug, path, payload, json.dumps(payload).encode(),
+                                           {}, stub_credentials(), context=context)
+                self.assertEqual(json.loads(prepared.body)['model'], slug)
+                self.assertEqual(prepared.provider, 'openrouter')
+
+    def test_hydrogen_picker_projection_preserves_access_and_unlisted_filters(self):
+        slug = 'google/gemini-4-hydrogen'
+        qualified = by_slug(slug)
+        with mock.patch.object(availability, 'combined_ids', return_value={slug}):
+            for client in ('codex', 'claude'):
+                self.assertIn(qualified, models_for(MODELS, client))
+            projected = merge({'models': []}, available={slug})
+            entry = next(row for row in projected['models'] if row['slug'] == slug)
+            self.assertEqual(entry['display_name'], qualified.display_name)
+            self.assertEqual(entry['input_modalities'], ['text', 'image', 'audio'])
+            self.assertEqual(entry['context_window'], 1048576)
+            self.assertEqual([row['effort'] for row in entry['supported_reasoning_levels']],
+                             ['low', 'medium', 'high', 'xhigh'])
+            listing = claude.models_listing()['data']
+            self.assertEqual(next(row for row in listing if row['id'] == slug)['display_name'],
+                             qualified.display_name)
+            self.assertNotIn(slug, {row['id'] for row in claude.models_listing(allowed=[])['data']})
+            self.assertNotIn(slug, {row['slug'] for row in merge({'models': []}, available=set())['models']})
+            hidden = replace(qualified, tier='preview', listed=False)
+            for client in ('codex', 'claude'):
+                self.assertNotIn(hidden, models_for((hidden,), client))
+            with mock.patch.object(registry, 'MODELS', (hidden,)):
+                self.assertEqual(claude.models_listing()['data'], [])
+
+    def test_hydrogen_preserves_subscription_picker_and_owner_choice(self):
+        slug = 'google/gemini-4-hydrogen'
+        original = {'models': [{'slug': 'gpt-6-astra', 'default_reasoning_level': 'high',
+                               'model_messages': {'instructions_template': 'Owner instructions'}}]}
+        without = tuple(row for row in MODELS if row.slug != slug)
+        with mock.patch.object(catalogue, 'MODELS', without):
+            before = merge(deepcopy(original), roster=['gpt-6-astra'])
+        after = merge(deepcopy(original), roster=['gpt-6-astra'])
+        self.assertEqual(after['models'][0], before['models'][0])
+        self.assertEqual(after['models'][0]['slug'], 'gpt-6-astra')
+        self.assertEqual(after['models'][0]['default_reasoning_level'], 'high')
+        self.assertIn(slug, {row['slug'] for row in after['models']})
+
     def test_only_four_pinned_claude_rows_reach_picker_and_router_after_upgrade(self):
         base = {'models': [{'slug': '~anthropic/claude-opus-latest'},
                            {'slug': '~google/gemini-pro-latest'},

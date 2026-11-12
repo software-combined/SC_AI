@@ -249,7 +249,7 @@ class RunWindowTests(unittest.TestCase):
                                        platform_name='darwin')
         self.assertEqual(rc, 0)
         self.assertIn('Paste an OpenRouter key before saving.', messages)
-        self.assertTrue(any('You are connected.' in m for m in messages))
+        self.assertTrue(any('Your key and choices are saved.' in m for m in messages))
 
     def test_refused_key_reprompts_and_expired_link_stops(self):
         with mock.patch.object(key_dialog, 'collect',
@@ -294,7 +294,7 @@ class RunWindowTests(unittest.TestCase):
         self.assertEqual(rc, 0)
         self.assertEqual(posted, {'key': KEY, 'claude_mode': 'none'})
         self.assertIn('Claude Code: %s models only' % provider_defs.OPENROUTER.label, messages[-1])
-        self.assertIn('restart claude code', messages[-1].lower())
+        self.assertRegex(messages[-1], r'Claude Code:[\s\S]*Check setup')
 
     def test_cli_parses_the_client_set(self):
         self.assertEqual(key_prompt._parse(['http://127.0.0.1:1/x']),

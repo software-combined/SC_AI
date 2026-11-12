@@ -197,7 +197,7 @@ class DesktopSetupTests(unittest.TestCase):
                              {'deploymentMode': '1p', 'keep': 'native choice'})
             self.assertEqual(install_mod._codex_config.read_receipt(home)
                              ['clients']['claude-desktop'], receipt)
-            self.launcher.assert_called_once_with(home, '/opt/homebrew/bin/python3.14', None)
+            self.launcher.assert_called_once_with(home.resolve(), '/opt/homebrew/bin/python3.14', None)
 
     def test_dry_run_with_launcher_interpreter_does_not_write_or_install(self):
         with tempfile.TemporaryDirectory() as tmp:

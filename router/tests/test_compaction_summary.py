@@ -341,6 +341,7 @@ class SummarizerRetryTests(SummaryAvailabilityTest):
 class NetworkDeadlineTests(SummaryAvailabilityTest):
     def test_connect_timeout_cannot_send_after_fallback(self):
         release, finished = threading.Event(), threading.Event()
+        self.addCleanup(release.set)
         sent = []
 
         class Response:
@@ -357,7 +358,7 @@ class NetworkDeadlineTests(SummaryAvailabilityTest):
 
             def connect(self):
                 try:
-                    release.wait(1)
+                    release.wait(5)
                 finally:
                     finished.set()
 
@@ -386,8 +387,8 @@ class NetworkDeadlineTests(SummaryAvailabilityTest):
                 pass
 
         connections = [FirstConnection(), SecondConnection()]
-        with mock.patch.object(compaction_summary, 'SUMMARY_ATTEMPT_DEADLINE_S', 0.05), \
-                mock.patch.object(compaction_summary, 'SUMMARY_TOTAL_DEADLINE_S', 0.1), \
+        with mock.patch.object(compaction_summary, 'SUMMARY_ATTEMPT_DEADLINE_S', 1.0), \
+                mock.patch.object(compaction_summary, 'SUMMARY_TOTAL_DEADLINE_S', 3.0), \
                 mock.patch.object(compaction_summary.http.client,
                                   'HTTPSConnection',
                                   side_effect=lambda *args, **kwargs: connections.pop(0)):
@@ -402,6 +403,7 @@ class NetworkDeadlineTests(SummaryAvailabilityTest):
 
     def _assert_phase_timeout(self, phase):
         release, started = threading.Event(), threading.Event()
+        self.addCleanup(release.set)
 
         class Response:
             status = 200
@@ -409,7 +411,7 @@ class NetworkDeadlineTests(SummaryAvailabilityTest):
             def read(self):
                 if phase == 'read':
                     started.set()
-                    release.wait(1)
+                    release.wait(5)
                 return b'{}'
 
         class Connection:
@@ -418,17 +420,17 @@ class NetworkDeadlineTests(SummaryAvailabilityTest):
             def connect(self):
                 if phase == 'connect':
                     started.set()
-                    release.wait(1)
+                    release.wait(5)
 
             def request(self, *args, **kwargs):
                 if phase == 'request':
                     started.set()
-                    release.wait(1)
+                    release.wait(5)
 
             def getresponse(self):
                 if phase == 'getresponse':
                     started.set()
-                    release.wait(1)
+                    release.wait(5)
                 return Response()
 
             def close(self):
@@ -441,8 +443,9 @@ class NetworkDeadlineTests(SummaryAvailabilityTest):
             with self.assertRaises(TimeoutError):
                 compaction_summary._fetch_summary(
                     _external_responses(), 'key',
-                    {'model': 'xiaomi/mimo-v2.6-flash'}, 0.05,
-                    now + 0.05, now + 0.05, time.monotonic)
+                    {'model': 'xiaomi/mimo-v2.6-flash'}, 1.0,
+                    now + 1.0, now + 1.0, time.monotonic)
+        self.assertLess(time.monotonic() - now, 2.0)
         self.assertTrue(started.is_set())
 
     def test_request_response_and_fallback_read_respect_wall_clock(self):

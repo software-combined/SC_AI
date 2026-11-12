@@ -29,7 +29,7 @@ class PreflightTests(unittest.TestCase):
 
     def test_preflight_reports_everything_missing_together(self):
         _patch_attrs(self, find_python=lambda explicit=None: None)
-        with mock.patch.object(install_mod.shutil, 'which', return_value=None):
+        with mock.patch.object(install_mod._diag.client_executable, 'resolve', return_value=None):
             buf = io.StringIO()
             with contextlib.redirect_stdout(buf):
                 with self.assertRaisesRegex(SystemExit, '2'):
@@ -41,7 +41,7 @@ class PreflightTests(unittest.TestCase):
     def test_preflight_service_only_skips_codex_requirement(self):
         _patch_attrs(self, find_python=lambda explicit=None: '/usr/bin/python3.14')
         with mock.patch.object(install_mod.shutil, 'which',
-                               side_effect=lambda name: None if name == 'codex' else '/usr/bin/x'):
+                               side_effect=lambda name, **kwargs: None if name == 'codex' else '/usr/bin/x'):
             buf = io.StringIO()
             with contextlib.redirect_stdout(buf):
                 rc = install_mod.do_preflight(
@@ -51,7 +51,7 @@ class PreflightTests(unittest.TestCase):
     def test_preflight_claude_only_skips_codex_requires_claude(self):
         _patch_attrs(self, find_python=lambda explicit=None: '/usr/bin/python3.14')
         with mock.patch.object(install_mod.shutil, 'which',
-                               side_effect=lambda name: None if name == 'claude' else '/usr/bin/x'):
+                               side_effect=lambda name, **kwargs: None if name == 'claude' else '/usr/bin/x'):
             buf = io.StringIO()
             with contextlib.redirect_stdout(buf):
                 with self.assertRaisesRegex(SystemExit, '2'):
@@ -63,7 +63,7 @@ class PreflightTests(unittest.TestCase):
     def test_preflight_claude_only_passes_without_codex(self):
         _patch_attrs(self, find_python=lambda explicit=None: '/usr/bin/python3.14')
         with mock.patch.object(install_mod.shutil, 'which',
-                               side_effect=lambda name: None if name == 'codex' else '/usr/bin/x'):
+                               side_effect=lambda name, **kwargs: None if name == 'codex' else '/usr/bin/x'):
             buf = io.StringIO()
             with contextlib.redirect_stdout(buf):
                 rc = install_mod.do_preflight(
@@ -73,7 +73,7 @@ class PreflightTests(unittest.TestCase):
     def test_preflight_both_requires_both_clis(self):
         _patch_attrs(self, find_python=lambda explicit=None: '/usr/bin/python3.14')
         with mock.patch.object(install_mod.shutil, 'which',
-                               side_effect=lambda name: None if name == 'claude' else '/usr/bin/x'):
+                               side_effect=lambda name, **kwargs: None if name == 'claude' else '/usr/bin/x'):
             buf = io.StringIO()
             with contextlib.redirect_stdout(buf):
                 with self.assertRaisesRegex(SystemExit, '2'):

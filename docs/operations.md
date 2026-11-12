@@ -32,6 +32,24 @@ commit, so a tag on a commit made before this acceptance check existed can
 still publish without it. Stopping those older copies from publishing is a
 separate step.
 
+Beta GitHub prereleases also carry the five native installers from the selected
+core bundle, plus SHA256SUMS and SHA256SUMS.sig. The workflow checks every
+receipt, filename and body hash before it publishes the beta feed. The full
+native publication gate must pass. The checksum signature uses the existing
+release trust. The native installers remain unsigned.
+
+An existing beta release must contain the required assets with exactly the
+verified local bytes. Local feed preparation uses the same publisher and signing
+path as publication. A missing or different asset stops the rerun before any
+feed write. Recovery
+requires an operator decision; the workflow never uploads replacements or
+deletes existing assets automatically.
+
+The stable download page and installer list continue to follow the stable
+release. Promote a beta only after its native desktop journey and normal stable
+release gates pass. Record the version actually installed during the pilot:
+existing installations preserve their saved channel.
+
 ## Feed infrastructure and publishing
 
 Two stacks, both in this repository, hold the update path. The `infra/`
@@ -309,10 +327,10 @@ first install from a handed-off release directory with
 `python3 packaging/install.py --feed file:///path/to/latest.json`, a
 one-shot pin that is never persisted.
 
-`docs/agent-install-prompt.md` is the paste-to-agent prompt so the user
-asks their own agent to run the bootstrap and verify setup. The prompt
-pins the production home, forbids printing secrets, and leaves client
-restarts to the user.
+`docs/agent-install-prompt.md` guides staff through the native installer
+and permanent SCG Router app. It selects assistants before setup, uses the
+secure work-account route and diagnoses failures through retained tools.
+Credentials, licence/security decisions and assistant restarts stay with the user.
 
 Never run the installer against a scratch `--home` on a live machine:
 service names are machine-wide, so even a /tmp home bootstraps, bootouts,

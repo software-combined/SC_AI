@@ -9,23 +9,14 @@ import webbrowser
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from native_payload import install_arguments, load, metadata, retained, succeeded as _succeeded
+from native_payload import install_arguments, load, metadata, read_json, record_channel, retained, succeeded as _succeeded
+import client_executable
 
 ACTIONS = (('resume', 'Update or repair'), ('status', 'Check setup'),
-           ('add', 'Connect another assistant'), ('key', 'Replace model key'),
+           ('add', 'Connect another assistant'), ('key', 'Set up model access'),
            ('remove', 'Remove router'))
 ASSISTANT_DOWNLOADS = {'codex': 'https://chatgpt.com/download/',
                        'claude': 'https://claude.com/download'}
-
-
-def read_json(path):
-    try:
-        doc = json.loads(Path(path).read_text())
-    except FileNotFoundError:
-        return {}
-    if not isinstance(doc, dict):
-        raise ValueError('The saved setup cannot be read. Contact Software Combined IT.')
-    return doc
 
 
 def environment(resources):
@@ -39,18 +30,17 @@ def environment(resources):
 
 def run_installer(resources, home, flags=(), run=subprocess.run):
     state = read_json(Path(home) / 'mixed-router-state.json')
-    key, repair = '--setup' in flags, '--repair' in flags
-    args = install_arguments(resources, home, state, key=key, repair=repair)
-    # Flags from the graphical chooser replace, rather than combine with,
-    # the previous selection. No unattended fallback can attach Codex.
-    if '--clients' in flags:
+    key, repair, package = (flag in flags for flag in ('--setup', '--repair', '--install-package'))
+    args = install_arguments(resources, home, state, key=key, repair=repair, package=package)
+    # Explicit clients replace selection; mode-only completion follows receipts.
+    if '--clients' in flags or '--openai-mode' in flags or '--claude-mode' in flags:
         if '--choose-clients' in args:
             args.remove('--choose-clients')
         if '--clients' in args:
             index = args.index('--clients')
             del args[index:index + 2]
-    args += [flag for flag in flags if flag not in ('--setup', '--repair')]
-    if not key and not repair:
+    args += [flag for flag in flags if flag not in ('--setup', '--repair', '--install-package')]
+    if not key and not repair and not package:
         attached = load('codex_config').read_receipt(home).get('clients', {})
         if '--desktop' not in args and 'claude-desktop' in attached:
             args.append('--desktop')
@@ -63,8 +53,7 @@ def run_installer(resources, home, flags=(), run=subprocess.run):
 
 
 def status(resources, home, run=subprocess.run):
-    doc = metadata(resources)
-    python = Path(resources) / 'runtime' / doc['runtime_exec']
+    python = Path(resources) / 'runtime' / metadata(resources)['runtime_exec']
     source = load('native_controller').launcher_source(home, Path(resources) / 'router')
     result = run([str(python), str(source / 'packaging/install.py'),
                   '--status', '--json', '--home', str(home)], capture_output=True,
@@ -89,24 +78,53 @@ def _select(dialog):
     return flags
 
 
-def _missing_assistant(flags, dialog):
+def _missing_assistant(flags, dialog, run=None):
     skills = load('agent_skills')
-    import shutil
     selected = flags[flags.index('--clients') + 1]
     clients = ['codex', 'claude'] if selected == 'both' else [selected]
     if '--desktop' in flags and 'claude' not in clients:
         clients.append('claude')
     for client in clients:
-        if client == 'none' or shutil.which(client, path=skills.client_path()):
+        if client == 'none':
+            continue
+        while True:
+            try:
+                executable = client_executable.resolve(client, path=skills.client_path(), run=run)
+                reason = None
+            except client_executable.DiscoveryError as error:
+                executable, reason = None, error.reason
+            if executable or reason is None:
+                break
+            label = 'Codex' if client == 'codex' else 'Claude Code'
+            detail = ('%s was found, but its included setup tool could not be verified.' % label
+                      if reason == 'bundled_cli_invalid' else
+                      'Windows could not confirm which %s installation to use.' % label)
+            if dialog.confirm_result(
+                    '%s\n\n'
+                    'Try again, or cancel and contact Software Combined IT. '
+                    'Your assistant can stay open.' % detail,
+                    labels=('Try again', 'Cancel')) is not True:
+                return True
+        if executable:
             continue
         label = 'Codex' if client == 'codex' else 'Claude Code'
         if client == 'claude' and '--desktop' in flags:
             label = 'Claude Code setup tools from Claude desktop’s Install page'
-        if dialog.confirm('Install or open %s and sign in first.\n\n'
-                          'Continue opens its download page. Open SCG Router again when it is ready.' % label):
+        if dialog.confirm('%s was not found.\n\n'
+                          'Continue opens its download page. Run SCG Router again after installation.' % label):
             webbrowser.open(ASSISTANT_DOWNLOADS[client])
         return True
     return False
+
+
+def _complete_choices(resources, home):
+    flags = load('client_choice').mode_flags(read_json(Path(home) / 'mixed-router-state.json'),
+        load('codex_config').read_receipt(home).get('clients', {}))
+    if flags and not _succeeded(run_installer(resources, home, flags)):
+        raise ValueError('Your key is kept. Choose Check setup in SCG Router to apply your choices.')
+    if read_json(Path(home) / 'mixed-router-state.json').get('setup'):
+        raise ValueError('Model access is unfinished. Keep your saved key and contact Software Combined IT.')
+    return 0
 
 
 def _key(resources, home, replace=False, run=subprocess.run):
@@ -115,7 +133,7 @@ def _key(resources, home, replace=False, run=subprocess.run):
     if not replace:
         diagnostics = load('diagnostics')
         if not diagnostics._provider_defs().unhandled(Path(home), state, diagnostics._key_private):
-            return 0
+            return _complete_choices(resources, home)
     if replace:
         with load('native_dialog').Progress('Opening key setup. This can take a few minutes.\n\n'
                 'Cancel closes setup after the current step finishes.', home=home) as progress:
@@ -127,12 +145,10 @@ def _key(resources, home, replace=False, run=subprocess.run):
         state = read_json(Path(home) / 'mixed-router-state.json')
     setup = state.get('setup', {})
     if not setup.get('nonce') or setup.get('expires', 0) <= time.time():
-        return 0
-    doc = metadata(resources)
-    python = Path(resources) / 'runtime' / doc['runtime_exec']
+        return _complete_choices(resources, home)
+    python = Path(resources) / 'runtime' / metadata(resources)['runtime_exec']
     url = 'http://127.0.0.1:%s/%s/setup/%s' % (state['port'], state['token'], setup['nonce'])
-    current = (Path(home) / 'current').read_text().strip()
-    release = Path(home) / 'releases' / current
+    release = Path(home) / 'releases' / (Path(home) / 'current').read_text().strip()
     try:
         attached = load('codex_config').read_receipt(home).get('clients', {})
     except (OSError, ValueError):  # An unreadable receipt must not block replacing the key.
@@ -148,19 +164,11 @@ def _key(resources, home, replace=False, run=subprocess.run):
         return result.returncode
     if result.returncode != 0:
         raise ValueError('The key window could not finish. Open SCG Router to try again.')
-    # Claude Code was attached before the window saved the Claude choice.
-    mode = read_json(Path(home) / 'mixed-router-state.json').get('claude_mode')
-    if ('claude' in attached and mode in ('subscription', 'none')
-            and attached['claude'].get('claude_mode', 'subscription') != mode
-            and not _succeeded(run_installer(resources, home, ['--claude-mode', mode]))):
-        raise ValueError('Claude Code could not be set up for your Claude choice. '
-                         'Open SCG Router to try again.')
-    return 0
+    return _complete_choices(resources, home)
 
 
 def _claude_on_openrouter(home, dialog):
-    """Claude reaches OpenRouter only through Switch Claude, which asks first,
-    restarts Claude and shares saved tasks; it does nothing when already there."""
+    """Switch Claude asks before restarting; an existing OpenRouter connection is unchanged."""
     owner = load('claude_desktop_switch')
     try:
         if owner.switch(home, target='3p') == '3p':
@@ -175,24 +183,33 @@ def _claude_on_openrouter(home, dialog):
 
 def _check(resources, home, dialog):
     facts = status(resources, home)
-    pending = facts['onboarding']['clients']
     if not facts.get('serving'):
-        dialog.message('SCG Router needs repair. Open it again and choose Update or repair.')
+        dialog.message('SCG Router needs repair. Open it again and choose Update or repair.', home=home)
         return
     update = facts.get('update', {})
     if update.get('retry_pending'):
         dialog.message('SCG Router is running. The last update check could not finish. '
-                       'Updates will retry automatically.')
+                       'Updates will retry automatically.', home=home)
         return
     if update.get('required_action'):
         dialog.message('SCG Router is running, but updates need attention.\n\n'
             'Running version: %s\nLatest known for this channel: %s\nLast successful check: %s\n\n'
             'Choose Update or repair to continue.' % (facts.get('running_version') or 'Unknown',
             update.get('latest_known_version') or 'Unknown',
-            load('update_status').display_time(update.get('last_successful_check_at'))))
+            load('update_status').display_time(update.get('last_successful_check_at'))), home=home)
         return
+    if facts.get('service_key_usable') is False:
+        if dialog.confirm_result('Model access needs setup.\n\n'
+                'Sign in with your work account or enter your own key in the secure window.',
+                home, labels=('Set up access', 'Cancel')) is True:
+            _key(resources, home, replace=True)
+        return
+    if not facts['onboarding'].get('choices_applied', True):
+        _complete_choices(resources, home)
+        facts = status(resources, home)
+    pending = facts['onboarding']['clients']
     if facts['onboarding'].get('ready'):
-        dialog.message('Ready. Your assistants are connected and updates are automatic.')
+        dialog.message('Ready. Your assistants are connected and updates are automatic.', home=home)
         return
     if dialog.confirm_result('SCG Router is running. Setup is not finished.\n\n'
             'Finish setup now? You may need to restart your assistants and send a test message.',
@@ -202,7 +219,7 @@ def _check(resources, home, dialog):
             ['--clients', 'none', '--desktop'], dialog):
         return
     if not pending or any(not row['plugins_available'] for row in pending.values()):
-        dialog.message('Your assistant tools still need setup. Open SCG Router and choose Update or repair.')
+        dialog.message('Your assistant tools still need setup. Open SCG Router and choose Update or repair.', home=home)
         return
     progress = read_json(Path(home) / 'setup-progress.json')
     for client, checks in pending.items():
@@ -218,11 +235,11 @@ def _check(resources, home, dialog):
                 'such as SC documentation.\n\n'
                 'Choose Continue only after you receive a reply and the SC tool works.'
                 % (label, 'Choose Code and start a new task. ' if client == 'claude-desktop'
-                   else 'Quit and reopen it, then start a new chat. ')):
+                   else 'Quit and reopen it, then start a new chat. '), home=home):
             return
         if not load('native_readiness').successful_reply(home, progress['started'], client):
             dialog.message('A successful reply has not reached SCG Router yet. '
-                           'Check your selected model, then open SCG Router and choose Check setup.')
+                           'Check your selected model, then open SCG Router and choose Check setup.', home=home)
             return
         confirmed = progress.setdefault('confirmed_clients', [])
         if client not in confirmed:
@@ -231,7 +248,7 @@ def _check(resources, home, dialog):
     facts = status(resources, home)
     dialog.message('Ready. Your assistants are connected and updates are automatic.'
                    if facts['onboarding']['ready'] else
-                   'Setup is saved. Open SCG Router and choose Check setup to finish.')
+                   'Setup is saved. Open SCG Router and choose Check setup to finish.', home=home)
 
 
 def _remove(resources, home, dialog, doc):
@@ -284,7 +301,13 @@ def onboard(resources, home, action=None):
     doc = metadata(resources)
     if action == 'remove':
         return _remove(resources, home, dialog, doc)
-    flags = _select(dialog) if not existing or action == 'add' else ['--repair']
+    package_install = action == 'install'
+    if package_install and read_json(home / 'mixed-router-state.json'):
+        flags = ['--install-package']
+    elif not existing or action == 'add':
+        flags = _select(dialog)
+    else:
+        flags = ['--repair']
     if flags is None or ('--clients' in flags and _missing_assistant(flags, dialog)):
         return 0
     restart = load('setup_restart')
@@ -294,7 +317,12 @@ def onboard(resources, home, action=None):
     includes_codex = selected_clients in ('codex', 'both')
     if selected_clients is None:
         try:
-            includes_codex = 'codex' in load('codex_config').read_receipt(home).get('clients', {})
+            attached = load('codex_config').read_receipt(home).get('clients', {})
+            saved = read_json(home / 'mixed-router-state.json')
+            clients = saved.get('clients')
+            if clients not in ('codex', 'claude', 'both', 'none'):
+                clients = 'none' if saved.get('client') == 'none' else 'codex'
+            includes_codex = 'codex' in attached if attached else clients in ('codex', 'both')
         except (OSError, ValueError):
             includes_codex = False
     if sys.platform == 'win32' and includes_codex:
@@ -303,19 +331,17 @@ def onboard(resources, home, action=None):
                 'win32', app=load('codex_desktop_switch').CODEX)
         except (OSError, subprocess.SubprocessError):
             pass
-    with dialog.Progress() as progress:
+    with dialog.Progress(home=home) as progress:
         permanent = retained(resources, home)
         python = permanent / 'runtime' / doc['runtime_exec']
         if sys.platform != 'win32':
             load('native_shortcuts').install(home, permanent, python)
-        if not (home / 'channel').exists():
-            load('atomic_write').replace_text(
-                home / 'channel', ('stable' if existing else doc['channel']) + '\n')
         result = run_installer(permanent, home, flags)
     if not _succeeded(result):
         dialog.message('Setup could not finish. '
                        'Open SCG Router to try again, or contact Software Combined IT.')
         return 1
+    record_channel(permanent, home, existing=existing, package=package_install)
     try:
         permanent = load('native_resources').current(home)
         doc = metadata(permanent)
@@ -330,8 +356,9 @@ def onboard(resources, home, action=None):
         load('native_resources').confirm_controls(home, permanent)
     load('desktop_menu').start(home, permanent)
     atomic = load('atomic_write')
-    atomic.replace_json(home / 'setup-progress.json',
-                        {'version': doc['version'], 'started': time.time(), 'confirmed_clients': []})
+    if not package_install or read_json(home / 'setup-progress.json').get('version') != doc['version']:
+        atomic.replace_json(home / 'setup-progress.json',
+                            {'version': doc['version'], 'started': time.time(), 'confirmed_clients': []})
     if progress.cancelled:
         return 0
     key_result = _key(permanent, home)
@@ -348,10 +375,13 @@ def main(argv=None):
     parser.add_argument('--resources', type=Path, required=True)
     parser.add_argument('--home', type=Path, default=Path.home() / '.codex/mixed-model-router')
     parser.add_argument('--status', action='store_true')
-    parser.add_argument('--action', choices=[key for key, _ in ACTIONS])
+    parser.add_argument('--action', choices=['install', *[key for key, _ in ACTIONS]])
     args = parser.parse_args(argv)
     resources = args.resources.resolve()
     try:
+        if args.home.expanduser().is_symlink():
+            raise ValueError('The setup folder is not safe to use.')
+        args.home = args.home.expanduser().resolve()
         metadata(resources)
         os.environ.update(environment(resources))
         if args.status:
