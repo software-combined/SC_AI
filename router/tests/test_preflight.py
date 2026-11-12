@@ -29,7 +29,7 @@ class PreflightTests(unittest.TestCase):
 
     def test_preflight_reports_everything_missing_together(self):
         _patch_attrs(self, find_python=lambda explicit=None: None)
-        with mock.patch.object(install_mod.shutil, 'which', return_value=None):
+        with mock.patch.object(install_mod._diag.client_executable, 'resolve', return_value=None):
             buf = io.StringIO()
             with contextlib.redirect_stdout(buf):
                 with self.assertRaisesRegex(SystemExit, '2'):

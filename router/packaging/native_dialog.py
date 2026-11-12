@@ -30,16 +30,29 @@ def choose(question, options, run=subprocess.run, *, labels=('Continue', 'Cancel
     return dialog.answer(sys.platform, result.stdout, options) if result.returncode == 0 else None
 
 
-def message(text):
-    return platform.show_message(text, sys.platform)
+def message(text, home=None):
+    try:
+        return platform.show_message(text, sys.platform, home=home)
+    except FileNotFoundError:
+        return platform.show_message(text, sys.platform)
 
 
-def confirm(text):
-    return platform.confirm(text, sys.platform)
+def confirm(text, home=None):
+    try:
+        return platform.confirm(text, sys.platform, home=home)
+    except FileNotFoundError:
+        return platform.confirm(text, sys.platform)
 
 
 def confirm_result(text, home=None, run=subprocess.run, *, labels=('Continue', 'Cancel')):
     """True means the offered action, False the safe action, None no presentation."""
+    if sys.platform == 'win32' and home is not None:
+        try:
+            return platform._windows_dialogs.show(text, home, True, run, labels=labels)
+        except FileNotFoundError:
+            pass  # First setup has no retained helper; keep the existing styled dialog.
+        except (OSError, subprocess.SubprocessError):
+            return None
     tool = dialog.tool(home=home)
     if not tool or (sys.platform.startswith('linux') and not (
             os.environ.get('DISPLAY') or os.environ.get('WAYLAND_DISPLAY'))):
@@ -83,8 +96,11 @@ class Progress:
     def __enter__(self):
         text, labels = self.text, (self.button,)
         if sys.platform == 'win32' and self.home is not None:
-            self.process = platform._windows_dialogs.progress(self.home, text, self.button)
-            return self
+            try:
+                self.process = platform._windows_dialogs.progress(self.home, text, self.button)
+                return self
+            except FileNotFoundError:
+                pass  # The fresh-install path still has the styled script window.
         if sys.platform == 'darwin':
             args = ['/usr/bin/osascript', '-e', platform.dialog_script(text, labels=labels)]
         elif sys.platform == 'win32':

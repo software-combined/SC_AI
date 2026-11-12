@@ -89,6 +89,15 @@ class WindowsCodexTests(unittest.TestCase):
     def scan(self, seen=None):
         return self.policy.snapshot(self.identity, seen or {}, (), api=self.api)
 
+    def test_running_check_accepts_the_default_empty_tracker_without_lifecycle_actions(self):
+        self.api.rows = {10: row(10, 1, self.identity['exe']),
+                         11: row(11, 10, '/runtime/node.exe'),
+                         12: row(12, 1, '/other/editor.exe')}
+        with mock.patch.object(desktop._windows_codex, 'bindings', return_value=self.api):
+            self.assertTrue(desktop.is_running('win32', app=desktop.App('com.openai.codex', ())))
+        self.assertEqual(set(self.api.owners), {10, 11})
+        self.assertEqual((self.api.closed, self.api.ended), ([], []))
+
     def test_package_discovery_is_fresh_after_version_folder_changes(self):
         old = self.identity
         moved = self.root.with_name('Codex_version_B')

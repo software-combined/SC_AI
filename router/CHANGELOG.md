@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+## 1.3.54
+
+- Windows package installs use their verified bundle and channel for upgrades
+  and reinstalls, keeping saved access and choices without closing assistants.
+  Repeating the package keeps completed setup; setup progress and Check setup
+  use the verified native Windows dialogs when available.
+
 ## 1.3.53
 
 - Keep an unchanged current install read-only and recognise macOS home aliases
