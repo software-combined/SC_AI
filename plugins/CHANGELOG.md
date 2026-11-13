@@ -1,5 +1,13 @@
 # Changelog
 
+## scg-review 0.7.5 and scg-subagents 0.9.1 (2026-11-14)
+
+- Explain direct native handoff discovery, expected canonical call records,
+  accepted child handles and waiting. Keep valid completed review lanes for an
+  unchanged frozen scope and require the full reports before approval.
+- Match structured model and effort fields to a complete assignment before
+  dispatch. Preserve model policy, lane independence and every review gate.
+
 ## scg-review 0.7.4 (2026-11-13)
 
 - Support separately owner-approved non-secret findings bound to the repository,

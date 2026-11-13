@@ -297,7 +297,10 @@ declarations; the other collaboration tools stay, and an emptied namespace is
 dropped. The model therefore sees one handoff surface, with nothing to choose.
 A changed Lite prefix receives a stable content-based identity.
 Each alias call returns to its canonical name with the marker, so Codex
-executes the normal tool and saves canonical history. Ciphertext under an alias,
+executes the normal tool and saves canonical history. Offered descriptions explain
+this name conversion and direct native dispatch outside the exec-only `ALL_TOOLS`
+catalogue. A returned child handle establishes acceptance, not review completion.
+Ciphertext under an alias,
 or an upstream encryption marker, is refused, never relabelled. A canonical
 call to a readable declaration gets the marker unless its message matches the
 backend ciphertext fingerprint; that call stays unmarked for the guard.

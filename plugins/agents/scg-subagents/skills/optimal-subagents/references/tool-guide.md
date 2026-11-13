@@ -30,6 +30,17 @@ absent from `ALL_TOOLS`. That catalogue covers only tools available inside
 `functions.exec`; an empty search there says nothing about native tools.
 Call offered native tools directly, using their actual schema.
 
+SCG Router returns `collaboration_plaintext` calls to the canonical
+`collaboration` name with readable delivery preserved. A canonical name in the
+execution record is expected, not a failed selection. Judge dispatch by the
+returned child ID or task name, or an actual rejection. Do not cancel an accepted
+child because the recorded namespace differs from the offered one.
+Match the structured model and effort to the complete assignment before dispatch;
+do not send placeholder tasks to test tool selection. Wait only while an accepted
+child has unfinished work. A wait call is not a spawn attempt, and a timeout does
+not establish tool unavailability. An accepted child still needs to finish its
+assigned deliverable before the parent can claim completion.
+
 Use deferred discovery only for tools the runtime marks as deferred. If the
 runtime offers a read-only native status tool, such as `list_agents`, use it
 when diagnosing access; it does not prove that spawning will succeed. When
