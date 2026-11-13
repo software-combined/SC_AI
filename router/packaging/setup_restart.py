@@ -26,9 +26,9 @@ def target(home):
 
 
 def offer(home, before, codex_was_running):
-    """Handle changed/open Codex completion once, even if its dialog cannot finish."""
+    """Join a current restart decision before automatic setup asks another question."""
     after = target(home)
-    if sys.platform != 'win32' or after is None or before == after:
+    if sys.platform != 'win32' or after is None:
         return False
     notice = load('notice')
     still_running = codex_was_running
@@ -44,10 +44,12 @@ def offer(home, before, codex_was_running):
         return False
     try:
         service = load('service')
+        version = service.current_version(home)
         with service.install_lock(home, '.update-notice.lock') as held:
+            if before == after and not notice.current_restart(home, version):
+                return False
             if not held:
                 return True  # The earlier offer owns this generation's decision.
-            version = service.current_version(home)
             notice.record_client_change(home, version, version)
         load('notice_windows').show(home, setup_completion=True)
     except (OSError, ValueError, RuntimeError, subprocess.SubprocessError):

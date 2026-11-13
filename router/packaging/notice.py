@@ -238,6 +238,20 @@ def record_attachment(home, version, event):
         return False
 
 
+def current_restart(home, version):
+    """A current Codex restart decision belongs to the whole setup journey."""
+    try:
+        doc = json.loads((Path(home) / NOTICE_FILE).read_text())
+    except (OSError, ValueError):
+        return False
+    if (not isinstance(doc, dict) or doc.get('version') != version
+            or _text.clients(doc.get('clients')) not in ('codex', 'both')):
+        return False
+    names = doc.get('names')
+    return bool(doc.get('attachment') or doc.get('client_change') or doc.get('shown')
+                or (names if isinstance(names, list) else _text.pending_names(home)))
+
+
 def record_client_change(home, version, event):
     """Stage one restart reason for a changed, verified Codex setup target."""
     try:
