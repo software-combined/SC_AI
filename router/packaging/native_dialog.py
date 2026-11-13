@@ -31,10 +31,14 @@ def choose(question, options, run=subprocess.run, *, labels=('Continue', 'Cancel
 
 
 def message(text, home=None):
+    """An unacknowledged information notice must not fail completed setup."""
     try:
-        return platform.show_message(text, sys.platform, home=home)
-    except FileNotFoundError:
-        return platform.show_message(text, sys.platform)
+        try:
+            return platform.show_message(text, sys.platform, home=home)
+        except FileNotFoundError:
+            return platform.show_message(text, sys.platform)
+    except subprocess.TimeoutExpired:
+        return False
 
 
 def confirm(text, home=None):

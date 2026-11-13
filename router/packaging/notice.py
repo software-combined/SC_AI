@@ -247,7 +247,7 @@ def record_client_change(home, version, event):
         except (OSError, ValueError):
             doc = {}
         doc = doc if isinstance(doc, dict) else {}
-        if doc.get('client_change') == event:
+        if doc.get('client_change') == event or doc.get('version') == version and doc.get('shown'):
             return False
         if doc.get('shown'):
             doc.pop('names', None)
