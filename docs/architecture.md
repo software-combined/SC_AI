@@ -297,7 +297,15 @@ declarations; the other collaboration tools stay, and an emptied namespace is
 dropped. The model therefore sees one handoff surface, with nothing to choose.
 A changed Lite prefix receives a stable content-based identity.
 Each alias call returns to its canonical name with the marker, so Codex
-executes the normal tool and saves canonical history. Offered descriptions explain
+executes the normal tool and saves canonical history. `handoff_history.py` owns
+the handoff vocabulary, history parsing and model-visible replay projection.
+On the next native Responses request, an explicitly readable historical call
+uses the same alias as its current declaration. Arguments, call and item IDs,
+encryption markers and outputs stay unchanged. The client's saved history is
+never mutated. Encrypted, malformed or undeclared calls keep their original
+namespace; compaction and installs without an external key keep their contract.
+Captured spawn models still protect later follow-ups, including repeated
+preparation of an already-projected request. Offered descriptions explain
 this name conversion and direct native dispatch outside the exec-only `ALL_TOOLS`
 catalogue. A returned child handle establishes acceptance, not review completion.
 Ciphertext under an alias,

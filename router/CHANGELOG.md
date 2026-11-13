@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+## 1.3.60
+
+- Match historical readable handoff names to the tools offered in native
+  requests. Preserve saved history, arguments, call pairing and encryption guards.
+
 ## 1.3.59
 
 - Explain native handoff discovery and successful plaintext-to-canonical call
