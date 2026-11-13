@@ -1,4 +1,4 @@
-"""Installer-owned key window lifecycle; runtime only records its answers."""
+"""Installer-owned key and native completion; runtime only records its answers."""
 import os
 import subprocess
 import sys
@@ -7,6 +7,53 @@ from pathlib import Path
 
 PENDING = ('Setup is pending. Your installed router and any saved key are kept. '
            'Open SCG Router and choose Check setup to finish.')
+
+
+class SavedKeyError(ValueError):
+    """A known completion failure with fixed, safe user-facing wording."""
+    def __init__(self):
+        super().__init__('Your saved key is kept, but setup could not finish. '
+                         'Try Check setup again. If it still fails, contact Software Combined IT.')
+
+
+def complete_native(resources, home, run_installer):
+    from native_payload import load, read_json, succeeded
+    path = Path(home) / 'mixed-router-state.json'
+    state, diagnostics = read_json(path), load('diagnostics')
+    if diagnostics._provider_defs().unhandled(Path(home), state, diagnostics._key_private):
+        raise SavedKeyError()
+    flags = load('client_choice').mode_flags(state,
+        load('codex_config').read_receipt(home).get('clients', {}))
+    if flags and not succeeded(run_installer(resources, home, flags)):
+        raise SavedKeyError()
+    if load('service')._state.setup_pending(read_json(path)):
+        raise SavedKeyError()
+    return 0
+
+
+def confirm_client(home, dialog, client, saved_key):
+    label = {'codex': 'Codex', 'claude': 'Claude Code', 'claude-desktop': 'Claude desktop'}[client]
+    if saved_key and client != 'claude-desktop':
+        return dialog.confirm_result(
+            'Your saved key is ready. Keep %s open and keep your current model. '
+            'Send a message and use an enabled SC tool, such as SC documentation. '
+            'If both already work, choose Confirm.' % label,
+            home, labels=('Confirm', 'Later')) is True
+    return dialog.confirm(
+        'To finish setup for %s:\n\n%s'
+        'Choose an OpenRouter model and send a greeting. Use an enabled SC tool, '
+        'such as SC documentation.\n\n'
+        'Choose Continue only after you receive a reply and the SC tool works.'
+        % (label, 'Choose Code and start a new task. ' if client == 'claude-desktop'
+           else 'Quit and reopen it, then start a new chat. '), home=home)
+
+
+def ready_message(clients, saved_key):
+    if saved_key and clients and 'claude-desktop' not in clients:
+        labels = ['Codex' if client == 'codex' else 'Claude Code' for client in clients]
+        return 'Ready. %s %s connected. You can keep working in this chat.' % (
+            ' and '.join(labels), 'is' if len(labels) == 1 else 'are')
+    return 'Ready. Your assistants are connected and updates are automatic.'
 
 
 def open_window(python, home, release, url, clients):

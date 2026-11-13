@@ -5,6 +5,7 @@ import json
 import os
 import subprocess
 import tempfile
+import time
 import tomllib
 import unittest
 from pathlib import Path
@@ -72,8 +73,8 @@ class CompletionTests(unittest.TestCase):
                 'claude-desktop': {'claude_mode': 'none'}}}))
             self.assertTrue(ready.choices_applied(home))
             (home / 'mixed-router-state.json').write_text(
-                '{"claude_mode":"none","setup":{"nonce":"synthetic","expires":0}}')
-            self.assertFalse(ready.choices_applied(home))  # A failed close cannot become Ready after expiry.
+                json.dumps(dict(claude_mode='none', setup=dict(nonce='synthetic', expires=time.time() + 3600))))
+            self.assertFalse(ready.choices_applied(home))  # An active access window stays pending.
             with self.assertRaisesRegex(ValueError, 'contact Software Combined IT'):
                 module('native_setup')._complete_choices(home, home)
 

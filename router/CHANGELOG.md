@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+## 1.3.56
+
+- Resume setup with a working saved key after an expired sign-in window. Keep
+  Codex and Claude Code open on their current model while confirming a reply
+  and an enabled SC tool. Active access setup and unapplied choices stay pending.
+- Use the retained native dialog for setup errors and show a specific message
+  when saved-key completion cannot finish.
+- Let setup finish while a background update check is pending, and report the
+  pending check alongside Ready. Required update or repair actions still apply.
+- Keep the installer's tray handoff quiet when the Router menu is already running.
+
 ## 1.3.55
 
 - Add Google Gemini 4 Hydrogen through OpenRouter to both Codex and Claude Code
