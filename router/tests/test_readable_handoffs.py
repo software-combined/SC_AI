@@ -188,14 +188,15 @@ class ExternalRouteTests(unittest.TestCase):
 
 
 class ReplayTests(unittest.TestCase):
-    def test_restored_history_replays_unchanged_on_both_routes(self):
+    def test_restored_history_uses_each_routes_declared_name(self):
         spawned = restored(call('spawn_agent'))
         history = [{'type': 'message', 'role': 'user', 'content': 'Delegate the synthetic task.'},
                    spawned, {'type': 'function_call_output', 'call_id': spawned['call_id'],
                              'output': 'spawned'}]
         tools = native_tools(*HANDOFFS)
         body = json.loads(native({'model': PARENT, 'tools': tools, 'input': deepcopy(history)}).body)
-        self.assertEqual(body['input'], history)
+        self.assertEqual(body['input'], [history[0],
+            {**spawned, 'namespace': 'collaboration_plaintext'}, history[2]])
         external = ExternalResponsesProvider(provider_defs.OPENROUTER).prepare(
             CHILD, '/responses', {'model': CHILD, 'tools': tools, 'input': deepcopy(history)},
             b'', {}, KEY)

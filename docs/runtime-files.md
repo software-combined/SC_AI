@@ -19,7 +19,7 @@ are never copied between machines.
 `ai_router/registry.py`, `ai_router/credentials.py`,
 `ai_router/request_context.py`, `ai_router/request_lease.py`, `ai_router/outbound.py`,
 `ai_router/tool_adapter.py`, `ai_router/tool_history.py`, `ai_router/tool_aliases.py`,
-`ai_router/agent_handoffs.py`, `ai_router/handoff_response.py`,
+`ai_router/agent_handoffs.py`, `ai_router/handoff_history.py`, `ai_router/handoff_response.py`,
 `ai_router/sse.py`, `ai_router/outcome.py`,
 `ai_router/attempt_policy.py`, `ai_router/stream_errors.py`,
 `ai_router/capabilities.py`, `ai_router/compaction.py`,
