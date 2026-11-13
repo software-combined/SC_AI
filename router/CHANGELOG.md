@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+## 1.3.57
+
+- Keep one optional Codex restart decision for an upgrade across model,
+  attachment and setup completion notices. Choosing Later stays respected when
+  the installer hands off to the new helper; a later update can offer once again.
+- Keep completed setup successful when an informational notice times out without
+  acknowledgement. Confirmation and restart choices still require consent.
+
 ## 1.3.56
 
 - Resume setup with a working saved key after an expired sign-in window. Keep

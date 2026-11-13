@@ -1,6 +1,7 @@
 """Switch dialogs use the verified compiled helper and an explicit safe result."""
 import hashlib
 import json
+import subprocess
 import tempfile
 import unittest
 from pathlib import Path
@@ -81,6 +82,60 @@ class WindowsDialogTests(unittest.TestCase):
             native._check(self.source, self.home, dialog)
         dialog.message.assert_called_once_with(
             'Ready. Your assistants are connected and updates are automatic.', home=self.home)
+
+    def test_ready_information_timeout_does_not_turn_success_into_an_error_dialog(self):
+        setup, native = module('native_setup'), module('native_dialog')
+        show_message, load = native.platform.show_message, setup.load
+        run = mock.Mock(side_effect=subprocess.TimeoutExpired('synthetic-helper', 120))
+        facts = dict(serving=True, service_key_usable=True,
+                     onboarding=dict(ready=True, clients={'codex': {}}))
+        before = {p.relative_to(self.home): p.read_bytes()
+                  for p in self.home.rglob('*') if p.is_file()}
+        with mock.patch.object(native, 'sys', SimpleNamespace(platform='win32')), \
+                mock.patch.object(native.platform, '_windows_dialogs', self.dialog), \
+                mock.patch.object(native.platform, 'show_message', side_effect=lambda text, platform, home=None:
+                                  show_message(text, platform, run=run, home=home)), \
+                mock.patch.object(setup, 'metadata'), \
+                mock.patch.object(setup, 'load', side_effect=lambda name:
+                                  native if name == 'native_dialog' else load(name)), \
+                mock.patch.object(setup, 'status', return_value=facts), \
+                mock.patch.object(setup, 'onboard', side_effect=lambda resources, home, action:
+                                  setup._check(resources, home, native) or 0):
+            self.assertEqual(setup.main(['--resources', str(self.source),
+                                        '--home', str(self.home), '--action', 'install']), 0)
+        run.assert_called_once()
+        request = json.loads(run.call_args.kwargs['input'])
+        self.assertEqual(request['labels'], ['OK'])
+        self.assertTrue(request['text'].startswith('Ready.'))
+        self.assertEqual(run.call_args.kwargs['timeout'], 120)
+        self.assertEqual({p.relative_to(self.home): p.read_bytes()
+                          for p in self.home.rglob('*') if p.is_file()}, before)
+
+    def test_information_fallback_keeps_success_and_contains_timeout(self):
+        native = module('native_dialog')
+        for result in (True, subprocess.TimeoutExpired('synthetic-fallback', 120)):
+            with self.subTest(result=type(result).__name__), \
+                    mock.patch.object(native.platform, 'show_message',
+                                      side_effect=[FileNotFoundError(), result]) as show:
+                self.assertIs(native.message('Ready.', home=self.home), result is True)
+            self.assertEqual(show.call_args_list, [
+                mock.call('Ready.', native.sys.platform, home=self.home),
+                mock.call('Ready.', native.sys.platform)])
+
+    def test_confirmation_timeouts_never_grant_consent(self):
+        native = module('native_dialog')
+        confirm = native.platform.confirm
+        run = mock.Mock(side_effect=subprocess.TimeoutExpired('synthetic-helper', 120))
+        with mock.patch.object(native, 'sys', SimpleNamespace(platform='win32')), \
+                mock.patch.object(native.platform, '_windows_dialogs', self.dialog), \
+                mock.patch.object(native.platform, 'confirm', side_effect=lambda text, platform, home=None:
+                                  confirm(text, platform, run=run, home=home)):
+            with self.assertRaises(subprocess.TimeoutExpired):
+                native.confirm('Restart Codex?', home=self.home)
+            self.assertIsNone(native.confirm_result('Restart Codex?', self.home, run))
+        self.assertEqual(run.call_count, 2)
+        for call in run.call_args_list:
+            self.assertEqual(json.loads(call.kwargs['input'])['labels'], ['Continue', 'Cancel'])
 
     def test_first_setup_progress_keeps_the_existing_fallback_without_a_retained_helper(self):
         native = module('native_dialog')

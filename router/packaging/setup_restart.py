@@ -2,7 +2,6 @@
 import hashlib
 import subprocess
 import sys
-import uuid
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -44,7 +43,12 @@ def offer(home, before, codex_was_running):
         notice.suppress_closed_client_restart(home)
         return False
     try:
-        notice.record_client_change(home, load('service').current_version(home), uuid.uuid4().hex)
+        service = load('service')
+        with service.install_lock(home, '.update-notice.lock') as held:
+            if not held:
+                return True  # The earlier offer owns this generation's decision.
+            version = service.current_version(home)
+            notice.record_client_change(home, version, version)
         load('notice_windows').show(home, setup_completion=True)
     except (OSError, ValueError, RuntimeError, subprocess.SubprocessError):
         pass
