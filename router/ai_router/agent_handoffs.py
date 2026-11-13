@@ -1,13 +1,7 @@
 """Readable collaboration handoffs on mixed installs; Codex still executes every tool.
-
-Codex delivers a spawn, send or follow-up as plaintext only when the call's
-`encrypted_function_args` marker is `[]`; anything else reaches the child
-encrypted, which only the native backend can read. Where an external child can
-exist, every brief is declared readable: external routes rewrite the canonical
-tools, while native routes, whose backend requires the canonical message to stay
-encrypted, offer readable copies in their own namespace in place of them. Each
-call returns to its canonical name with the marker. An install without an
-external key keeps the stock encrypted contract.
+Readable briefs use `encrypted_function_args: []`. External routes rewrite tools;
+native routes offer readable aliases and return calls to canonical names with
+the marker. Installs without an external key keep the stock encrypted contract.
 """
 from copy import deepcopy
 import json
@@ -18,13 +12,19 @@ from . import errors, provider_defs, request_context
 
 NATIVE_NAMESPACE = 'collaboration'
 PLAINTEXT_NAMESPACE = 'collaboration_plaintext'
-PLAINTEXT_DESCRIPTION = 'Start subagents and send them messages or follow-up tasks as readable text.'
+PLAINTEXT_DESCRIPTION = (
+    'Start subagents and send readable messages or follow-up tasks. Call these tools directly. '
+    'SCG Router records successful calls under collaboration with readable delivery preserved; '
+    'that name change is expected, not a failed selection or a reason to cancel the child.')
 HANDOFF_TOOLS = frozenset(('spawn_agent', 'send_message', 'followup_task'))
 LANE_HINT_NAMES = frozenset(('spawn_agent', 'close_agent'))
 LANE_HINT = ('When all subagent lanes are full, close finished agents, '
              'or all of them if needed, then retry spawn.')
 SPAWN_HINT = ('Pass model and reasoning_effort explicitly for a fresh child; '
-              'a child on an externally billed model needs fork_turns="none".')
+              'a child on an externally billed model needs fork_turns="none". '
+              'Call the offered tool directly, outside functions.exec; ALL_TOOLS omits native tools. '
+              'Match the model fields to the complete brief before dispatch. '
+              'A returned child ID or task name means accepted, not finished. Wait only for accepted children.')
 READABLE_MESSAGE = 'The complete readable assignment or message. Do not encrypt it.'
 # Backend handoff ciphertext: matched all 568 saved encrypted messages (Sep 2026).
 CIPHERTEXT = re.compile(r'gAAAA[A-Za-z0-9_-]{40,}={0,2}')

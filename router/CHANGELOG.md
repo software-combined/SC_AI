@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+## 1.3.59
+
+- Explain native handoff discovery and successful plaintext-to-canonical call
+  records, so parents keep accepted reviewers running and wait for their reports.
+- Refresh the review and subagent guidance without changing review gates or tool
+  execution. Replay snapshots change only for the advertised descriptions.
+
 ## 1.3.58
 
 - Join the current Codex restart decision before automatic setup asks for

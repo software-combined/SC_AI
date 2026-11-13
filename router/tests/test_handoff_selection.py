@@ -32,11 +32,16 @@ class SelectionGuidanceTests(unittest.TestCase):
             self.assertEqual(payload, original)
             (namespace,) = prepared.get('tools', prepared.get('input', [{}])[0].get('tools'))
             self.assertEqual(namespace['name'], 'collaboration_plaintext')
+            self.assertIn('records successful calls under collaboration', namespace['description'])
+            self.assertIn('not a failed selection', namespace['description'])
             for tool in namespace['tools']:
                 description = tool['description']
                 if tool['name'] == 'spawn_agent':
                     self.assertIn('model and reasoning_effort explicitly', description)
                     self.assertIn('fork_turns="none"', description)
+                    self.assertIn('outside functions.exec; ALL_TOOLS omits native tools', description)
+                    self.assertIn('accepted, not finished', description)
+                    self.assertIn('Wait only for accepted children', description)
                 else:
                     self.assertEqual(description, 'Native operation.')
 
@@ -49,6 +54,16 @@ class SelectionGuidanceTests(unittest.TestCase):
                 self.assertIn(OFFERED_TOOLS_RULE, prose)
                 self.assertNotRegex(
                     prose, r"externally billed recipient|recipient's provider route|next user turn")
+
+    def test_review_and_tool_guide_distinguish_dispatch_records_from_failure(self):
+        for path in (CODEX_GUIDANCE[0], SUBAGENTS / 'references/tool-guide.md'):
+            with self.subTest(path=str(path.relative_to(ROOT.parent))):
+                prose = ' '.join(path.read_text(encoding='utf-8').split())
+                for distinction in ('`ALL_TOOLS`', 'readable delivery preserved',
+                                    'returned child ID or task name',
+                                    'A wait call is not a spawn attempt',
+                                    'not establish tool unavailability'):
+                    self.assertIn(distinction, prose)
 
     def test_claude_code_parents_get_their_own_section_and_listing_ids(self):
         guide = (SUBAGENTS / 'references/tool-guide.md').read_text(encoding='utf-8')

@@ -28,6 +28,7 @@ class NativeKeyPromptTests(unittest.TestCase):
             (home / 'current').write_text('1.2.0')
             key = home / 'openrouter.key'
             key.write_bytes(b'synthetic-existing-key')
+            key.chmod(0o600)
             state = home / 'mixed-router-state.json'
             state.write_text(json.dumps(dict(clients='codex', port=1, token='synthetic',
                                             setup=dict(nonce='test', expires=2000))))

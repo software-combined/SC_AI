@@ -81,6 +81,20 @@ subagent assignment, message and follow-up, whatever the recipient. Otherwise
 use the `collaboration` tools. Pass the selected model and supported effort
 explicitly; external children need `fork_turns="none"`.
 
+Read the current native definitions and call the offered tool directly, outside
+`functions.exec`. `ALL_TOOLS` lists only exec-callable tools; an empty search
+does not establish that native handoffs are missing. Recheck after a context reset.
+Before dispatch, match the structured model and effort to the complete brief.
+Never send a placeholder task to test tool selection.
+
+SCG Router records a `collaboration_plaintext` call under `collaboration` with
+readable delivery preserved. This name conversion is expected, not a failed
+selection or a reason to cancel the child. Judge dispatch by the returned child
+ID or task name, or an actual rejection. Keep accepted children running and wait
+only while they have unfinished work. A wait call is not a spawn attempt, and
+a timeout does not establish tool unavailability. Completion still needs Step 7's
+full review report; preserve valid completed lanes for an unchanged frozen scope.
+
 A handoff refusal is a delivery failure, not model or provider unavailability.
 Report the exact delivery blocker as `❌ Block` and preserve the work.
 

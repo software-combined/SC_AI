@@ -31,6 +31,7 @@ class NativePackageUpgradeTests(unittest.TestCase):
             install_mod._write_state(home, state)
             key = home / 'openrouter.key'
             key.write_text('synthetic-saved-key\n')
+            key.chmod(0o600)
             (home / 'channel').write_text('stable\n')
             (home / 'feed-serial').write_text('999\n')
             config = user / '.codex/config.toml'
