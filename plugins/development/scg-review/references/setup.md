@@ -96,6 +96,32 @@ Each checks scope again after its chained repository hook. If a hook stages
 changes, review the changed result before retrying. To prepare a merge commit,
 use `git merge --no-commit --no-ff <branch>`, review the result, then commit.
 
+## Owner-managed non-secret adjudications
+
+The pinned scanner still runs across the full staged diff. Repository ignore
+files, inline allow comments and scanner environment overrides remain refused.
+An owner may separately approve exact non-secret findings in the local
+`~/.config/scg-agent-git-hooks/scan-adjudications.json` file. No repository
+file or command-line flag can supply those approvals.
+
+This storage is qualified on POSIX only. The file must be a regular owner-only
+file, outside the repository, in an owner-managed directory. Symlinks and
+permissions allowing other users to write are refused. Native Windows scans
+retain their existing behavior; adjudication remains unavailable there.
+
+Each repository scope binds its exact origin URL and resolved Git common
+directory. It records `approvedBy`, `approvedAt` and `reason`. Each entry in
+`findings` binds `file`, `rule`, `line`, `stagedFileSha256` and `reason`.
+The document uses `schemaVersion: 1` and a `repositories` array. Provision it
+only after the owner approves the redacted inventory and source classification.
+
+A scanner exit of 1 is adjudicated only when its valid JSON report contains
+exclusively approved matches against regular staged blobs. Changed paths,
+rules, lines, file hashes, repository identities or staged trees fail closed.
+New matches, malformed reports and scanner execution failures still block.
+The successful scan visibly reports the adjudicated count; it never claims
+the findings were absent. All independent review and receipt gates still apply.
+
 ## Gitleaks scanner
 
 The configured Gitleaks scanner is a pinned native executable: an absolute
@@ -196,7 +222,8 @@ cp "<plugin-root>/support/git-hooks/pre-commit" \
    "<plugin-root>/support/git-hooks/pre-merge-commit" \
    "<plugin-root>/support/git-hooks/commit-msg" ~/.config/scg-agent-git-hooks/
 cp "<plugin-root>/support/git-hooks/bin/scg-review-state" ~/.config/scg-agent-git-hooks/bin/
-cp "<plugin-root>/support/git-hooks/lib/scg_agent_git_hooks.py" ~/.config/scg-agent-git-hooks/lib/
+cp "<plugin-root>/support/git-hooks/lib/scg_agent_git_hooks.py" \
+   "<plugin-root>/support/git-hooks/lib/scg_scan_adjudications.py" ~/.config/scg-agent-git-hooks/lib/
 chmod +x ~/.config/scg-agent-git-hooks/pre-commit \
          ~/.config/scg-agent-git-hooks/pre-merge-commit \
          ~/.config/scg-agent-git-hooks/commit-msg \
