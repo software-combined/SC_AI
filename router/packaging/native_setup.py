@@ -11,6 +11,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from native_payload import install_arguments, load, metadata, read_json, record_channel, retained, succeeded as _succeeded
 import client_executable
+import setup_completion as _completion
 
 ACTIONS = (('resume', 'Update or repair'), ('status', 'Check setup'),
            ('add', 'Connect another assistant'), ('key', 'Set up model access'),
@@ -118,13 +119,7 @@ def _missing_assistant(flags, dialog, run=None):
 
 
 def _complete_choices(resources, home):
-    flags = load('client_choice').mode_flags(read_json(Path(home) / 'mixed-router-state.json'),
-        load('codex_config').read_receipt(home).get('clients', {}))
-    if flags and not _succeeded(run_installer(resources, home, flags)):
-        raise ValueError('Your key is kept. Choose Check setup in SCG Router to apply your choices.')
-    if read_json(Path(home) / 'mixed-router-state.json').get('setup'):
-        raise ValueError('Model access is unfinished. Keep your saved key and contact Software Combined IT.')
-    return 0
+    return _completion.complete_native(resources, home, run_installer)
 
 
 def _key(resources, home, replace=False, run=subprocess.run):
@@ -187,10 +182,6 @@ def _check(resources, home, dialog):
         dialog.message('SCG Router needs repair. Open it again and choose Update or repair.', home=home)
         return
     update = facts.get('update', {})
-    if update.get('retry_pending'):
-        dialog.message('SCG Router is running. The last update check could not finish. '
-                       'Updates will retry automatically.', home=home)
-        return
     if update.get('required_action'):
         dialog.message('SCG Router is running, but updates need attention.\n\n'
             'Running version: %s\nLatest known for this channel: %s\nLast successful check: %s\n\n'
@@ -208,10 +199,15 @@ def _check(resources, home, dialog):
         _complete_choices(resources, home)
         facts = status(resources, home)
     pending = facts['onboarding']['clients']
+    saved_key = facts.get('service_key_usable') is True
+    ready_message = _completion.ready_message(pending, saved_key)
+    if update.get('retry_pending'):
+        ready_message += ' An update check is pending. Updates will retry automatically.'
     if facts['onboarding'].get('ready'):
-        dialog.message('Ready. Your assistants are connected and updates are automatic.', home=home)
+        dialog.message(ready_message, home=home)
         return
-    if dialog.confirm_result('SCG Router is running. Setup is not finished.\n\n'
+    if (not saved_key or 'claude-desktop' in pending) and dialog.confirm_result(
+            'SCG Router is running. Setup is not finished.\n\n'
             'Finish setup now? You may need to restart your assistants and send a test message.',
             home, labels=('Finish setup', 'Cancel')) is not True:
         return
@@ -225,17 +221,9 @@ def _check(resources, home, dialog):
     for client, checks in pending.items():
         if checks['fresh_session_confirmed'] and checks['reply_seen']:
             continue
-        label = {'codex': 'Codex', 'claude': 'Claude Code',
-                 'claude-desktop': 'Claude desktop'}[client]
         if client == 'claude-desktop' and not _claude_on_openrouter(home, dialog):
             return
-        if not dialog.confirm(
-                'To finish setup for %s:\n\n%s'
-                'Choose an OpenRouter model and send a greeting. Use an enabled SC tool, '
-                'such as SC documentation.\n\n'
-                'Choose Continue only after you receive a reply and the SC tool works.'
-                % (label, 'Choose Code and start a new task. ' if client == 'claude-desktop'
-                   else 'Quit and reopen it, then start a new chat. '), home=home):
+        if not _completion.confirm_client(home, dialog, client, saved_key):
             return
         if not load('native_readiness').successful_reply(home, progress['started'], client):
             dialog.message('A successful reply has not reached SCG Router yet. '
@@ -246,8 +234,7 @@ def _check(resources, home, dialog):
             confirmed.append(client)
         load('atomic_write').replace_json(Path(home) / 'setup-progress.json', progress)
     facts = status(resources, home)
-    dialog.message('Ready. Your assistants are connected and updates are automatic.'
-                   if facts['onboarding']['ready'] else
+    dialog.message(ready_message if facts['onboarding']['ready'] else
                    'Setup is saved. Open SCG Router and choose Check setup to finish.', home=home)
 
 
@@ -354,7 +341,7 @@ def onboard(resources, home, action=None):
     if sys.platform != 'win32':
         load('native_shortcuts').install(home, permanent, python)
         load('native_resources').confirm_controls(home, permanent)
-    load('desktop_menu').start(home, permanent)
+    load('desktop_menu').start(home, permanent, after_update=True)
     atomic = load('atomic_write')
     if not package_install or read_json(home / 'setup-progress.json').get('version') != doc['version']:
         atomic.replace_json(home / 'setup-progress.json',
@@ -388,11 +375,12 @@ def main(argv=None):
             print(json.dumps(status(resources, args.home)))
             return 0
         return onboard(resources, args.home, args.action)
-    except (OSError, ValueError, RuntimeError, subprocess.SubprocessError):
+    except (OSError, ValueError, RuntimeError, subprocess.SubprocessError) as exc:
         if args.status:
             return 1
-        load('native_dialog').message('Setup needs attention. Open SCG Router to try again, '
-                                      'or contact Software Combined IT.')
+        message = str(exc) if isinstance(exc, _completion.SavedKeyError) else (
+            'Setup needs attention. Open SCG Router to try again, or contact Software Combined IT.')
+        load('native_dialog').message(message, home=args.home)
         return 1
 
 

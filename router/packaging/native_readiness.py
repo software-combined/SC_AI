@@ -68,7 +68,8 @@ def choices_applied(home):
     try:
         state = json.loads((Path(home) / 'mixed-router-state.json').read_text())
         attached = load('codex_config').read_receipt(home).get('clients', {})
-        return not state.get('setup') and not load('client_choice').mode_flags(state, attached)
+        return (not load('service')._state.setup_pending(state)
+                and not load('client_choice').mode_flags(state, attached))
     except (OSError, ValueError, TypeError, AttributeError):
         return False
 

@@ -64,8 +64,10 @@ existing policy reader. Same-version mode changes use the service repair
 lifecycle before client attachment, with prior state restored on reload failure.
 Its pure mode comparison also drives native readiness. `setup_completion` owns
 the installer's bounded key-window wait after attachment and applies late answers
-through the same current-install lifecycle. The runtime only saves answers.
-An unfinished access window keeps readiness pending, including after a partial key save.
+through the same current-install lifecycle. It also owns native saved-key completion
+and its client-aware confirmation copy. The runtime only saves answers.
+Completion and readiness share `state.setup_pending`: an active access window stays
+pending, while expired preparation cannot block usable access with matching receipts.
 
 `client_executable` owns discovery for setup prerequisites, plugin registration,
 readiness and diagnostic preflight. Existing PATH, npm, local-bin and desktop
