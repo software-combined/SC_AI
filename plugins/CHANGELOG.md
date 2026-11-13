@@ -1,5 +1,12 @@
 # Changelog
 
+## scg-review 0.7.4 (2026-11-13)
+
+- Support separately owner-approved non-secret findings bound to the repository,
+  exact scanner location and staged-file hash, with visible adjudication counts.
+- Keep the pinned full staged scan, override rejection and independent review.
+  Invalid approval data, new findings and changed source still block commits.
+
 ## scg-subagents 0.9.0 (2026-11-11)
 
 - Refresh model evidence and prices for Artificial Analysis Intelligence Index

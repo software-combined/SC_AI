@@ -8,9 +8,11 @@ import json
 import os
 from pathlib import Path
 import re
+import runpy
 import subprocess
 import sys
 import time
+import tempfile
 from typing import Any
 
 
@@ -377,10 +379,17 @@ def scan(_: argparse.Namespace) -> None:
     if reported != pin["version"]:
         fail(f"SCG secret scan blocked: gitleaks reports version {reported!r}; "
              f"pinned {pin['version']!r} (decision BLOCK).")
+    with tempfile.TemporaryDirectory(prefix="scg-secret-scan-") as private:
+        report = Path(private) / "findings.json"
+        _scan_staged(pin, info, root, binary, report)
+
+
+def _scan_staged(pin, info, root, binary, report):
     cmd = [
         str(binary), "git", "--staged", "--verbose",
         "--gitleaks-ignore-path", os.devnull, "--ignore-gitleaks-allow",
         "--redact=100", "--no-banner", "--no-color",
+        "--report-format", "json", "--report-path", str(report),
         "--timeout", str(pin["timeout"]), ".",
     ]
     try:
@@ -391,6 +400,20 @@ def scan(_: argparse.Namespace) -> None:
     except subprocess.TimeoutExpired:
         fail("SCG secret scan blocked: gitleaks timed out (decision BLOCK).")
     if proc.returncode != 0:
+        policy = BASE_DIR / "scan-adjudications.json"
+        if proc.returncode == 1 and policy.exists():
+            try:
+                # Export tools load this helper by file path. Resolve the optional
+                # scanner module by its sibling path, never ambient PYTHONPATH.
+                adjudicate = runpy.run_path(str(Path(__file__).with_name("scg_scan_adjudications.py")))["adjudicate"]
+                count = adjudicate(report, policy, root, info["tree"])
+            except (OSError, ValueError) as exc:
+                output = (proc.stdout + proc.stderr).strip()
+                fail(f"SCG secret scan blocked: owner adjudication failed: {exc}\n{output}")
+            print(f"SCG secret scan passed with {count} exact owner-adjudicated non-secret findings.")
+            print(f"  scanner: {binary} {pin['version']} (sha256 verified)")
+            print(f"  staged diff for tree: {info['tree']}; no unapproved findings remain")
+            return
         output = (proc.stdout + proc.stderr).strip()
         fail(
             "SCG secret scan blocked: gitleaks found leaks or failed (secrets redacted by --redact=100).\n"
