@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+## 1.3.58
+
+- Join the current Codex restart decision before automatic setup asks for
+  confirmation, including when settings are unchanged. Keep Later respected
+  and manual Check setup available without overlapping restart questions.
+
 ## 1.3.57
 
 - Keep one optional Codex restart decision for an upgrade across model,

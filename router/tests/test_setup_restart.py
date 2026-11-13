@@ -19,6 +19,7 @@ class SetupRestartTests(unittest.TestCase):
         self.owner = module('setup_restart')
         self.notice = mock.Mock()
         self.notice.record_client_change.return_value = True
+        self.notice.current_restart.return_value = False
         self.notice_windows = mock.Mock()
         self.notice_windows.show.return_value = True
         self.platform = mock.Mock()
@@ -70,6 +71,7 @@ class SetupRestartTests(unittest.TestCase):
         notice = module('notice')
         old, current = module('notice_windows'), module('notice_windows')
         self.notice.record_client_change.side_effect = notice.record_client_change
+        self.notice.current_restart.side_effect = notice.current_restart
         self.notice_windows.show.side_effect = current.show
         self.service.install_lock.side_effect = module('service').install_lock
         dialog, text = mock.Mock(), module('notice_text')
@@ -99,7 +101,7 @@ class SetupRestartTests(unittest.TestCase):
         self.assertTrue(self.owner.offer(self.home, 'before', True))
         self.assertEqual(dialog.show.call_count, 1)
         self.assertEqual(path.read_bytes(), first_later)
-        self.assertFalse(self.owner.offer(self.home, 'changed', True))
+        self.assertTrue(self.owner.offer(self.home, 'changed', True))
         self.assertFalse(current.offer(self.home, spawn=mock.Mock()))
         self.platform.request_stop.assert_not_called()
         self.platform.open_app.assert_not_called()
@@ -117,17 +119,61 @@ class SetupRestartTests(unittest.TestCase):
         path = self.home / 'update-notice.json'
         pending = path.read_bytes()
         def later(*args, **kwargs):
-            self.assertTrue(self.owner.offer(self.home, 'before', True))
+            self.assertTrue(self.owner.offer(self.home, 'changed', True))
             self.assertEqual(path.read_bytes(), pending)
             return False
         dialog.show.side_effect = later
         self.assertTrue(old.show(self.home))
         self.assertEqual(dialog.show.call_count, 1)
         self.assertEqual(json.loads(path.read_text())['restart_result'], 'later')
-        self.assertTrue(self.owner.offer(self.home, 'before', True))
+        self.assertTrue(self.owner.offer(self.home, 'changed', True))
         self.assertEqual(dialog.show.call_count, 1)
         self.platform.request_stop.assert_not_called()
         self.platform.open_app.assert_not_called()
+
+    def test_unchanged_target_joins_current_notice_before_automatic_confirmation(self):
+        old, current, restart_dialog = self._shared_notice_helpers()
+        setup = module('native_setup')
+        source = resources(self.home / 'resources', version='1.3.35', channel='beta')
+        (self.home / 'releases/1.3.35').mkdir(parents=True)
+        (self.home / 'current').write_text('1.3.35')
+        (self.home / 'mixed-router-state.json').write_text('{"clients":"codex"}')
+        dialog = mock.MagicMock()
+        dialog.Progress.return_value.__enter__.return_value.cancelled = False
+        owners = {name: mock.Mock() for name in ('desktop_menu', 'native_resources', 'atomic_write')}
+        owners.update(native_dialog=dialog, setup_restart=self.owner,
+                      claude_desktop_platform=self.platform, codex_desktop_switch=self.codex,
+                      codex_config=mock.Mock(read_receipt=lambda _: {'clients': {'codex': {}}}))
+        owners['native_resources'].current.return_value = source
+        with mock.patch.object(setup, 'load', side_effect=owners.__getitem__), \
+                mock.patch.object(setup, 'retained', return_value=source), \
+                mock.patch.object(setup, 'run_installer', return_value=SimpleNamespace(returncode=0)), \
+                mock.patch.object(setup, '_key', return_value=0), \
+                mock.patch.object(setup, '_check') as check:
+            self.assertEqual(setup.onboard(source, self.home, 'install'), 0)
+            check.assert_not_called()
+            self.assertEqual(restart_dialog.show.call_count, 1)
+            later = (self.home / 'update-notice.json').read_bytes()
+            self.assertEqual(json.loads(later)['restart_result'], 'later')
+            self.assertTrue(self.owner.offer(self.home, 'changed', True))
+            self.assertEqual((self.home / 'update-notice.json').read_bytes(), later)
+            self.assertEqual(restart_dialog.show.call_count, 1)
+            self.assertFalse(current.offer(self.home, spawn=mock.Mock()))
+            # Explicit Check setup remains available; its reply/tool gates own readiness.
+            self.assertEqual(setup.onboard(source, self.home, 'status'), 0)
+            check.assert_called_once_with(source, self.home, dialog)
+        self.platform.request_stop.assert_not_called()
+        self.platform.open_app.assert_not_called()
+
+    def test_unchanged_target_does_not_join_other_versions_or_claude_only_notices(self):
+        self._shared_notice_helpers()
+        path = self.home / 'update-notice.json'
+        for changes in (dict(version='1.3.34'), dict(clients='claude')):
+            doc = dict(version='1.3.35', clients='codex', attachment='synthetic')
+            doc.update(changes)
+            path.write_text(json.dumps(doc))
+            self.assertFalse(self.owner.offer(self.home, 'changed', True))
+        self.notice_windows.show.assert_not_called()
 
     def test_unavailable_or_timed_out_completion_is_handled_and_stays_pending(self):
         record = module('notice').record_client_change
