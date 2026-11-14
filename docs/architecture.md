@@ -304,6 +304,11 @@ uses the same alias as its current declaration. Arguments, call and item IDs,
 encryption markers and outputs stay unchanged. The client's saved history is
 never mutated. Encrypted, malformed or undeclared calls keep their original
 namespace; compaction and installs without an external key keep their contract.
+The host's developer `multi_agent_role` block can contain a direct-call example
+using the canonical name. Its backtick-quoted `to=functions.collaboration` handoff
+examples use the declared readable aliases too, so instructions and schemas agree.
+Only that complete developer block is projected. User text, tool output, opaque
+content and unrelated instructions retain their original bytes.
 Captured spawn models still protect later follow-ups, including repeated
 preparation of an already-projected request. Offered descriptions explain
 this name conversion and direct native dispatch outside the exec-only `ALL_TOOLS`
