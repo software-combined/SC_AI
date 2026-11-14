@@ -20,7 +20,7 @@
     "type": "message"
    },
    {
-    "id": "at_0b6b6946-0a16-5568-ae6d-e9d39d0e046c",
+    "id": "at_3af5f109-0fdc-5a44-a41a-b508854a24bf",
     "role": "developer",
     "tools": [
      {
@@ -54,11 +54,11 @@
       "type": "namespace"
      },
      {
-      "description": "Start subagents and send them messages or follow-up tasks as readable text.",
+      "description": "Start subagents and send readable messages or follow-up tasks. Call these tools directly. SCG Router records successful calls under collaboration with readable delivery preserved; that name change is expected, not a failed selection or a reason to cancel the child.",
       "name": "collaboration_plaintext",
       "tools": [
        {
-        "description": "Start a synthetic helper agent.\nWhen all subagent lanes are full, close finished agents, or all of them if needed, then retry spawn.\nPass model and reasoning_effort explicitly for a fresh child; a child on an externally billed model needs fork_turns=\"none\".",
+        "description": "Start a synthetic helper agent.\nWhen all subagent lanes are full, close finished agents, or all of them if needed, then retry spawn.\nPass model and reasoning_effort explicitly for a fresh child; a child on an externally billed model needs fork_turns=\"none\". Call the offered tool directly, outside functions.exec; ALL_TOOLS omits native tools. Match the model fields to the complete brief before dispatch. A returned child ID or task name means accepted, not finished. Wait only for accepted children.",
         "name": "spawn_agent",
         "parameters": {
          "additionalProperties": false,

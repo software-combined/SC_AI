@@ -7,7 +7,7 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest import mock
 
-from ai_router import key_dialog
+from ai_router import key_dialog, key_store
 from tests.install_fixtures import install_mod
 from tests.test_claude_desktop_config import _profile, _state, desktop_config
 from tests.test_claude_desktop_switch import switcher
@@ -32,11 +32,13 @@ class KeyWindowTests(unittest.TestCase):
 
     def window(self, clients, attached, answer=None):
         """Run the key window; `answer` is what the person chose for Claude."""
+        (self.home / 'openrouter.key').unlink(missing_ok=True)
         self.state.write_text(json.dumps(dict(clients=clients, port=1, token='synthetic',
                                               setup=dict(nonce='test', expires=2000))))
         for name, mode in attached.items():
             receipts.write_client_receipt(self.home, name, {'claude_mode': mode})
         def saved(*_args, **_kwargs):
+            key_store.store_key(self.home, 'synthetic-key')
             doc = json.loads(self.state.read_text())
             doc.pop('setup')
             if answer is not None:

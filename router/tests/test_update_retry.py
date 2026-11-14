@@ -151,12 +151,31 @@ class RetryPresentationTests(unittest.TestCase):
         self.assertNotIn('Repair now', text)
         self.assertTrue(operator._support_document(raw)['update']['retry_pending'])
 
-    def test_check_setup_explains_retry_without_starting_interactive_repair(self):
+    def test_check_setup_finishes_with_honest_pending_update_notice(self):
         setup, dialog = module('native_setup'), mock.Mock()
         facts = dict(serving=True, onboarding=dict(clients={}, ready=True),
                      update=dict(retry_pending=True))
         with mock.patch.object(setup, 'status', return_value=facts):
             setup._check(Path('/synthetic/resources'), Path('/synthetic/home'), dialog)
         self.assertIn('retry automatically', dialog.message.call_args.args[0])
+        self.assertIn('Ready.', dialog.message.call_args.args[0])
+        self.assertIn('An update check is pending.', dialog.message.call_args.args[0])
         self.assertNotIn('repair', dialog.message.call_args.args[0].lower())
         dialog.confirm_result.assert_not_called()
+
+    def test_pending_check_does_not_hide_required_maintenance(self):
+        setup = module('native_setup')
+        for action in ('repair', 'update'):
+            with self.subTest(action=action):
+                dialog = mock.Mock()
+                facts = dict(serving=True, service_key_usable=True,
+                    onboarding=dict(clients={'codex': {}}, ready=True),
+                    update=dict(retry_pending=True, required_action=action))
+                with mock.patch.object(setup, 'status', return_value=facts), \
+                        mock.patch.object(setup, '_complete_choices') as complete:
+                    setup._check(Path('/synthetic/resources'), Path('/synthetic/home'), dialog)
+                text = dialog.message.call_args.args[0]
+                self.assertIn('updates need attention', text)
+                self.assertNotIn('Ready.', text)
+                complete.assert_not_called()
+                dialog.confirm_result.assert_not_called()

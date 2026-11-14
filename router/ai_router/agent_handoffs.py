@@ -1,33 +1,29 @@
 """Readable collaboration handoffs on mixed installs; Codex still executes every tool.
-
-Codex delivers a spawn, send or follow-up as plaintext only when the call's
-`encrypted_function_args` marker is `[]`; anything else reaches the child
-encrypted, which only the native backend can read. Where an external child can
-exist, every brief is declared readable: external routes rewrite the canonical
-tools, while native routes, whose backend requires the canonical message to stay
-encrypted, offer readable copies in their own namespace in place of them. Each
-call returns to its canonical name with the marker. An install without an
-external key keeps the stock encrypted contract.
+Readable briefs use `encrypted_function_args: []`. External routes rewrite tools;
+native routes offer readable aliases and return calls to canonical names with
+the marker. Installs without an external key keep the stock encrypted contract.
 """
 from copy import deepcopy
 import json
-import re
 import uuid
 
 from . import errors, provider_defs, request_context
+from .handoff_history import (HANDOFF_TOOLS, NATIVE_NAMESPACE, PLAINTEXT_NAMESPACE,
+                              arguments, message_shape, project_readable_calls, spawn_model, spawn_models)
 
-NATIVE_NAMESPACE = 'collaboration'
-PLAINTEXT_NAMESPACE = 'collaboration_plaintext'
-PLAINTEXT_DESCRIPTION = 'Start subagents and send them messages or follow-up tasks as readable text.'
-HANDOFF_TOOLS = frozenset(('spawn_agent', 'send_message', 'followup_task'))
+PLAINTEXT_DESCRIPTION = (
+    'Start subagents and send readable messages or follow-up tasks. Call these tools directly. '
+    'SCG Router records successful calls under collaboration with readable delivery preserved; '
+    'that name change is expected, not a failed selection or a reason to cancel the child.')
 LANE_HINT_NAMES = frozenset(('spawn_agent', 'close_agent'))
 LANE_HINT = ('When all subagent lanes are full, close finished agents, '
              'or all of them if needed, then retry spawn.')
 SPAWN_HINT = ('Pass model and reasoning_effort explicitly for a fresh child; '
-              'a child on an externally billed model needs fork_turns="none".')
+              'a child on an externally billed model needs fork_turns="none". '
+              'Call the offered tool directly, outside functions.exec; ALL_TOOLS omits native tools. '
+              'Match the model fields to the complete brief before dispatch. '
+              'A returned child ID or task name means accepted, not finished. Wait only for accepted children.')
 READABLE_MESSAGE = 'The complete readable assignment or message. Do not encrypt it.'
-# Backend handoff ciphertext: matched all 568 saved encrypted messages (Sep 2026).
-CIPHERTEXT = re.compile(r'gAAAA[A-Za-z0-9_-]{40,}={0,2}')
 
 
 class ReadableHandoffs(frozenset):
@@ -39,49 +35,6 @@ class ReadableHandoffs(frozenset):
         value.location = location
         value.catalogue = request_context.capture() if catalogue is None else catalogue
         return value
-
-
-def _arguments(item):
-    """Parse function-call arguments leniently; {} when absent or malformed."""
-    raw = item.get('arguments')
-    if isinstance(raw, dict):
-        return raw
-    if isinstance(raw, str):
-        try:
-            parsed = json.loads(raw)
-        except ValueError:
-            return {}
-        return parsed if isinstance(parsed, dict) else {}
-    return {}
-
-
-def _spawn_model(spawns, target):
-    """Resolve a child path to one spawn model; ambiguous targets return None."""
-    if not isinstance(target, str) or not target:
-        return None
-    if target in spawns:
-        return spawns[target]
-    suffix = target.rsplit('/', 1)[-1]
-    matches = [model for task, model in spawns.items() if suffix == task]
-    if len(matches) != 1:
-        return None
-    return matches[0]
-
-
-def spawn_models(items):
-    """Map spawn task names in request history to their requested models."""
-    models = {}
-    if not isinstance(items, list):
-        return models
-    for item in items:
-        if (not isinstance(item, dict) or item.get('type') != 'function_call'
-                or item.get('namespace') != NATIVE_NAMESPACE or item.get('name') != 'spawn_agent'):
-            continue
-        args = _arguments(item)
-        task, model = args.get('task_name'), args.get('model')
-        if isinstance(task, str) and task and isinstance(model, str) and model:
-            models[task] = model
-    return models
 
 
 def readable_handoff_tool(tool, namespace):
@@ -229,25 +182,14 @@ def handoff_facts(payload, names, catalogue=None):
 
 
 def native_handoffs(payload, readable, catalogue=None):
-    """(payload or a copy, ReadableHandoffs) for one native Responses request.
+    """Prepare one native Responses request with its captured handoff facts.
 
-    `readable` follows the install, never the recipient: where an external
-    child can exist, every brief is declared readable in the plaintext
-    namespace. Otherwise only the lane hints change and the empty set leaves
-    the response as the backend sent it.
+    Readable installs offer plaintext aliases and matching history. Other
+    installs keep the stock contract and gain only lane hints.
     """
     payload = hint_full_lanes(payload, alias=readable)
-    return payload, handoff_facts(payload, readable_names(payload) if readable else (), catalogue)
-
-
-def message_shape(item):
-    """'absent', 'readable', 'ciphertext' or 'other'; a classification, never content."""
-    message = _arguments(item).get('message')  # Unparseable arguments fail in Codex first.
-    if message is None:
-        return 'absent'
-    if not isinstance(message, str):
-        return 'other'
-    return 'ciphertext' if CIPHERTEXT.fullmatch(message) else 'readable'
+    names = handoff_facts(payload, readable_names(payload) if readable else (), catalogue)
+    return project_readable_calls(payload, names), names
 
 
 def mark_readable(item, names):
@@ -290,13 +232,13 @@ def validate_handoff(item, names):
         return
     if item.get('encrypted_function_args', 'absent') == []:
         return
-    args = _arguments(item)
+    args = arguments(item)
     spawns = getattr(names, 'spawn_models', {})
     if item.get('name') == 'spawn_agent':
         model = args.get('model')
     else:
         target = args.get('target')
-        model = _spawn_model(spawns, target)
+        model = spawn_model(spawns, target)
     entry = getattr(names, 'catalogue', {}).get(model) if isinstance(model, str) else None
     if entry is None or not provider_defs.is_external(entry.provider):
         return

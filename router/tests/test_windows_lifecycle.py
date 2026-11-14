@@ -76,6 +76,10 @@ class WindowsLifecycleTests(unittest.TestCase):
             chooser.assert_not_called()
             helper.assert_not_called()
             warning.offer.assert_not_called()
+            # An explicit user open still presents the existing controller's menu.
+            self.assertEqual(menu.main(['--home', str(self.home), '--resources', str(self.home)]), 0)
+            chooser.assert_called_once_with(self.home, self.home)
+            helper.assert_not_called()
         rows = (self.home / 'logs/maintenance.jsonl').read_text()
         self.assertIn('existing_controller', rows)
 

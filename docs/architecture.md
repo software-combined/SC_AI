@@ -64,8 +64,10 @@ existing policy reader. Same-version mode changes use the service repair
 lifecycle before client attachment, with prior state restored on reload failure.
 Its pure mode comparison also drives native readiness. `setup_completion` owns
 the installer's bounded key-window wait after attachment and applies late answers
-through the same current-install lifecycle. The runtime only saves answers.
-An unfinished access window keeps readiness pending, including after a partial key save.
+through the same current-install lifecycle. It also owns native saved-key completion
+and its client-aware confirmation copy. The runtime only saves answers.
+Completion and readiness share `state.setup_pending`: an active access window stays
+pending, while expired preparation cannot block usable access with matching receipts.
 
 `client_executable` owns discovery for setup prerequisites, plugin registration,
 readiness and diagnostic preflight. Existing PATH, npm, local-bin and desktop
@@ -295,7 +297,23 @@ declarations; the other collaboration tools stay, and an emptied namespace is
 dropped. The model therefore sees one handoff surface, with nothing to choose.
 A changed Lite prefix receives a stable content-based identity.
 Each alias call returns to its canonical name with the marker, so Codex
-executes the normal tool and saves canonical history. Ciphertext under an alias,
+executes the normal tool and saves canonical history. `handoff_history.py` owns
+the handoff vocabulary, history parsing and model-visible replay projection.
+On the next native Responses request, an explicitly readable historical call
+uses the same alias as its current declaration. Arguments, call and item IDs,
+encryption markers and outputs stay unchanged. The client's saved history is
+never mutated. Encrypted, malformed or undeclared calls keep their original
+namespace; compaction and installs without an external key keep their contract.
+The host's developer `multi_agent_role` block can contain a direct-call example
+using the canonical name. Its backtick-quoted `to=functions.collaboration` handoff
+examples use the declared readable aliases too, so instructions and schemas agree.
+Only that complete developer block is projected. User text, tool output, opaque
+content and unrelated instructions retain their original bytes.
+Captured spawn models still protect later follow-ups, including repeated
+preparation of an already-projected request. Offered descriptions explain
+this name conversion and direct native dispatch outside the exec-only `ALL_TOOLS`
+catalogue. A returned child handle establishes acceptance, not review completion.
+Ciphertext under an alias,
 or an upstream encryption marker, is refused, never relabelled. A canonical
 call to a readable declaration gets the marker unless its message matches the
 backend ciphertext fingerprint; that call stays unmarked for the guard.

@@ -2,6 +2,48 @@
 
 ## Unreleased
 
+## 1.3.61
+
+- Align Codex's injected handoff examples with the readable tools actually
+  offered. Preserve user text, saved history, model choices and execution guards.
+
+## 1.3.60
+
+- Match historical readable handoff names to the tools offered in native
+  requests. Preserve saved history, arguments, call pairing and encryption guards.
+
+## 1.3.59
+
+- Explain native handoff discovery and successful plaintext-to-canonical call
+  records, so parents keep accepted reviewers running and wait for their reports.
+- Refresh the review and subagent guidance without changing review gates or tool
+  execution. Replay snapshots change only for the advertised descriptions.
+
+## 1.3.58
+
+- Join the current Codex restart decision before automatic setup asks for
+  confirmation, including when settings are unchanged. Keep Later respected
+  and manual Check setup available without overlapping restart questions.
+
+## 1.3.57
+
+- Keep one optional Codex restart decision for an upgrade across model,
+  attachment and setup completion notices. Choosing Later stays respected when
+  the installer hands off to the new helper; a later update can offer once again.
+- Keep completed setup successful when an informational notice times out without
+  acknowledgement. Confirmation and restart choices still require consent.
+
+## 1.3.56
+
+- Resume setup with a working saved key after an expired sign-in window. Keep
+  Codex and Claude Code open on their current model while confirming a reply
+  and an enabled SC tool. Active access setup and unapplied choices stay pending.
+- Use the retained native dialog for setup errors and show a specific message
+  when saved-key completion cannot finish.
+- Let setup finish while a background update check is pending, and report the
+  pending check alongside Ready. Required update or repair actions still apply.
+- Keep the installer's tray handoff quiet when the Router menu is already running.
+
 ## 1.3.55
 
 - Add Google Gemini 4 Hydrogen through OpenRouter to both Codex and Claude Code

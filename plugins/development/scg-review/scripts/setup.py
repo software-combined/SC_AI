@@ -15,7 +15,7 @@ import tempfile
 
 PLUGIN = Path(__file__).resolve().parents[1]
 SHIMS = ("pre-commit", "pre-merge-commit", "commit-msg", "bin/scg-review-state")
-FILES = (*SHIMS, "lib/scg_agent_git_hooks.py")
+FILES = (*SHIMS, "lib/scg_agent_git_hooks.py", "lib/scg_scan_adjudications.py")
 LANES = ["correctness", "quality", "adversarial", "security"]
 # The hook helper needs 3.11+ (datetime.UTC). The POSIX shims' historical
 # bare python3 stays unvalidated; anything absolute is probed before install.

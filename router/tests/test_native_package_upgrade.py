@@ -31,6 +31,7 @@ class NativePackageUpgradeTests(unittest.TestCase):
             install_mod._write_state(home, state)
             key = home / 'openrouter.key'
             key.write_text('synthetic-saved-key\n')
+            key.chmod(0o600)
             (home / 'channel').write_text('stable\n')
             (home / 'feed-serial').write_text('999\n')
             config = user / '.codex/config.toml'
@@ -124,6 +125,8 @@ class NativePackageUpgradeTests(unittest.TestCase):
                 self.assertEqual(restart.offer.call_count, 3)
                 restart.offer.assert_called_with(home, restart.target.return_value, True)
                 self.assertEqual(restart.target.call_count, 3)
+                self.assertEqual(owners['desktop_menu'].start.call_args_list,
+                                 [mock.call(home, source, after_update=True)] * 3)
                 owners['claude_desktop_platform'].is_running.assert_called_once_with(
                     'win32', app=owners['codex_desktop_switch'].CODEX)
             self.assertEqual(len(commands), 3)
