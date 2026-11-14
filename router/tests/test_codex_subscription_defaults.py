@@ -85,6 +85,7 @@ class SubscriptionDefaultTests(unittest.TestCase):
             (home / 'activation.json').write_text(json.dumps({'version': 2, 'clients': {
                 'codex': {'openai_mode': 'subscription'}, 'claude': {'claude_mode': 'subscription'}}}))
             def window(*args, **kwargs):
+                key_store.store_key(home, 'synthetic-saved-key')
                 state.update(openai_mode='none', claude_mode='none')
                 state.pop('setup')
                 state_path.write_text(json.dumps(state))
