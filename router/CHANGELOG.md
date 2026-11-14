@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+## 1.3.61
+
+- Align Codex's injected handoff examples with the readable tools actually
+  offered. Preserve user text, saved history, model choices and execution guards.
+
 ## 1.3.60
 
 - Match historical readable handoff names to the tools offered in native

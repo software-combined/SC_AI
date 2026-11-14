@@ -63,8 +63,28 @@ def message_shape(item):
     return 'ciphertext' if CIPHERTEXT.fullmatch(message) else 'readable'
 
 
+def _role_instruction(item, names):
+    """Keep the host's direct-call example consistent with declared aliases."""
+    if (not isinstance(item, dict) or item.get('type') != 'message'
+            or item.get('role') != 'developer' or item.get('encrypted_content') is not None
+            or not isinstance(item.get('content'), list)):
+        return item
+    content = []
+    for block in item['content']:
+        text = block.get('text') if isinstance(block, dict) and block.get('type') == 'input_text' else None
+        if isinstance(text, str) and text.startswith('<multi_agent_role>') and text.endswith('</multi_agent_role>'):
+            updated = text
+            for name in names:
+                updated = updated.replace(f'`to=functions.{NATIVE_NAMESPACE}.{name}`',
+                                          f'`to={PLAINTEXT_NAMESPACE}.{name}`')
+            if updated != text:
+                block = {**block, 'text': updated}
+        content.append(block)
+    return item if all(new is old for new, old in zip(content, item['content'])) else {**item, 'content': content}
+
+
 def project_readable_calls(payload, names):
-    """Match model-visible history to offered aliases, never rewrite saved calls.
+    """Match model-visible history and host examples to aliases, never saved calls.
 
     Only an explicit plaintext marker and readable message qualify. Arguments,
     identifiers, markers and outputs remain exactly as the client supplied them.
@@ -74,6 +94,7 @@ def project_readable_calls(payload, names):
         return payload
     projected = []
     for item in items:
+        item = _role_instruction(item, names)
         if (isinstance(item, dict) and item.get('type') == 'function_call'
                 and item.get('namespace') == NATIVE_NAMESPACE and item.get('name') in names
                 and item.get('encrypted_function_args') == [] and message_shape(item) == 'readable'):
