@@ -4292,5 +4292,126 @@
       "result": "pass"
     }
   ]
+},
+{
+  "kind": "model_routes_v1",
+  "observed_at": "2026-11-18T22:44:10.731918+00:00",
+  "model": "google/gemini-4-neon",
+  "provider": "openrouter",
+  "capability_fingerprint": "6b4ccbcd376d4f821863145a228a7712a5d4f955ce41d6e26420c7e836037956",
+  "runtime_fingerprint": "510272b8c57cce37ff098e6ef09fe76990abbf21813964fffa803893f5a1d588",
+  "router_version": "1.3.61",
+  "router_revision": "6d050fc8fa998846c4ca74381e1c6d1f3826c713",
+  "routes": [
+    {
+      "protocol": "responses",
+      "client": "codex",
+      "client_version": "0.169.0-alpha.11.1",
+      "requested_effort": "low",
+      "served_models": [
+        {
+          "value": "google/gemini-4-neon",
+          "source": "response.created.response.model"
+        },
+        {
+          "value": "google/gemini-4-neon",
+          "source": "response.in_progress.response.model"
+        },
+        {
+          "value": "google/gemini-4-neon",
+          "source": "response.completed.response.model"
+        },
+        {
+          "value": "google/gemini-4-neon",
+          "source": "response.created.response.model"
+        },
+        {
+          "value": "google/gemini-4-neon",
+          "source": "response.in_progress.response.model"
+        },
+        {
+          "value": "google/gemini-4-neon",
+          "source": "response.completed.response.model"
+        },
+        {
+          "value": "google/gemini-4-neon",
+          "source": "response.created.response.model"
+        },
+        {
+          "value": "google/gemini-4-neon",
+          "source": "response.in_progress.response.model"
+        },
+        {
+          "value": "google/gemini-4-neon",
+          "source": "response.completed.response.model"
+        }
+      ],
+      "served_efforts": [
+        {
+          "value": "low",
+          "source": "response.created.response.reasoning.effort"
+        },
+        {
+          "value": "low",
+          "source": "response.in_progress.response.reasoning.effort"
+        },
+        {
+          "value": "low",
+          "source": "response.completed.response.reasoning.effort"
+        },
+        {
+          "value": "low",
+          "source": "response.created.response.reasoning.effort"
+        },
+        {
+          "value": "low",
+          "source": "response.in_progress.response.reasoning.effort"
+        },
+        {
+          "value": "low",
+          "source": "response.completed.response.reasoning.effort"
+        },
+        {
+          "value": "low",
+          "source": "response.created.response.reasoning.effort"
+        },
+        {
+          "value": "low",
+          "source": "response.in_progress.response.reasoning.effort"
+        },
+        {
+          "value": "low",
+          "source": "response.completed.response.reasoning.effort"
+        }
+      ],
+      "calls": 4,
+      "conformance": "pass",
+      "result": "pass"
+    },
+    {
+      "protocol": "messages",
+      "client": "claude",
+      "client_version": "2.1.318",
+      "requested_effort": "low",
+      "served_models": [
+        {
+          "value": "google/gemini-4-neon",
+          "source": "message_start.message.model"
+        },
+        {
+          "value": "google/gemini-4-neon",
+          "source": "message_start.message.model"
+        },
+        {
+          "value": "google/gemini-4-neon",
+          "source": "message_start.message.model"
+        }
+      ],
+      "served_efforts": [],
+      "calls": 3,
+      "conformance": "pass",
+      "result": "pass"
+    }
+  ]
 }
 ]
