@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 1.3.62
+
 - Add Gemini 4 Neon to the Codex and Claude Code model pickers through OpenRouter.
 
 ## 1.3.61

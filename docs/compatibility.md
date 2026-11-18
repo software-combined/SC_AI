@@ -1,5 +1,24 @@
 # Compatibility
 
+## Router 1.3.62 release checks, 19 November 2026 AEDT
+
+Checks ran with Codex desktop `26.1111.21308` (build `27194`, bundled CLI
+`0.169.0-alpha.11.1`) and Claude Code `2.1.318`.
+
+| Client and route | Model requested at Low | Result |
+| --- | --- | --- |
+| Codex through OpenRouter | `google/gemini-4-neon` | Tool round trip, streaming, image and compaction checks passed in four upstream attempts. |
+| Codex through ChatGPT | `gpt-6-luna` | The bundled client completed one dynamic tool round trip and returned the exact marker using the signed-in subscription. |
+| Claude Code through OpenRouter | `google/gemini-4-neon` | Two sequential Reads, paired results and the final marker passed in three upstream attempts. |
+| Claude Code through its subscription | Sonnet | Two model turns returned the exact marker from a Read. The client reported `claude-sonnet-5-5`. |
+
+The [acceptance ledger](acceptance-ledger.json) binds the OpenRouter results to
+the model and Router runtime. Both routes reported Neon. Codex reported Low
+and the Claude route did not expose served effort. Subscription checks used
+one bounded synthetic invocation per client. The Codex probe reported the
+selected model and provider. Served effort was unverified on both
+subscription routes.
+
 ## Router 1.3.53 candidate checks, 11 November 2026 AEDT
 
 Clients are Codex desktop `26.1103.60933` (build `25894`), bundled CLI
