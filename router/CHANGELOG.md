@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Add Gemini 4 Neon to the Codex and Claude Code model pickers through OpenRouter.
+
 ## 1.3.61
 
 - Align Codex's injected handoff examples with the readable tools actually

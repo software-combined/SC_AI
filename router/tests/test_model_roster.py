@@ -42,6 +42,20 @@ RETIRED_TERRA, SUBSCRIPTION_TERRA = 'openai/gpt-5.6-terra', 'gpt-5.6-terra'
 
 
 class ModelRosterTests(unittest.TestCase):
+    def test_neon_is_optional_in_both_client_pickers(self):
+        slug = 'google/gemini-4-neon'
+        base = {'models': [{'slug': 'gpt-6-astra', 'default_reasoning_level': 'high'}]}
+        models = merge(base, roster=['gpt-6-astra'], available={slug})['models']
+        self.assertEqual(models[0]['slug'], 'gpt-6-astra')
+        self.assertEqual(models[0]['default_reasoning_level'], 'high')
+        neon = next(row for row in models if row['slug'] == slug)
+        self.assertEqual(neon['display_name'], 'Google: Gemini 4 Neon · OpenRouter')
+        self.assertEqual(neon['default_reasoning_level'], 'low')
+        self.assertEqual([row['effort'] for row in neon['supported_reasoning_levels']],
+                         ['low', 'medium', 'high', 'xhigh'])
+        with mock.patch.object(availability, 'combined_ids', return_value={slug}):
+            self.assertIn(slug, {row['id'] for row in claude.models_listing()['data']})
+
     def test_hydrogen_pins_public_metadata_and_qualified_status(self):
         model = by_slug('google/gemini-4-hydrogen')
         self.assertIsNotNone(model)
