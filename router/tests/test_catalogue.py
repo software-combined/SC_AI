@@ -225,11 +225,11 @@ class CatalogueFlagTests(unittest.TestCase):
             self.assertTrue(check(str(path)))
 
     def test_merge_keeps_codex_twins_and_drops_claude_hidden_rows(self):
-        stale = dict(external_entry(by_slug('openai/gpt-6-astra')),
-                     description='stale-install')
-        merged = merge({'models': [stale]}, client='codex')
-        self.assertIn('openai/gpt-6-astra',
-                      {m['slug'] for m in merged['models']})
+        retired = ('openai/gpt-6-astra', 'openai/gpt-6.1-sol')
+        merged = merge({'models': [external_entry(by_slug(slug)) for slug in retired]})
+        slugs = {m['slug'] for m in merged['models']}
+        self.assertTrue({'openai/gpt-6.2-astra', 'openai/gpt-6.2-sol'} <= slugs)
+        self.assertFalse(set(retired) & slugs)
         hid = dict(external_entry(by_slug('anthropic/claude-sonnet-5.5')),
                    description='stale-install')
         self.assertNotIn('anthropic/claude-sonnet-5.5',
@@ -266,7 +266,7 @@ class CatalogueFlagTests(unittest.TestCase):
         for model in models_for(MODELS, 'claude'):
             if model.provider == 'openrouter':
                 self.assertIn(model.slug, claude_slugs)
-        self.assertTrue({'openai/gpt-6-astra', 'openai/gpt-6.1-sol',
+        self.assertTrue({'openai/gpt-6.2-astra', 'openai/gpt-6.2-sol',
                          'openai/gpt-6.1-terra',
                          'openai/gpt-6-luna'} <= codex_slugs)
         self.assertNotIn('openai/gpt-5.6-terra', codex_slugs)  # retired from the picker
@@ -274,7 +274,7 @@ class CatalogueFlagTests(unittest.TestCase):
                                          'anthropic/claude-fable-5.2',
                                          'anthropic/claude-haiku-5.5',
                                          'anthropic/claude-opus-5.5'})
-        self.assertIn('openai/gpt-6-astra', claude_slugs)
+        self.assertTrue({'openai/gpt-6.2-astra', 'openai/gpt-6.2-sol'} <= claude_slugs)
         self.assertIn('anthropic/claude-sonnet-5.5', codex_slugs)
         with tempfile.TemporaryDirectory() as tmp:
             for client, merged in (('codex', codex), ('claude', claude)):
@@ -285,7 +285,7 @@ class CatalogueFlagTests(unittest.TestCase):
     def test_client_flag_round_trip_on_cli(self):
         with tempfile.TemporaryDirectory() as tmp:
             for client, other_row in (('codex', 'anthropic/claude-sonnet-5.5'),
-                                      ('claude', 'openai/gpt-6-astra')):
+                                      ('claude', 'openai/gpt-6.2-astra')):
                 target = Path(tmp) / f'{client}.json'
                 proc = subprocess.run(
                     [sys.executable, '-m', 'ai_router.catalogue',
@@ -302,7 +302,7 @@ class CatalogueFlagTests(unittest.TestCase):
 
 
 class CatalogueTwinsTests(unittest.TestCase):
-    TWINS = ('openai/gpt-6-astra', 'openai/gpt-6.1-sol', 'openai/gpt-6.1-terra', 'openai/gpt-6-luna')
+    TWINS = ('openai/gpt-6.2-astra', 'openai/gpt-6.2-sol', 'openai/gpt-6.1-terra', 'openai/gpt-6-luna')
 
     def test_none_mode_merge_lists_twins_without_subscription_stubs(self):
         merged = merge({'models': []}, roster=('gpt-6-astra',),
@@ -318,7 +318,7 @@ class CatalogueTwinsTests(unittest.TestCase):
 
     def test_none_mode_merge_normalises_a_stale_subscription_catalogue(self):
         stale_sub = dict(subscription_stub('gpt-6-astra'))
-        stale_openai = dict(external_entry(by_slug('openai/gpt-6-astra')),
+        stale_openai = dict(external_entry(by_slug('openai/gpt-6.2-astra')),
                             description='stale-install')
         stale_other = {'slug': 'gpt-stale-custom', 'display_name': 'Stale'}
         merged = merge({'models': [stale_sub, stale_openai, stale_other]},
@@ -329,7 +329,7 @@ class CatalogueTwinsTests(unittest.TestCase):
         self.assertNotIn('gpt-6-astra', slugs)
         self.assertNotIn('gpt-stale-custom', slugs)
         row = next(m for m in merged['models']
-                   if m['slug'] == 'openai/gpt-6-astra')
+                   if m['slug'] == 'openai/gpt-6.2-astra')
         self.assertNotEqual(row['description'], 'stale-install')
 
     def test_openai_mode_round_trips_through_merge_file(self):

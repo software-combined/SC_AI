@@ -116,6 +116,10 @@ client checks passed; its route evidence is in the acceptance ledger. Its
 published file and video inputs do not widen the existing Codex projection,
 which supports text, image and audio.
 
+GPT-6.2 Astra and GPT-6.2 Sol are the current OpenRouter choices in their
+families. GPT-6 Astra and GPT-6.1 Sol remain routable for saved chats.
+The Codex patch test for GPT-6.2 Astra passed in four upstream attempts.
+
 The current roster pins exact ids from the
 [OpenRouter model list](https://openrouter.ai/api/v1/models): Claude Opus 5.5,
 Sonnet 5.5, Fable 5.2 and Haiku 5.5; Gemini 4 Carbon, Argon, Hydrogen and Neon, Gemini 3.8 Flash and

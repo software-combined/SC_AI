@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+## 1.3.64
+
+- Replace GPT-6 Astra and GPT-6.1 Sol in the OpenRouter pickers with GPT-6.2 Astra and GPT-6.2 Sol.
+- Keep a Windows updater timeout from requesting repair when the exact release,
+  required components, assistant attachments and running health independently verify completion.
+
 ## 1.3.62
 
 - Add Gemini 4 Neon to the Codex and Claude Code model pickers through OpenRouter.

@@ -763,7 +763,8 @@
     "apply_patch": "freeform",
     "experimental_tools": [],
     "web_search": true,
-    "tier": "verified"
+    "tier": "verified",
+    "listed": false
   },
   {
     "slug": "openai/gpt-6-luna",
@@ -829,7 +830,7 @@
     "experimental_tools": [],
     "web_search": true,
     "tier": "verified",
-    "listed": true,
+    "listed": false,
     "priority": 125
   },
   {
@@ -867,6 +868,72 @@
     "priority": 126
   },
   {
+    "slug": "openai/gpt-6.2-astra",
+    "provider": "openrouter",
+    "upstream_id": "",
+    "display_name": "OpenAI: GPT-6.2 Astra \u00b7 OpenRouter",
+    "vendor": "OpenAI",
+    "reasoning": [
+      "low",
+      "medium",
+      "high",
+      "xhigh",
+      "max"
+    ],
+    "default_reasoning": "low",
+    "modalities": [
+      "text",
+      "image"
+    ],
+    "excluded_efforts": [],
+    "schema_mode": "native",
+    "history_mode": "native",
+    "max_tools": null,
+    "drop_images": false,
+    "context_window": 1050000,
+    "max_output_tokens": 128000,
+    "reasoning_summary": "none",
+    "apply_patch": "freeform",
+    "experimental_tools": [],
+    "web_search": true,
+    "tier": "verified",
+    "listed": true,
+    "priority": 127
+  },
+  {
+    "slug": "openai/gpt-6.2-sol",
+    "provider": "openrouter",
+    "upstream_id": "",
+    "display_name": "OpenAI: GPT-6.2 Sol \u00b7 OpenRouter",
+    "vendor": "OpenAI",
+    "reasoning": [
+      "low",
+      "medium",
+      "high",
+      "xhigh",
+      "max"
+    ],
+    "default_reasoning": "low",
+    "modalities": [
+      "text",
+      "image"
+    ],
+    "excluded_efforts": [],
+    "schema_mode": "native",
+    "history_mode": "native",
+    "max_tools": null,
+    "drop_images": false,
+    "context_window": 1050000,
+    "max_output_tokens": 128000,
+    "reasoning_summary": "none",
+    "apply_patch": "none",
+    "experimental_tools": [],
+    "web_search": true,
+    "tier": "verified",
+    "listed": true,
+    "priority": 128
+  },
+  {
     "slug": "openai/gpt-image-2",
     "provider": "openrouter",
     "display_name": "OpenAI: GPT Image 2 \u00b7 OpenRouter",
@@ -885,7 +952,7 @@
     "max_tools": null,
     "drop_images": false,
     "context_window": 0,
-    "priority": 127,
+    "priority": 129,
     "max_output_tokens": 32768,
     "reasoning_summary": "none",
     "apply_patch": "none",
@@ -914,7 +981,7 @@
     "max_tools": null,
     "drop_images": false,
     "context_window": 0,
-    "priority": 128,
+    "priority": 130,
     "max_output_tokens": 32768,
     "reasoning_summary": "none",
     "apply_patch": "none",
@@ -943,7 +1010,7 @@
     "max_tools": null,
     "drop_images": false,
     "context_window": 0,
-    "priority": 129,
+    "priority": 131,
     "max_output_tokens": 32768,
     "reasoning_summary": "none",
     "apply_patch": "none",
@@ -981,7 +1048,7 @@
     "default_reasoning": "low",
     "context_window": 131072,
     "max_output_tokens": 32768,
-    "priority": 130,
+    "priority": 132,
     "protocols": [
       "responses"
     ]
@@ -1012,7 +1079,7 @@
     "web_search": false,
     "tier": "verified",
     "listed": true,
-    "priority": 131
+    "priority": 133
   },
   {
     "slug": "openrouter/auto",
@@ -1040,7 +1107,7 @@
     "web_search": false,
     "tier": "verified",
     "listed": true,
-    "priority": 132
+    "priority": 134
   },
   {
     "slug": "qwen/qwen3.8-max-0902",
@@ -1065,7 +1132,7 @@
     "max_tools": null,
     "drop_images": false,
     "context_window": 1000000,
-    "priority": 133,
+    "priority": 135,
     "max_output_tokens": 131072,
     "reasoning_summary": "none",
     "apply_patch": "none",
@@ -1095,7 +1162,7 @@
     "max_tools": 350,
     "drop_images": true,
     "context_window": 500000,
-    "priority": 134,
+    "priority": 136,
     "max_output_tokens": 450000,
     "reasoning_summary": "none",
     "apply_patch": "none",
@@ -1132,7 +1199,7 @@
     "web_search": false,
     "tier": "verified",
     "listed": true,
-    "priority": 135
+    "priority": 137
   },
   {
     "slug": "xiaomi/mimo-v2.6-flash",
@@ -1159,7 +1226,7 @@
     "max_tools": null,
     "drop_images": false,
     "context_window": 1048576,
-    "priority": 136,
+    "priority": 138,
     "max_output_tokens": 131072,
     "reasoning_summary": "none",
     "apply_patch": "none",
@@ -1193,7 +1260,7 @@
     "drop_images": false,
     "context_window": 1048576,
     "auto_compact_token_limit": 400000,
-    "priority": 137,
+    "priority": 139,
     "max_output_tokens": 131072,
     "reasoning_summary": "none",
     "apply_patch": "none",
@@ -1222,7 +1289,7 @@
     "max_tools": 128,
     "drop_images": false,
     "context_window": 1310720,
-    "priority": 138,
+    "priority": 140,
     "max_output_tokens": 131072,
     "reasoning_summary": "none",
     "apply_patch": "freeform",
@@ -1250,7 +1317,7 @@
     "max_tools": 128,
     "drop_images": false,
     "context_window": 1310720,
-    "priority": 139,
+    "priority": 141,
     "max_output_tokens": 943718,
     "reasoning_summary": "none",
     "apply_patch": "freeform",
