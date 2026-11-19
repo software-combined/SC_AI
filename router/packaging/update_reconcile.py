@@ -20,6 +20,28 @@ def log(home, task, event, **facts):
         pass
 
 
+def verified_timeout(home, latest, service):
+    """Prove the signed candidate completed despite its Windows child timing out."""
+    try:
+        state = service._state.read(service._state.path(home))
+        version = latest['version']
+        status = load('update_status')
+        if (not isinstance(state, dict) or state.get('last_applied_version') != version
+                or service.current_version(home) != version
+                or state.get('last_error') not in (None, 'installer_timeout')
+                or any(status.components(state).get(name) != 'ready' for name in status.COMPONENTS)
+                or not load('native_resources').ready(home)):
+            return False
+        cohort, _, _ = load('windows_installation').parts(home)
+        if (cohort['version'] != version or cohort['bundle_sha256'] != latest['sha256']
+                or load('install_delivery').assistant_status(home, state) != 'ready'):
+            return False
+        health = service.health(state, timeout=5)
+        return bool(health and health.get('status') == 'ok' and health.get('version') == version)
+    except (Exception, SystemExit):
+        return False  # Unavailable proof must preserve the original timeout failure.
+
+
 def run(home, service):
     outcomes = {'attachment': 'deferred'}
     try:
