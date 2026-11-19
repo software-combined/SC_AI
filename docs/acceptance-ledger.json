@@ -4413,5 +4413,243 @@
       "result": "pass"
     }
   ]
+},
+{
+  "kind": "model_routes_v1",
+  "observed_at": "2026-11-18T23:55:03.615578+00:00",
+  "model": "openai/gpt-6.2-astra",
+  "provider": "openrouter",
+  "capability_fingerprint": "cc339cec5e52c551864eb5df8abcfb84dad597cb47f48d2338a147c7eb0981d8",
+  "runtime_fingerprint": "d7ae4953968cba9a58a937583aa6bf992e949409bb1cf78fb03d971959993900",
+  "router_version": "1.3.63",
+  "router_revision": "c4181adbb4781304959eed709fae8fe270d4ccff",
+  "routes": [
+    {
+      "protocol": "responses",
+      "client": "codex",
+      "client_version": "0.169.0-alpha.11.1",
+      "requested_effort": "low",
+      "served_models": [
+        {
+          "value": "openai/gpt-6.2-astra",
+          "source": "response.created.response.model"
+        },
+        {
+          "value": "openai/gpt-6.2-astra",
+          "source": "response.in_progress.response.model"
+        },
+        {
+          "value": "openai/gpt-6.2-astra",
+          "source": "response.completed.response.model"
+        },
+        {
+          "value": "openai/gpt-6.2-astra",
+          "source": "response.created.response.model"
+        },
+        {
+          "value": "openai/gpt-6.2-astra",
+          "source": "response.in_progress.response.model"
+        },
+        {
+          "value": "openai/gpt-6.2-astra",
+          "source": "response.completed.response.model"
+        },
+        {
+          "value": "openai/gpt-6.2-astra",
+          "source": "response.created.response.model"
+        },
+        {
+          "value": "openai/gpt-6.2-astra",
+          "source": "response.in_progress.response.model"
+        },
+        {
+          "value": "openai/gpt-6.2-astra",
+          "source": "response.completed.response.model"
+        }
+      ],
+      "served_efforts": [
+        {
+          "value": "low",
+          "source": "response.created.response.reasoning.effort"
+        },
+        {
+          "value": "low",
+          "source": "response.in_progress.response.reasoning.effort"
+        },
+        {
+          "value": "low",
+          "source": "response.completed.response.reasoning.effort"
+        },
+        {
+          "value": "low",
+          "source": "response.created.response.reasoning.effort"
+        },
+        {
+          "value": "low",
+          "source": "response.in_progress.response.reasoning.effort"
+        },
+        {
+          "value": "low",
+          "source": "response.completed.response.reasoning.effort"
+        },
+        {
+          "value": "low",
+          "source": "response.created.response.reasoning.effort"
+        },
+        {
+          "value": "low",
+          "source": "response.in_progress.response.reasoning.effort"
+        },
+        {
+          "value": "low",
+          "source": "response.completed.response.reasoning.effort"
+        }
+      ],
+      "calls": 4,
+      "conformance": "pass",
+      "result": "pass"
+    },
+    {
+      "protocol": "messages",
+      "client": "claude",
+      "client_version": "2.1.318",
+      "requested_effort": "low",
+      "served_models": [
+        {
+          "value": "openai/gpt-6.2-astra",
+          "source": "message_start.message.model"
+        },
+        {
+          "value": "openai/gpt-6.2-astra",
+          "source": "message_start.message.model"
+        }
+      ],
+      "served_efforts": [],
+      "calls": 2,
+      "conformance": "pass",
+      "result": "pass"
+    }
+  ]
+},
+{
+  "kind": "model_routes_v1",
+  "observed_at": "2026-11-18T23:55:03.870272+00:00",
+  "model": "openai/gpt-6.2-sol",
+  "provider": "openrouter",
+  "capability_fingerprint": "b20ef87fdf2afacdd52b2e42d31fffab55c2698c5c1a9c38bfab026cf5da3338",
+  "runtime_fingerprint": "d7ae4953968cba9a58a937583aa6bf992e949409bb1cf78fb03d971959993900",
+  "router_version": "1.3.63",
+  "router_revision": "c4181adbb4781304959eed709fae8fe270d4ccff",
+  "routes": [
+    {
+      "protocol": "responses",
+      "client": "codex",
+      "client_version": "0.169.0-alpha.11.1",
+      "requested_effort": "low",
+      "served_models": [
+        {
+          "value": "openai/gpt-6.2-sol",
+          "source": "response.created.response.model"
+        },
+        {
+          "value": "openai/gpt-6.2-sol",
+          "source": "response.in_progress.response.model"
+        },
+        {
+          "value": "openai/gpt-6.2-sol",
+          "source": "response.completed.response.model"
+        },
+        {
+          "value": "openai/gpt-6.2-sol",
+          "source": "response.created.response.model"
+        },
+        {
+          "value": "openai/gpt-6.2-sol",
+          "source": "response.in_progress.response.model"
+        },
+        {
+          "value": "openai/gpt-6.2-sol",
+          "source": "response.completed.response.model"
+        },
+        {
+          "value": "openai/gpt-6.2-sol",
+          "source": "response.created.response.model"
+        },
+        {
+          "value": "openai/gpt-6.2-sol",
+          "source": "response.in_progress.response.model"
+        },
+        {
+          "value": "openai/gpt-6.2-sol",
+          "source": "response.completed.response.model"
+        }
+      ],
+      "served_efforts": [
+        {
+          "value": "low",
+          "source": "response.created.response.reasoning.effort"
+        },
+        {
+          "value": "low",
+          "source": "response.in_progress.response.reasoning.effort"
+        },
+        {
+          "value": "low",
+          "source": "response.completed.response.reasoning.effort"
+        },
+        {
+          "value": "low",
+          "source": "response.created.response.reasoning.effort"
+        },
+        {
+          "value": "low",
+          "source": "response.in_progress.response.reasoning.effort"
+        },
+        {
+          "value": "low",
+          "source": "response.completed.response.reasoning.effort"
+        },
+        {
+          "value": "low",
+          "source": "response.created.response.reasoning.effort"
+        },
+        {
+          "value": "low",
+          "source": "response.in_progress.response.reasoning.effort"
+        },
+        {
+          "value": "low",
+          "source": "response.completed.response.reasoning.effort"
+        }
+      ],
+      "calls": 4,
+      "conformance": "pass",
+      "result": "pass"
+    },
+    {
+      "protocol": "messages",
+      "client": "claude",
+      "client_version": "2.1.318",
+      "requested_effort": "low",
+      "served_models": [
+        {
+          "value": "openai/gpt-6.2-sol",
+          "source": "message_start.message.model"
+        },
+        {
+          "value": "openai/gpt-6.2-sol",
+          "source": "message_start.message.model"
+        },
+        {
+          "value": "openai/gpt-6.2-sol",
+          "source": "message_start.message.model"
+        }
+      ],
+      "served_efforts": [],
+      "calls": 3,
+      "conformance": "pass",
+      "result": "pass"
+    }
+  ]
 }
 ]

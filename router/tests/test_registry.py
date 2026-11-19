@@ -291,7 +291,7 @@ class RegistryTests(unittest.TestCase):
         self.assertTrue(visible_for(openai_sub, 'claude'))
         self.assertTrue(visible_for(by_slug('moonshotai/kimi-k3.1-pro'), 'codex'))
         self.assertTrue(visible_for(by_slug('moonshotai/kimi-k3.1-pro'), 'claude'))
-        self.assertTrue(visible_for(by_slug('openai/gpt-6-astra'), 'claude'))
+        self.assertTrue(visible_for(by_slug('openai/gpt-6.2-astra'), 'claude'))
         self.assertTrue(visible_for(by_slug('anthropic/claude-sonnet-5.5'), 'codex'))
 
     def test_visibility_tilde_and_plain_prefixes_both_hide(self):
@@ -307,7 +307,7 @@ class RegistryTests(unittest.TestCase):
                       default_reasoning='low')
         self.assertFalse(visible_for(plain, 'claude'))
         self.assertTrue(visible_for(plain, 'codex'))
-        self.assertTrue(visible_for(by_slug('openai/gpt-6-astra'), 'codex'))
+        self.assertTrue(visible_for(by_slug('openai/gpt-6.2-astra'), 'codex'))
 
     def test_near_miss_offers_bare_tilde_alias_only(self):
         # No registry row is an alias today, so the mechanism is exercised
@@ -339,7 +339,7 @@ class RegistryTests(unittest.TestCase):
     def test_codex_picker_lists_openai_twins_without_include_twins(self):
         twins = {m.slug for m in models_for(MODELS, 'codex')
                  if m.slug.startswith('openai/')}
-        self.assertEqual(twins, {'openai/gpt-6-astra', 'openai/gpt-6.1-sol',
+        self.assertEqual(twins, {'openai/gpt-6.2-astra', 'openai/gpt-6.2-sol',
                                  'openai/gpt-6.1-terra',
                                  'openai/gpt-6-luna'})
 

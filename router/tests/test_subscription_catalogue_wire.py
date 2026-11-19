@@ -45,7 +45,7 @@ class NativeCatalogueWireTests(unittest.TestCase):
             {'slug': 'gpt-5.6-luna', 'display_name': 'GPT-5.6-Luna'},
             {'slug': 'gpt-reserve', 'display_name': 'Reserve', 'visibility': 'hide'},
         ]}
-        allowed = ['openai/gpt-6.1-sol']
+        allowed = ['openai/gpt-6.2-sol']
         state = {'token': 'synthetic-token', 'allowed_models': allowed,
                  'openai_models': ['gpt-6-sol', 'gpt-6-luna', 'gpt-static']}
         server = SimpleNamespace(state=state, _subscription_snapshots={})

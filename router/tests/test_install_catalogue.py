@@ -115,7 +115,7 @@ class InstallCatalogueTests(unittest.TestCase):
             # A subscription install lists the subscription rows and the
             # OpenRouter twins beside them, so an exhausted row still has a
             # paid route the user picks deliberately.
-            for slug in ('openai/gpt-6-astra', 'openai/gpt-6.1-sol',
+            for slug in ('openai/gpt-6.2-astra', 'openai/gpt-6.2-sol',
                          'openai/gpt-6.1-terra', 'openai/gpt-6-luna'):
                 self.assertIn(slug, slugs)
             # GPT-5.6 Terra stays on the subscription but has no OpenRouter row.
@@ -139,7 +139,7 @@ class InstallCatalogueTests(unittest.TestCase):
                      '--openai-mode', 'none')
             catalog = json.loads((home / 'mixed-models.json').read_text())
             slugs = {m['slug'] for m in catalog['models']}
-            for twin in ('openai/gpt-6-astra', 'openai/gpt-6.1-sol',
+            for twin in ('openai/gpt-6.2-astra', 'openai/gpt-6.2-sol',
                          'openai/gpt-6.1-terra', 'openai/gpt-6-luna'):
                 self.assertIn(twin, slugs)
             self.assertNotIn('openai/gpt-5.6-terra', slugs)
