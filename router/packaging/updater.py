@@ -443,13 +443,14 @@ def _apply_update(args, home, sleep, _fetch, _read_feed, _announce):
             result = _svc.run(cmd, capture_output=True, text=True, timeout=900,
                               env=dict(os.environ, ROUTER_NO_KEY_WINDOW='1', ROUTER_AUTOMATIC_UPDATE='1'))
         except subprocess.SubprocessError as exc:
-            # A child that is killed or never starts reports nothing itself,
-            # so count it here or a hanging release retries every poll
-            # forever. TimeoutExpired is a SubprocessError, not an OSError.
-            _park(home, etag, etag_path, latest['version'])
-            code = ('installer_timeout' if isinstance(exc, subprocess.TimeoutExpired)
-                    else 'installer_failed')
-            raise UpdateError(code, f'installer did not complete: {type(exc).__name__}')
+            if (sys.platform == 'win32' and isinstance(exc, subprocess.TimeoutExpired)
+                    and _reconcile.verified_timeout(home, latest, _svc)):
+                _reconcile.log(home, 'install', 'timeout_verified', version=latest['version'], error='TimeoutExpired')
+                result = subprocess.CompletedProcess(cmd, 0)
+            else:
+                _park(home, etag, etag_path, latest['version'])
+                code = 'installer_timeout' if isinstance(exc, subprocess.TimeoutExpired) else 'installer_failed'
+                raise UpdateError(code, f'installer did not complete: {type(exc).__name__}')
         print(result.stdout[-2000:] if result.stdout else '')
         if result.returncode != 0:
             print(result.stderr[-2000:] if result.stderr else '')
