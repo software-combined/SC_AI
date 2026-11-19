@@ -18,8 +18,9 @@ from tests.fakes import FakeUpstream, install_fake
 from tests.harness import auth_file, post, start_server, test_state
 
 ROUTED = {'x-scg-codex-route': 'routed'}
-TWIN = 'openai/gpt-6-astra'
-TWIN_PICK = 'Pick "OpenAI: GPT-6 Astra · OpenRouter"'
+SUBSCRIPTION_MODEL = 'gpt-6.2-astra'
+TWIN = f'openai/{SUBSCRIPTION_MODEL}'
+TWIN_PICK = 'Pick "OpenAI: GPT-6.2 Astra · OpenRouter"'
 HELPER = {'x-codex-turn-metadata': json.dumps({'thread_source': 'thread_title'})}
 
 
@@ -29,7 +30,7 @@ class SwitchedRouteTests(unittest.TestCase):
         recorded = install_fake(self, lambda: FakeUpstream(
             200, b'{"output": []}', [('Content-Type', 'application/json')]))
         config = test_state(auth_file(self))
-        config['openai_models'] = ['gpt-6-astra', 'gpt-5.5']
+        config['openai_models'] = [SUBSCRIPTION_MODEL, 'gpt-5.5']
         config.update(state)
         server = start_server(config)
         self.addCleanup(server.shutdown)
@@ -56,7 +57,7 @@ class SwitchedRouteTests(unittest.TestCase):
     def test_a_streaming_turn_gets_one_final_frame_and_nothing_is_sent(self):
         with mock.patch('ai_router.router.log_event') as log:
             status, kind, raw, recorded = self._send(
-                {'model': 'gpt-6-astra', 'input': [], 'stream': True}, ROUTED)
+                {'model': SUBSCRIPTION_MODEL, 'input': [], 'stream': True}, ROUTED)
         self.assertEqual((status, kind, recorded), (200, 'text/event-stream', []))
         self.assertTrue(raw.startswith(b'event: response.failed\ndata: '))
         event = json.loads(raw.split(b'data: ', 1)[1])
@@ -73,7 +74,7 @@ class SwitchedRouteTests(unittest.TestCase):
     def test_other_requests_get_a_final_400_and_nothing_is_sent(self):
         for path in ('/responses', '/responses/compact'):
             with self.subTest(path=path):
-                message = self._refusal({'model': 'gpt-6-astra', 'input': []}, path=path)
+                message = self._refusal({'model': SUBSCRIPTION_MODEL, 'input': []}, path=path)
                 self.assertIn(TWIN_PICK, message)
 
     def test_the_header_decides_in_any_case_even_with_a_login(self):
@@ -81,7 +82,7 @@ class SwitchedRouteTests(unittest.TestCase):
         for headers in ({'X-SCG-Codex-Route': 'routed'}, {'X-Scg-Codex-Route': 'routed'},
                         {**ROUTED, 'Authorization': 'Bearer subscription-secret'}):
             with self.subTest(headers=headers):
-                self._refusal({'model': 'gpt-6-astra', 'input': []}, headers)
+                self._refusal({'model': SUBSCRIPTION_MODEL, 'input': []}, headers)
 
     def test_native_paths_get_the_no_subscription_answers(self):
         for path, code in (('/alpha/search', 'NATIVE_UNAVAILABLE'),
@@ -102,18 +103,18 @@ class SwitchedRouteTests(unittest.TestCase):
         self.assertEqual(upstream['authorization'], 'Bearer test-key')
 
     def test_without_the_header_a_chatgpt_turn_is_forwarded_as_before(self):
-        status, _, _, recorded = self._send({'model': 'gpt-6-astra', 'input': []})
+        status, _, _, recorded = self._send({'model': SUBSCRIPTION_MODEL, 'input': []})
         self.assertEqual(status, 200)
         self.assertEqual([(call[0], call[2]) for call in recorded],
                          [('chatgpt.com', '/backend-api/codex/responses')])
 
     def test_the_twin_is_named_only_when_this_machines_picker_lists_it(self):
         generic = codex_route.message()
-        turn = {'model': 'gpt-6-astra', 'input': []}
+        turn = {'model': SUBSCRIPTION_MODEL, 'input': []}
         self.assertEqual(self._refusal({'model': 'gpt-5.5', 'input': []}), generic)
         # GPT-5.6 Terra has no OpenRouter row any more, so nothing is named.
         self.assertEqual(self._refusal({'model': 'gpt-5.6-terra', 'input': []},
-                                       openai_models=['gpt-6-astra', 'gpt-5.6-terra']), generic)
+                                       openai_models=[SUBSCRIPTION_MODEL, 'gpt-5.6-terra']), generic)
         self.assertEqual(self._refusal(turn, allowed_models=['deepseek/deepseek-v4.1-flash-1017']),
                          generic)
         unlisted = dataclasses.replace(by_slug(TWIN), listed=False)

@@ -182,7 +182,7 @@ class SetupUnitTests(unittest.TestCase):
         self.assertEqual(status, 200)
         slugs = {m['slug'] for m in
                  json.loads((home / 'mixed-models.json').read_text())['models']}
-        self.assertIn('openai/gpt-6-astra', slugs)
+        self.assertIn('openai/gpt-6.2-astra', slugs)
         self.assertNotIn('gpt-6-astra', slugs)
         self.assertTrue(check(str(home / 'mixed-models.json'), 'codex',
                                include_twins=True))
