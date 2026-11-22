@@ -46,7 +46,8 @@ downloads. `native_setup` owns the graphical flow and uses the existing client,
 service and key-window owners. Repair uses the canonical `--repair` path;
 explicit assistant additions use the existing client-selection path.
 `repair_ui` owns explicit maintenance's graceful assistant-close prompt.
-Scheduled updates never call it. Public bootstrap scripts retain the saved
+Repair asks it only when a connection needs rewriting or Claude desktop uses
+OpenRouter. Scheduled updates never call it. Public bootstrap scripts retain the saved
 channel and working runtime; repair never starts key setup.
 `dialog_tool` is a Python 3.9 leaf shared by installer and runtime dialogs.
 It validates retained setup paths before selecting the Linux wrapper.
@@ -64,8 +65,9 @@ existing policy reader. Same-version mode changes use the service repair
 lifecycle before client attachment, with prior state restored on reload failure.
 Its pure mode comparison also drives native readiness. `setup_completion` owns
 the installer's bounded key-window wait after attachment and applies late answers
-through the same current-install lifecycle. It also owns native saved-key completion
-and its client-aware confirmation copy. The runtime only saves answers.
+through the same current-install lifecycle. It also owns native saved-key completion,
+native setup's one client-aware closing notice and the **Check setup** copy.
+The runtime only saves answers.
 Completion and readiness share `state.setup_pending`: an active access window stays
 pending, while expired preparation cannot block usable access with matching receipts.
 
@@ -153,8 +155,7 @@ desktop identity, shutdown and visible-reopen checks. Retained setup resources
 keep it available after the updater's extraction is removed. Its dialog lock
 prevents stacked notices. Presentation and pending restart are separate facts:
 a failed restart stays pending with manual steps, without automatic repeat
-prompts. A selected completion journey suppresses background presentation even
-when its dialog was unavailable; this does not mark it shown or dismissed.
+prompts. A notice that older setup already offered stays quiet in the background.
 Compared atomic writes preserve a newer notice that arrives meanwhile.
 Graphical setup suppresses detached notices while it owns completion guidance.
 

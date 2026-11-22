@@ -161,7 +161,7 @@
     "packaging/native/native_menu_build.py": 3,
     "packaging/native_dialog.py": 9,
     "packaging/native_resources.py": 2,
-    "packaging/native_setup.py": 5,
+    "packaging/native_setup.py": 3,
     "packaging/native_shortcuts.py": 7,
     "packaging/notice.py": 3,
     "packaging/operator_surface.py": 1,
@@ -169,7 +169,6 @@
     "packaging/runtime_rebind.py": 1,
     "packaging/service.py": 3,
     "packaging/setup_completion.py": 1,
-    "packaging/setup_restart.py": 1,
     "packaging/update_warning.py": 2,
     "packaging/updater.py": 3,
     "packaging/windows_installation.py": 1

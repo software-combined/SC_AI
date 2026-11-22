@@ -56,6 +56,28 @@ def ready_message(clients, saved_key):
     return 'Ready. Your assistants are connected and updates are automatic.'
 
 
+RESTARTS = (('codex', 'Codex', 'quit and reopen Codex'),
+            ('claude', 'Claude Code', 'restart Claude Code'),
+            ('claude-desktop', 'Claude desktop', 'quit and reopen Claude'))
+
+
+def finish_message(clients):
+    """Name each attached assistant and its restart; never claim a reply was checked."""
+    found = [(label, step) for name, label, step in RESTARTS if name in clients]
+    if not found:
+        return 'No assistant was found. Install Codex or Claude, then open SCG Router again.'
+    steps = [step[0].upper() + step[1:] for _, step in found]
+    if len(found) == 1:
+        text = 'SCG Router is ready. %s to use it.' % steps[0]
+    else:
+        labels = [label for label, _ in found]
+        names = ', '.join(labels[:-1]) + ' and ' + labels[-1]
+        text = 'SCG Router is ready for %s. %s.' % (names, '. '.join(steps))
+    if 'claude-desktop' in clients:
+        text += ' To use OpenRouter models in Claude, choose Claude, then OpenRouter, in the SCG Router menu.'
+    return text
+
+
 def open_window(python, home, release, url, clients):
     """Wait for the owned popup; never put the setup URL in argv or output."""
     try:

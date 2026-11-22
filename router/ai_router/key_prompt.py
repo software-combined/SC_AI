@@ -15,6 +15,7 @@ Run manually: `python -m ai_router.key_prompt <setup-url>`
 or pipe the URL on stdin with `--stdin` so it never appears in `ps`.
 """
 import json
+import os
 import subprocess
 import sys
 import threading
@@ -73,7 +74,8 @@ def _open_page(url, opener=None, label=provider_defs.label_for(provider_defs.DEF
 
 def run_window(url, tool_path=None, platform_name=None, which=None, run=None,
                opener=None, post=None, provider_id=None,
-               label=provider_defs.label_for(provider_defs.DEFAULT_EXTERNAL), work=False):
+               label=provider_defs.label_for(provider_defs.DEFAULT_EXTERNAL), work=False,
+               confirm=True):
     """Prompt, submit, confirm. 0 stored, 2 cancelled, 3 no GUI, 1 refused."""
     if not _local_setup_url(url):
         return 1
@@ -116,8 +118,9 @@ def run_window(url, tool_path=None, platform_name=None, which=None, run=None,
                                platform_name=platform_name, run=run)
             return 1
         if payload.get('ok'):
-            key_dialog.message(tool_path, _confirm_text(payload, managed=managed),
-                               platform_name=platform_name, run=run)
+            if confirm:
+                key_dialog.message(tool_path, _confirm_text(payload, managed=managed),
+                                   platform_name=platform_name, run=run)
             return 0
         error = payload.get('error') or 'setup failed (%s)' % status
         if status == 409:
@@ -191,7 +194,8 @@ def main(argv=None):
         print('usage: python -m ai_router.key_prompt (<loopback setup URL> | --stdin)',
               file=sys.stderr)
         return 1
-    return run_window(url, work=True)
+    # Native setup shows its own closing notice, so it skips this confirmation.
+    return run_window(url, work=True, confirm=os.environ.get('ROUTER_NO_KEY_CONFIRM') != '1')
 
 
 if __name__ == '__main__':

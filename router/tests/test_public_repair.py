@@ -123,7 +123,8 @@ class NativeRepairArgumentsTests(unittest.TestCase):
                     modules[name] if name in modules else original(name)), \
                     mock.patch.object(setup, 'run_installer', return_value=SimpleNamespace(returncode=0)), \
                     mock.patch.object(setup, '_select') as choose, \
-                    mock.patch.object(setup, '_key'), mock.patch.object(setup, '_check'):
+                    mock.patch.object(setup, '_key'), mock.patch.object(setup, '_check'), \
+                    mock.patch.object(setup, 'status', return_value={'serving': True}):
                 self.assertEqual(setup.onboard(root / 'Resources', home, 'resume'), 0)
             choose.assert_not_called()
             self.assertEqual(shortcuts.install.call_count, 2)
