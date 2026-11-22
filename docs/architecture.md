@@ -117,7 +117,8 @@ the Hub owns company entitlement, workspace selection and personal-key budgets.
 The shared progress dialog stays open during sign-in and key preparation.
 Cancellation stops callback polling, prevents a later provisioning request and
 discards a late response before it can reach the local setup writer.
-`key_prompt` submits the result to the existing local setup writer. Work keys,
+`key_prompt` asks only how to connect and, for an own key, the key itself; it
+submits the result to the existing local setup writer. Work keys,
 OAuth tokens and management credentials never become release configuration.
 The Microsoft callback shows a self-contained Hub-style confirmation with bundled
 brand fonts and logo, and clears the consumed code from the browser address.

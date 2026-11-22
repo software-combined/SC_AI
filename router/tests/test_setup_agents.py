@@ -1,4 +1,4 @@
-"""Setup-window starter choice: profile validation and install-once behavior."""
+"""The setup route writes no starter instructions and keeps saved modes."""
 import json
 import shutil
 import tempfile
@@ -6,107 +6,53 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-from ai_router import agents, setup
+from ai_router import setup
 from tests.test_setup import NOW, _key_ok, _state
 from tests.setup_fixtures import offline_availability
 
 
-class SetupStarterTests(unittest.TestCase):
+class SetupWithoutStarterTests(unittest.TestCase):
     setUp = offline_availability
 
-    def test_post_rejects_unknown_starter_choice(self):
+    def _home(self, **saved):
         home = Path(tempfile.mkdtemp())
         self.addCleanup(shutil.rmtree, home, True)
-        state = _state(home)
+        state = _state(home, **saved)
         (home / 'mixed-router-state.json').write_text(json.dumps(state))
-        status, _ = setup.handle_setup(state, home, 'n' * 16, True,
-                                       b'key=sk-test&mode=none&profile=bogus',
-                                       _urlopen=_key_ok(), _now=NOW)
-        self.assertEqual(status, 422)
-        self.assertFalse((home / 'openrouter.key').exists())
+        return home, state
 
-    def test_post_installs_dev_starter_once_and_keeps_existing(self):
-        from ai_router import agents
-        home = Path(tempfile.mkdtemp())
-        self.addCleanup(shutil.rmtree, home, True)
-        state = _state(home)
-        (home / 'mixed-router-state.json').write_text(json.dumps(state))
-        with mock.patch.object(agents, 'target',
-                               return_value=home / 'AGENTS.md'):
-            status, body = setup.handle_setup(
-                state, home, 'n' * 16, True, b'key=sk-test&mode=none&profile=dev',
-                _urlopen=_key_ok(), _now=NOW)
-        self.assertEqual(status, 200)
-        self.assertIn(b'Coding help installed', body)
-        self.assertIn('small verified changes', (home / 'AGENTS.md').read_text())
-        self.assertEqual(state.get('agents_profile'), 'dev')
-        # A repeat run with the other profile leaves the owner's file alone.
-        state2 = _state(home)
-        (home / 'mixed-router-state.json').write_text(json.dumps(state2))
-        (home / 'openrouter.key').unlink()
-        with mock.patch.object(agents, 'target',
-                               return_value=home / 'AGENTS.md'):
-            status, body = setup.handle_setup(
-                state2, home, 'n' * 16, True,
-                b'key=sk-test&mode=none&profile=general',
-                _urlopen=_key_ok(), _now=NOW)
-        self.assertEqual(status, 200)
-        self.assertIn(b'Existing instructions kept', body)
-        self.assertIn('small verified changes', (home / 'AGENTS.md').read_text())
+    def _saved(self, home):
+        return json.loads((home / 'mixed-router-state.json').read_text())
 
-    def test_post_close_failure_reverts_starter_and_stays_500(self):
-        from ai_router import agents
-        home = Path(tempfile.mkdtemp())
-        self.addCleanup(shutil.rmtree, home, True)
-        state = _state(home)
-        (home / 'mixed-router-state.json').write_text(json.dumps(state))
-        starter = home / 'AGENTS.md'
-        with mock.patch.object(agents, 'target', return_value=starter), \
-                mock.patch.object(setup, '_finish_setup', return_value=False):
-            status, body = setup.handle_setup(
-                state, home, 'n' * 16, True, b'key=sk-test&mode=none&profile=general',
-                _urlopen=_key_ok(), _now=NOW)
-        self.assertEqual(status, 500)
-        text = body.decode() if isinstance(body, bytes) else body
-        self.assertIn('Your key is saved', text)
-        self.assertIn('Check setup', text)
-        self.assertFalse(starter.exists())
+    def test_an_older_callers_starter_field_writes_no_instructions(self):
+        home, state = self._home()
+        user = home / 'user'
+        with mock.patch.object(Path, 'home', return_value=user):
+            status, payload = setup.handle_setup_json(
+                state, home, 'n' * 16, b'key=sk-test&profile=dev', _urlopen=_key_ok(), _now=NOW)
+        self.assertEqual((status, payload['ok']), (200, True))
+        self.assertNotIn('starter', payload)
+        self.assertFalse((user / '.codex').exists(), 'no starter AGENTS.md')
+        self.assertNotIn('agents_profile', self._saved(home))
 
-    def test_profile_less_close_failure_still_reports_500(self):
-        # A claude-only popup POST sends no profile, so no starter is
-        # installed - but a failed close must still fail the request.
-        home = Path(tempfile.mkdtemp())
-        self.addCleanup(shutil.rmtree, home, True)
-        state = _state(home)
-        (home / 'mixed-router-state.json').write_text(json.dumps(state))
+    def test_a_key_only_post_keeps_the_saved_modes(self):
+        home, state = self._home(openai_mode='none', claude_mode='none', anthropic_mode='none')
+        status, payload = setup.handle_setup_json(
+            state, home, 'n' * 16, b'key=sk-test', _urlopen=_key_ok(), _now=NOW)
+        self.assertEqual((status, payload['ok']), (200, True))
+        saved = self._saved(home)
+        for name in ('openai_mode', 'claude_mode', 'anthropic_mode'):
+            self.assertEqual(saved[name], 'none', name)
+
+    def test_close_failure_still_reports_500(self):
+        home, state = self._home()
         with mock.patch.object(setup, '_finish_setup', return_value=False):
             status, payload = setup.handle_setup_json(
-                state, home, 'n' * 16, b'key=sk-test&claude_mode=none',
-                _urlopen=_key_ok(), _now=NOW)
+                state, home, 'n' * 16, b'key=sk-test', _urlopen=_key_ok(), _now=NOW)
         self.assertEqual(status, 500)
         self.assertFalse(payload['ok'])
         self.assertTrue(payload['key_saved'])
         self.assertIn('Check setup', payload['error'])
-
-    def test_starter_choice_is_persisted(self):
-        home = Path(tempfile.mkdtemp())
-        self.addCleanup(shutil.rmtree, home, True)
-        state = _state(home)
-        (home / 'mixed-router-state.json').write_text(json.dumps(state))
-        with mock.patch.object(agents, 'target',
-                               return_value=home / 'AGENTS.md'):
-            status, _ = setup.handle_setup(
-                state, home, 'n' * 16, True, b'key=sk-test&mode=none&profile=dev',
-                _urlopen=_key_ok(), _now=NOW)
-        self.assertEqual(status, 200)
-        saved = json.loads((home / 'mixed-router-state.json').read_text())
-        self.assertEqual(saved.get('agents_profile'), 'dev')
-
-    def test_starters_explain_a_truncated_subagent_model_list(self):
-        for profile in agents.PROFILES:
-            text = agents.template(profile)
-            self.assertIn('truncate the model list', text)
-            self.assertIn('vendor/model', text)
 
 
 if __name__ == '__main__':

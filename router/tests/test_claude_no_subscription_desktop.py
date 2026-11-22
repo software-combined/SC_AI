@@ -7,7 +7,7 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest import mock
 
-from ai_router import key_dialog, key_store
+from ai_router import key_store
 from tests.install_fixtures import install_mod
 from tests.test_claude_desktop_config import _profile, _state, desktop_config
 from tests.test_claude_desktop_switch import switcher
@@ -50,14 +50,11 @@ class KeyWindowTests(unittest.TestCase):
         argv = run.call_args.args[0]
         return argv[argv.index('--clients') + 1]
 
-    def test_desktop_only_install_is_asked_about_a_claude_subscription(self):
-        # Without the question, a desktop-only user can never record "No subscription".
-        which = self.window('none', {'claude-desktop': 'subscription'})
-        self.assertIn('claude_mode', [field for field, _, _ in key_dialog.questions(which)])
-        self.installer.assert_not_called()  # the desktop reads the choice live
-
-    def test_service_only_install_still_asks_only_for_the_key(self):
-        self.assertEqual(key_dialog.questions(self.window('none', {})), [])
+    def test_the_window_still_receives_the_client_set(self):
+        # The window ignores it; the argument stays for compatibility.
+        self.assertEqual(self.window('none', {}), 'none')
+        self.assertEqual(self.window('none', {'claude-desktop': 'subscription'}), 'claude')
+        self.installer.assert_not_called()
 
     def test_claude_code_is_set_up_again_only_when_the_answer_changed_its_mode(self):
         # Claude Code is attached before the window; a stale attachment keeps asking for a login.

@@ -6,6 +6,8 @@
 - `tools/build_native_installer.py` no longer accepts `--download-config` or the no-op `--allow-unsigned`.
 - Setup and update saves retry on the newer settings instead of overwriting a concurrent save. A very short window remains, and an installer run can still replace a save made while it runs.
 - Count a deferred Windows update once. The retry counter no longer rises twice, and the deferral message appears once.
+- Setup asks one access question: sign in with your work account or use your own key. It no longer asks about ChatGPT or Claude subscriptions and assumes you use them; IT can still pass `--openai-mode none` or `--claude-mode none`. Saved choices are kept.
+- Setup no longer offers or writes starter instructions (`AGENTS.md`). An existing file is untouched.
 
 ## 1.3.65
 

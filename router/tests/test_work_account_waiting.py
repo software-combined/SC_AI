@@ -141,7 +141,7 @@ class WaitingTests(unittest.TestCase):
         with mock.patch.object(work_account, '_load', return_value=dialog), \
                 mock.patch.object(work_account, '_ask', return_value='work') as ask, \
                 mock.patch.object(work_account, '_waiting', return_value=work_account.CANCELLED):
-            self.assertIs(work_account.collect('/dialog', 'win32', 'codex'), work_account.CANCELLED)
+            self.assertIs(work_account.collect('/dialog', 'win32'), work_account.CANCELLED)
         ask.assert_called_once()
         with mock.patch.object(work_account, 'collect', return_value=work_account.CANCELLED), \
                 mock.patch.object(key_prompt, 'submit') as submit, \

@@ -129,14 +129,6 @@ class PopupStyleTests(unittest.TestCase):
             with self.subTest(control):
                 self.assertIn(control, script)
 
-    def test_windows_combo_uses_the_enum_name(self):
-        # DropDownStyle = 3 is not a member of ComboBoxStyle: PowerShell
-        # throws a non-terminating error and leaves an editable combo, whose
-        # free text collect() then refuses.
-        script = key_dialog.argv('C:/powershell.exe', 'win32')[-1]
-        self.assertIn("DropDownStyle = 'DropDownList'", script)
-        self.assertNotIn('DropDownStyle = 3', script)
-
     def test_the_chooser_shares_the_title_and_icon(self):
         dialog = _dialog()
         self.assertEqual(dialog.TITLE, key_dialog.TITLE, 'SCG Router')

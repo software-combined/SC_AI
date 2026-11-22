@@ -2,7 +2,6 @@
   "ai_router/catalogue.py": 395,
   "ai_router/compaction_summary.py": 266,
   "ai_router/errors.py": 292,
-  "ai_router/key_dialog.py": 305,
   "ai_router/models.py": 333,
   "ai_router/providers.py": 326,
   "ai_router/relay.py": 273,

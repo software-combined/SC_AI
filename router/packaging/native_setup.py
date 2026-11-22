@@ -150,7 +150,7 @@ def _key(resources, home, replace=False, run=subprocess.run):
         attached = {}
     clients = state.get('clients', 'codex')
     if clients == 'none' and 'claude-desktop' in attached:
-        clients = 'claude'  # Claude desktop alone still needs the Claude subscription answer.
+        clients = 'claude'  # Kept for older key windows; the current window ignores --clients.
     result = run([str(python), '-m', 'ai_router.key_prompt', '--stdin',
                   '--clients', clients], input=url + '\n',
                  capture_output=True, text=True, timeout=900, cwd=release,

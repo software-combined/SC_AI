@@ -8,7 +8,7 @@ import html
 
 from . import provider_defs
 
-# Client-aware closing line, shared with the native popup's confirmation.
+# Client-aware closing line for the browser setup page.
 RESTART = {'codex': 'Restart Codex',
            'claude': 'Restart Claude Code',
            'both': 'Quit and reopen Codex, and restart Claude Code',
@@ -25,12 +25,6 @@ h1{margin:0;padding:1.125rem 1.5rem;border-bottom:1px solid hsl(214,32%,91%);let
 p{margin:0 0 1.5rem;color:hsl(215,16%,45%);font-size:.9375rem}
 label.f{display:block;margin-bottom:.5rem;font-size:.8125rem;font-weight:500}
 input[type=password]{width:100%;min-height:2.75rem;padding:0 .75rem;background:#fff;border:1px solid hsl(214,32%,91%);border-radius:.5rem;color:inherit;font:inherit}
-fieldset{margin:1.25rem 0 0;padding:0;border:0}
-legend{padding:0 0 .5rem;font-size:.8125rem;font-weight:500}
-.o{display:flex;gap:.625rem;align-items:flex-start;margin-bottom:.5rem;padding:.75rem;border:1px solid hsl(214,32%,91%);border-radius:.5rem;font-size:.9375rem;cursor:pointer}
-.o:hover{background:hsl(214,100%,97%);border-color:hsl(221,83%,53%)}
-.o em{display:block;margin-top:.125rem;color:hsl(215,16%,45%);font-size:.8125rem;font-style:normal}
-input[type=radio]{margin:.2rem 0 0;accent-color:hsl(221,83%,53%)}
 button{margin-top:1.5rem;width:100%;min-height:2.75rem;padding:0 1rem;border:0;border-radius:.5rem;background:hsl(221,83%,53%);color:#fff;cursor:pointer;font:500 .9375rem/1 Inter,Arial,sans-serif}
 button:hover{background:hsl(221,83%,47%)}
 :focus-visible{outline:2px solid hsl(221,83%,53%);outline-offset:2px}
@@ -65,20 +59,6 @@ It is kept in a file only you can read, and the router reads it when a request n
 <form method="post" action="./{html.escape(nonce, quote=True)}">
 <label class="f" for="key">{label} key</label>
 <input id="key" type="password" name="key" autocomplete="off" placeholder="{html.escape(defn.key.example, quote=True)}">
-<fieldset><legend>ChatGPT subscription</legend>
-<label class="o"><input type="radio" name="mode" value="subscription" checked><span>I have one
-<em>Route OpenAI models on the subscription</em></span></label>
-<label class="o"><input type="radio" name="mode" value="none"><span>No subscription
-<em>{label} models only</em></span></label>
-</fieldset>
-<fieldset><legend>Starter instructions</legend>
-<label class="o"><input type="radio" name="profile" value="general" checked><span>Everyday help
-<em>Everyday help: careful, brief, plain language</em></span></label>
-<label class="o"><input type="radio" name="profile" value="dev"><span>Coding help
-<em>Coding help: read first, small verified changes, tests</em></span></label>
-</fieldset>
-<p style="margin:1rem 0 0">The starter is installed only when no global
-instructions file exists yet. An existing file is never overwritten.</p>
 <button type="submit">Save and connect</button></form>''')
 
 
@@ -90,10 +70,9 @@ def remaining(limit, usage):
         return 'unknown'
 
 
-def done(label, limit, usage, mode, starter, clients='codex'):
+def done(label, limit, usage, mode, clients='codex'):
     return _page('Connected', f'''<p>Your key is saved on this computer.</p>
 <dl><dt>Key</dt><dd>{html.escape(str(label))}</dd>
 <dt>Remaining credit</dt><dd>{html.escape(remaining(limit, usage))}</dd>
-<dt>Mode</dt><dd>{html.escape(mode)}</dd>
-<dt>Starter</dt><dd>{html.escape(starter)}</dd></dl>
+<dt>Mode</dt><dd>{html.escape(mode)}</dd></dl>
 <p>You can close this window and {html.escape(RESTART.get(clients, RESTART['codex']))}.</p>''')

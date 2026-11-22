@@ -55,12 +55,9 @@ connected Claude clients.
 
 ### Without a Claude subscription
 
-Choose **No subscription** for the Claude question in the key window, or pass
-`--claude-mode none`. The key window asks this question for Claude Code and for
-Claude desktop alone. When the answer changes the mode of an attached Claude
-Code, native setup runs the installer again with the new `--claude-mode`. A
-terminal-only install that answers in the key window applies the change at the
-next update, or at once with `--claude-mode none`.
+Pass `--claude-mode none` to the installer. The key window does not ask about
+subscriptions: setup assumes a Claude subscription unless this flag or a saved
+choice says otherwise.
 
 Claude Code then needs no Claude sign-in, and every request goes to OpenRouter.
 The installer also owns these settings:
