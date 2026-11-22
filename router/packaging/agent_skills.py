@@ -74,7 +74,7 @@ def plugin_sources(plugins_dir):
     return sources
 
 
-def write_marketplace(root, plugins_dir):
+def write_marketplace(root, plugins_dir, marketplace=MARKETPLACE):
     """Materialise the local marketplace. Returns the plugin names written.
 
     The router owns this directory. A non-empty root without our marker was
@@ -109,11 +109,11 @@ def write_marketplace(root, plugins_dir):
             shutil.rmtree(target)
         os.replace(staging, target)
     manifest.write_text(json.dumps(
-        {'name': MARKETPLACE, 'interface': {'displayName': 'Scg Agent Plugins'},
+        {'name': marketplace, 'interface': {'displayName': 'Scg Agent Plugins'},
          'plugins': [_entry(n) for n in names]}, indent=2) + '\n')
     # Claude Code reads only its own manifest, and requires an owner there.
     claude.write_text(json.dumps(
-        {'name': MARKETPLACE, 'owner': {'name': 'Software Combined'},
+        {'name': marketplace, 'owner': {'name': 'Software Combined'},
          'plugins': [{'name': n, 'source': './plugins/' + n} for n in names]},
         indent=2) + '\n')
     return names
@@ -127,13 +127,13 @@ def attached_clients(state):
     return [] if clients == 'none' else [clients]
 
 
-def _commands(client, root, names):
+def _commands(client, root, names, marketplace):
     if client == 'codex':
         return ([['codex', 'plugin', 'marketplace', 'add', str(root)]] +
-                [['codex', 'plugin', 'add', f'{n}@{MARKETPLACE}'] for n in names])
+                [['codex', 'plugin', 'add', f'{n}@{marketplace}'] for n in names])
     if client == 'claude':
         return ([['claude', 'plugin', 'marketplace', 'add', str(root)]] +
-                [['claude', 'plugin', 'install', f'{n}@{MARKETPLACE}'] for n in names])
+                [['claude', 'plugin', 'install', f'{n}@{marketplace}'] for n in names])
     return []
 
 
@@ -168,7 +168,7 @@ def _client_json(call, command):
         return None
 
 
-def _old_codex_source(call):
+def _old_codex_source(call, marketplace):
     """True when Codex holds this marketplace name from an old Git home.
 
     Codex refuses to add the router's copy under a name it already holds from
@@ -180,7 +180,7 @@ def _old_codex_source(call):
     listing = _client_json(call, ['codex', 'plugin', 'marketplace', 'list', '--json'])
     try:
         for entry in listing['marketplaces']:
-            if entry.get('name') == MARKETPLACE:
+            if entry.get('name') == marketplace:
                 source = entry['marketplaceSource']
                 return (source['sourceType'] == 'git' and
                         OLD_CODEX_SOURCE.fullmatch(source['source'].lower()) is not None)
@@ -212,7 +212,7 @@ def _switched_off(client, call):
         return None
 
 
-def register(client, root, names, run=subprocess.run, which=shutil.which):
+def register(client, root, names, run=subprocess.run, which=shutil.which, marketplace=MARKETPLACE):
     """Register the local marketplace and install each plugin, tolerantly.
 
     Both clients are idempotent about an existing marketplace and an installed
@@ -240,10 +240,10 @@ def register(client, root, names, run=subprocess.run, which=shutil.which):
     disabled = _switched_off(client, call)
     if disabled is None:
         return f'{client}: plugin choices unavailable; registration deferred', 1
-    off = {n for n in names if f'{n}@{MARKETPLACE}' in disabled}
-    commands = _commands(client, root, [n for n in names if n not in off])
-    if client == 'codex' and _old_codex_source(call):
-        commands.insert(0, ['codex', 'plugin', 'marketplace', 'remove', MARKETPLACE])
+    off = {n for n in names if f'{n}@{marketplace}' in disabled}
+    commands = _commands(client, root, [n for n in names if n not in off], marketplace)
+    if client == 'codex' and _old_codex_source(call, marketplace):
+        commands.insert(0, ['codex', 'plugin', 'marketplace', 'remove', marketplace])
     refused = 0
     failures = []
     moved = False
@@ -352,17 +352,17 @@ def _digest(path):
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
-def sync(state, plugins_dir, base=None, run=subprocess.run, which=shutil.which, clients=None):
+def sync(state, plugins_dir, base=None, run=subprocess.run, which=shutil.which, clients=None, marketplace=MARKETPLACE):
     """One install's skills pass. Returns a short line for the install log."""
     clients = attached_clients(state) if clients is None else clients
     if not clients:
         return 'no attached client'
     try:
         root = marketplace_root(base)
-        names = write_marketplace(root, plugins_dir)
+        names = write_marketplace(root, plugins_dir, marketplace)
         if not names:
             return 'bundle carries none'
-        results = [register(c, root, names, run=run, which=which) for c in clients]
+        results = [register(c, root, names, run=run, which=which, marketplace=marketplace) for c in clients]
         notes = [line for line, _ in results]
         # The git updater only ever refreshes Codex, so retire it only once
         # Codex runs from the router's copy: retiring it behind a failed or

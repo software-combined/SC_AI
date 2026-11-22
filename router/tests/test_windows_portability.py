@@ -3,7 +3,6 @@
 Pins the TOML path form in the Codex block, the windowless subprocess seam,
 and the platform-correct no-interpreter remedy. Offline; no real tasks.
 """
-import importlib.util
 import os
 import subprocess
 import sys
@@ -12,14 +11,13 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
+from tests.loading import load
+
 ROOT = Path(__file__).resolve().parents[1]
 
 
 def _load(name, rel):
-    spec = importlib.util.spec_from_file_location(name, ROOT / rel)
-    mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)
-    return mod
+    return load(ROOT / rel, name)
 
 
 codex_config = _load('router_codex_config_portability', 'packaging/codex_config.py')

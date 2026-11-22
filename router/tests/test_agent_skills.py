@@ -6,7 +6,6 @@ directory is never clobbered, and that a superseded runner is preserved
 rather than deleted.
 """
 import hashlib
-import importlib.util
 import json
 import re
 import tempfile
@@ -15,14 +14,13 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
 
+from tests.loading import load
+
 ROOT = Path(__file__).resolve().parents[1]
 
 
 def _load(name, relative):
-    spec = importlib.util.spec_from_file_location(name, ROOT / relative)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+    return load(ROOT / relative, name)
 
 
 skills = _load('router_agent_skills', 'packaging/agent_skills.py')

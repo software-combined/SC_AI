@@ -7,7 +7,6 @@ above FIXED_IN. These pin who is offered what, that each offer is made once
 per episode, and that no dialog or write failure ever reaches the updater.
 """
 import contextlib
-import importlib.util
 import json
 import os
 import plistlib
@@ -22,6 +21,8 @@ from unittest import mock
 
 from ai_router import usage_episodes
 
+from tests import loading
+
 ROOT = Path(__file__).resolve().parents[1]
 DESKTOP = ('Codex Desktop/0.158.0-alpha.2.1 (Mac OS 26.5.0; arm64) unknown '
            '(Codex Desktop; %s)')
@@ -29,10 +30,7 @@ T0, HOUR = 1_790_000_000, 3600
 
 
 def _load(name, rel):
-    spec = importlib.util.spec_from_file_location(name, ROOT / rel)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+    return loading.load(ROOT / rel, name)
 
 
 offers = _load('router_test_codex_switch_offer', 'packaging/codex_switch_offer.py')

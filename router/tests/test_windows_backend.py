@@ -2,7 +2,6 @@
 fake structured Task Scheduler API. Pins real-machine facts: a repeating
 trigger needs a StartBoundary, an unscoped logon trigger needs elevation,
 deleting a task leaves its instance running, console tasks show a window."""
-import importlib.util
 import json
 import subprocess
 import sys
@@ -12,27 +11,20 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest import mock
 
+from tests.loading import load
+
 ROOT = Path(__file__).resolve().parents[1]
 
 
 def _load():
-    spec = importlib.util.spec_from_file_location(
-        'router_windows_backend_stage3_under_test',
-        ROOT / 'packaging' / 'platforms' / 'windows.py')
-    mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)
-    return mod
+    return load(ROOT / 'packaging' / 'platforms' / 'windows.py', 'router_windows_backend_stage3_under_test')
 
 
 backend = _load()
 
 
 def _load_service():
-    spec = importlib.util.spec_from_file_location(
-        'router_service_for_windows_backend', ROOT / 'packaging' / 'service.py')
-    mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)
-    return mod
+    return load(ROOT / 'packaging' / 'service.py', 'router_service_for_windows_backend')
 
 
 service = _load_service()

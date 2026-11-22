@@ -112,16 +112,15 @@ def clients(home, state):
 def _management(source, skills, state, attached, run):
     if not (source / '.codex-plugin/plugin.json').is_file():
         return
-    # The router management plugin intentionally has its own marketplace.
-    # It must not join or rename the existing SCG plugins marketplace.
-    skills.MARKETPLACE = 'scg-router-management'
     with tempfile.TemporaryDirectory() as temporary:
         plugin = Path(temporary) / 'scg-openrouter'
         plugin.mkdir()
         for name in ('.codex-plugin', '.claude-plugin', 'skills'):
             shutil.copytree(source / name, plugin / name)
+        # The router management plugin intentionally has its own marketplace.
+        # It must not join or rename the existing SCG plugins marketplace.
         skills.sync(state, plugin.parent, base=skills.shared_base() / 'router-management',
-                    clients=attached, run=run)
+                    clients=attached, run=run, marketplace='scg-router-management')
 
 
 def maintain(home, source, state, python=None, backend=None):

@@ -1,16 +1,12 @@
 """Sharing the ownership result never shares settings, paths or credentials."""
-import importlib.util
 import json
-from pathlib import Path
 import unittest
 from unittest import mock
 
 from tests.test_native_setup import module
+from tests.loading import load
 
-spec = importlib.util.spec_from_file_location('classify_attachments',
-    Path(__file__).resolve().parents[1] / 'tools/classify_attachments.py')
-report = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(report)
+report = load('tools/classify_attachments.py', 'classify_attachments')
 
 
 class AttachmentClassificationTests(unittest.TestCase):

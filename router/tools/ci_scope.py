@@ -39,6 +39,7 @@ INSTALLER_PATHS = (
     'tests/fakes.py',
     'tests/harness.py',
     'tests/install_fixtures.py',
+    'tests/loading.py',
     'tests/windows_native_fixture.py',
     'tests/windows_shutdown_fixture.py',
     'tests/test_bootstrap.py',

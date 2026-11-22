@@ -1,6 +1,5 @@
 """Real Git transitions and runner handoff cannot hide required verification."""
 import json
-import importlib.util
 import os
 import shutil
 from pathlib import Path
@@ -12,6 +11,8 @@ import time
 import unittest
 from types import SimpleNamespace
 from unittest import mock
+
+from tests.loading import load
 
 ROOT = Path(__file__).resolve().parents[1]
 SKILL = 'plugins/scg-example/skills/example/SKILL.md'
@@ -208,9 +209,7 @@ class PluginVerificationTests(unittest.TestCase):
         self.assertTrue(any('test_router.' in row['id'] for row in report['cases']))
 
     def test_windows_handoff_waits_for_a_real_failing_child(self):
-        spec = importlib.util.spec_from_file_location('fixture_verification', self.root / 'tools/plugin_verification.py')
-        owner = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(owner)
+        owner = load(self.root / 'tools/plugin_verification.py', 'fixture_verification')
         platform = SimpleNamespace(name='nt', chdir=os.chdir,
                                    execv=mock.Mock(side_effect=AssertionError('Windows must wait for its child')))
         previous = Path.cwd()

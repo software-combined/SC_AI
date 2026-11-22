@@ -1,5 +1,4 @@
 """Installed start/switch ordering for Claude profile session sharing."""
-import importlib.util
 import json
 import os
 import runpy
@@ -15,12 +14,10 @@ from unittest import mock
 from tests import claude_profile_sync_fixtures as fixtures
 from tests.install_fixtures import install_mod
 from tests.test_claude_desktop_config import _profile, _state, desktop_config
+from tests.loading import load
 
 ROOT = Path(__file__).resolve().parents[1]
-SPEC = importlib.util.spec_from_file_location(
-    'desktop_switch_launch_test', ROOT / 'packaging' / 'claude_desktop_switch.py')
-switcher = importlib.util.module_from_spec(SPEC)
-SPEC.loader.exec_module(switcher)
+switcher = load(ROOT / 'packaging' / 'claude_desktop_switch.py', 'desktop_switch_launch_test')
 
 class FakePlatform:
     def __init__(self, events, running=False, confirm=True, stopped=True):

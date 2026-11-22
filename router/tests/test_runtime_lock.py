@@ -7,20 +7,17 @@ byte sizes, GNU-safe member paths, interpreter and licence paths);
 synthetic data only elsewhere. No staff machine.
 """
 import copy
-import importlib.util
 import json
 import unittest
 from pathlib import Path
+
+from tests.loading import load
 
 ROOT = Path(__file__).resolve().parents[1]
 
 
 def _load():
-    spec = importlib.util.spec_from_file_location(
-        'router_runtime_lock', ROOT / 'packaging' / 'runtime_lock.py')
-    mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)
-    return mod
+    return load(ROOT / 'packaging' / 'runtime_lock.py', 'router_runtime_lock')
 
 
 runtime_lock = _load()

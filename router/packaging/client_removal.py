@@ -179,7 +179,7 @@ def detach_json(home, client, receipts, entry=None):
     receipts.drop_client(home, client, expected=current)
 
 
-def preflight(home, receipts):
+def preflight(home, receipts, python=None):
     if os.path.lexists(Path(home) / '.claude-profile-rotation-pending.json'):
         raise SystemExit('Choose Claude in SCG Router to recover the saved profile before removal.')
     path = receipts.receipt_path_for(home)
@@ -198,7 +198,7 @@ def preflight(home, receipts):
     for client, entry in entries.items():
         try:
             if client == 'codex':
-                before, after = receipts.removal_plan(entry_path(entry), entry)
+                before, after = receipts.removal_plan(entry_path(entry), entry, python)
                 files = [(entry_path(entry), before, after)]
             else:
                 files = json_plan(home, client, entry, receipts)
@@ -215,9 +215,9 @@ def preflight(home, receipts):
     return plans
 
 
-def remove_all(home, receipts, restore_codex):
+def remove_all(home, receipts, restore_codex, python=None):
     """All ownership checks precede every detach; service lifetime stays outside."""
-    plans = preflight(home, receipts)
+    plans = preflight(home, receipts, python)
     removed = []
     for client, entry, files in plans:
         try:

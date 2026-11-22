@@ -6,7 +6,6 @@ are immutable (an unreadable bundle state aborts), the channel feed is
 invalidated, and --dry-run touches nothing.
 """
 import hashlib
-import importlib.util
 import io
 import json
 import tempfile
@@ -15,17 +14,15 @@ from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
 from unittest import mock
 
+from tests.loading import load
+
 ROOT = Path(__file__).resolve().parents[1]
 GITHUB_BASE = ('https://github.com/software-combined/SC_AI'
                '/releases/download')
 
 
 def _load():
-    spec = importlib.util.spec_from_file_location(
-        'router_publish_feed_under_test', ROOT / 'tools' / 'publish_feed.py')
-    mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)
-    return mod
+    return load(ROOT / 'tools' / 'publish_feed.py', 'router_publish_feed_under_test')
 
 
 publish = _load()
@@ -83,12 +80,7 @@ class PublishFeedTests(unittest.TestCase):
         return dist
 
     def _seed(self, dist):
-        import importlib.util as _ilu
-        spec = _ilu.spec_from_file_location(
-            'router_feed_verify_seed',
-            Path(__file__).resolve().parents[1] / 'packaging' / 'feed_verify.py')
-        fv = _ilu.module_from_spec(spec)
-        spec.loader.exec_module(fv)
+        fv = load('packaging/feed_verify.py', 'router_feed_verify_seed')
         seed, _pub = fv.generate_keypair()
         key = dist / 'seed'
         key.parent.mkdir(parents=True, exist_ok=True)
@@ -276,15 +268,10 @@ class PublishFeedTests(unittest.TestCase):
         self.assertEqual(prepared, {name: (dist / name).read_bytes() for name in names})
 
     def test_sidecar_signs_served_bytes(self):
-        import importlib.util as _ilu
         dist = self._dist()
         runner = _Aws()
         self._run(dist, runner)
-        spec = _ilu.spec_from_file_location(
-            'router_feed_verify_sidecar',
-            Path(__file__).resolve().parents[1] / 'packaging' / 'feed_verify.py')
-        fv = _ilu.module_from_spec(spec)
-        spec.loader.exec_module(fv)
+        fv = load('packaging/feed_verify.py', 'router_feed_verify_sidecar')
         seed = (dist / 'seed').read_text().strip()
         pub = fv.public_key_hex(seed)
         body = (dist / publish.FEED_DOCUMENT).read_bytes()

@@ -4,12 +4,13 @@ The scanner replaced inline CI shell, so its globbing, skip rules and step
 matcher need a runnable pin: each case below is a bypass found by review.
 Runs against a temporary tree so nothing here touches the real repository.
 """
-import importlib.util
 import shutil
 import subprocess
 import tempfile
 import unittest
 from pathlib import Path
+
+from tests.loading import load
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -47,10 +48,7 @@ class ProviderKeyIgnoreTests(unittest.TestCase):
 
 def _load(root):
     """Import tools/check_policy_scans.py bound to `root` as its repository."""
-    spec = importlib.util.spec_from_file_location(
-        'policy_scans_under_test', root / 'tools' / 'check_policy_scans.py')
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
+    module = load(root / 'tools' / 'check_policy_scans.py', 'policy_scans_under_test')
     module.ROOT = root
     return module
 

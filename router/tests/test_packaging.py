@@ -1,4 +1,3 @@
-import importlib.util
 import re
 import shutil
 import tarfile
@@ -6,6 +5,8 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
+
+from tests.loading import load
 
 # Only the members `packaging/release.py` cannot discover by globbing need an
 # explicit contract: modules under ai_router/, tools/ and docs/ travel
@@ -26,11 +27,7 @@ EXPLICIT_FILES = (
 
 
 def _release_module():
-    spec = importlib.util.spec_from_file_location(
-        'router_release', Path(__file__).resolve().parents[1] / 'packaging' / 'release.py')
-    release_mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(release_mod)
-    return release_mod
+    return load('packaging/release.py', 'router_release')
 
 class PackagingTests(unittest.TestCase):
     def test_apache_only_licence_gate(self):
@@ -109,10 +106,7 @@ class PackagingTests(unittest.TestCase):
 
     def test_release_bundle_contains_deploy_list(self):
         root = Path(__file__).resolve().parents[1]
-        spec = importlib.util.spec_from_file_location(
-            'router_release', root / 'packaging' / 'release.py')
-        release_mod = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(release_mod)
+        release_mod = load(root / 'packaging' / 'release.py', 'router_release')
         out = root / 'dist-test-packaging'
         self.addCleanup(shutil.rmtree, str(out), True)
         release_mod.main(['--out', str(out)])

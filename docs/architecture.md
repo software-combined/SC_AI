@@ -651,6 +651,9 @@ is in [runtime files](runtime-files.md#codex-usage-limit-record).
 6. `packaging/` file-based imports (`spec_from_file_location`) avoid
    depending on a third-party distribution named `packaging`. Installer
    scripts stay Python 3.9-compatible; the runtime requires 3.14.
+   Tests that load router files into the test process use `tests/loading.py`,
+   which returns a new module on every call; child-process probes and some
+   plugin-script and tool tests keep their own loader.
 7. `tools/` holds checkout-run helpers (local probes, scans, key ceremonies)
    that are invoked by the developer or by CI, not by an installed router;
    `ci_unittest.py` owns bounded CI workers and their result reports, keeping

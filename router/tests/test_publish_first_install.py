@@ -7,12 +7,13 @@ key are refused, a changed wrapper is replaced, the wrappers are published
 only after the table they read, and --dry-run touches nothing.
 """
 import hashlib
-import importlib.util
 import io
 import unittest
 from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
 from unittest import mock
+
+from tests.loading import load
 
 ROOT = Path(__file__).resolve().parents[1]
 SUPPORTED = ('darwin/arm64', 'darwin/x86_64', 'linux/arm64', 'linux/x86_64',
@@ -20,12 +21,7 @@ SUPPORTED = ('darwin/arm64', 'darwin/x86_64', 'linux/arm64', 'linux/x86_64',
 
 
 def _load():
-    spec = importlib.util.spec_from_file_location(
-        'router_publish_first_install_under_test',
-        ROOT / 'tools' / 'publish_first_install.py')
-    mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)
-    return mod
+    return load(ROOT / 'tools' / 'publish_first_install.py', 'router_publish_first_install_under_test')
 
 
 publish = _load()

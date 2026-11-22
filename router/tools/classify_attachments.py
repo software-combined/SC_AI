@@ -25,7 +25,6 @@ REASONS = frozenset(('damaged_receipt', 'marker_conflict', 'unsupported_structur
 def classify(home, python=None):
     """Report routing ownership; an unproven opaque desktop field still refuses removal."""
     owner, removal = _load('codex_config'), _load('client_removal')
-    owner._owned.PYTHON = python
     home = Path(home)
     result = dict(schema=1, receipt='missing', clients={})
     try:
@@ -49,7 +48,7 @@ def classify(home, python=None):
     for name, entry in entries.items():
         try:
             if name == 'codex':
-                owner.removal_plan(removal.entry_path(entry), entry)
+                owner.removal_plan(removal.entry_path(entry), entry, python)
             else:
                 try:
                     removal.json_plan(home, name, entry, owner)

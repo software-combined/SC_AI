@@ -5,7 +5,6 @@ surface loads them, so these checks pin the plain-language sentence, the cap
 that matches the desktop notification, and the fallbacks that keep a stopped
 router from holding up a dialog.
 """
-import importlib.util
 import json
 import tempfile
 import unittest
@@ -14,14 +13,13 @@ from types import SimpleNamespace
 from unittest import mock
 from urllib.parse import parse_qsl
 
+from tests.loading import load
+
 _ROOT = Path(__file__).resolve().parents[1]
 
 
 def _load(name, path):
-    spec = importlib.util.spec_from_file_location(name, path)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+    return load(path, name)
 
 
 text_mod = _load('router_notice_text', _ROOT / 'packaging' / 'notice_text.py')

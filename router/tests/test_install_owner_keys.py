@@ -5,7 +5,6 @@ line setting the same root key would be a second definition that makes the
 whole config unreadable to Codex, so attach drops it, records it, and detach
 restores it. The same key inside an owner table is a different key and stays.
 """
-import importlib.util
 import json
 import os
 import subprocess
@@ -17,6 +16,7 @@ from pathlib import Path
 
 from tests._platform import unix_only
 from tests.test_install_config import _install
+from tests.loading import load
 
 _ROOT = Path(__file__).resolve().parents[1]
 OWNER_ROOT = 'model_provider = "ollama"\napproval_policy = "never"\n'
@@ -30,11 +30,7 @@ def _owner_config(tmp, text):
 
 
 def _switch_module():
-    spec = importlib.util.spec_from_file_location(
-        'owner_keys_switch', _ROOT / 'packaging' / 'codex_switch_config.py')
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+    return load(_ROOT / 'packaging' / 'codex_switch_config.py', 'owner_keys_switch')
 
 
 def _detach(test, home):

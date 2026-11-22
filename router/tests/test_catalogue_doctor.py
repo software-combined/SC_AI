@@ -1,6 +1,5 @@
 """The doctor checks the installed projection, including its visibility gates."""
 import json
-import importlib.util
 import io
 import os
 import subprocess
@@ -14,6 +13,7 @@ from unittest import mock
 from ai_router import availability, catalogue, snapshot_store
 from tests._platform import requires_posix_perms
 from tests.install_fixtures import install_mod, real_bundle
+from tests.loading import load
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -50,11 +50,8 @@ class CatalogueDoctorTests(unittest.TestCase):
         extracted = bundle / 'extracted'
         with tarfile.open(fileobj=io.BytesIO(blob), mode='r:gz') as archive:
             archive.extractall(extracted, filter='data')
-        spec = importlib.util.spec_from_file_location(
-            'packaged_operator', extracted / 'packaging/operator_surface.py')
-        operator = importlib.util.module_from_spec(spec)
         with mock.patch.object(sys, 'path', list(sys.path)):
-            spec.loader.exec_module(operator)
+            operator = load(extracted / 'packaging/operator_surface.py', 'packaged_operator')
             self.assertEqual(self.check(operator, extracted)['status'], 'OK')
 
     def test_key_filtered_catalogue_is_healthy_and_check_writes_nothing(self):

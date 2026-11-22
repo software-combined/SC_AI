@@ -4,12 +4,13 @@ The update notice and the first-run key window are produced by different
 modules on different Python versions, so this test is the single place that
 pins their shared title, icon and vocabulary.
 """
-import importlib.util
 import unittest
 from pathlib import Path
 from types import SimpleNamespace
 
 from ai_router import key_dialog
+
+from tests.loading import load
 
 _ROOT = Path(__file__).resolve().parents[1]
 
@@ -19,37 +20,21 @@ JARGON = ('nonce', 'loopback', 'catalogue', 'owner-only', '127.0.0.1',
 
 
 def _notice():
-    spec = importlib.util.spec_from_file_location(
-        'router_notice', _ROOT / 'packaging' / 'notice.py')
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+    return load(_ROOT / 'packaging' / 'notice.py', 'router_notice')
 
 
 def _dialog():
     """The client chooser, which is not importable as part of a package."""
-    spec = importlib.util.spec_from_file_location(
-        'router_client_dialog', _ROOT / 'packaging' / 'client_dialog.py')
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+    return load(_ROOT / 'packaging' / 'client_dialog.py', 'router_client_dialog')
 
 
 def _offer():
     """The Switch Codex offer, with its dialog tool found on every platform."""
-    spec = importlib.util.spec_from_file_location(
-        'router_codex_switch_offer', _ROOT / 'packaging' / 'codex_switch_offer.py')
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+    return load(_ROOT / 'packaging' / 'codex_switch_offer.py', 'router_codex_switch_offer')
 
 
 def _warning():
-    spec = importlib.util.spec_from_file_location(
-        'router_warning_copy', _ROOT / 'packaging' / 'update_warning.py')
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+    return load(_ROOT / 'packaging' / 'update_warning.py', 'router_warning_copy')
 
 
 def _popup_text():
@@ -196,10 +181,7 @@ class PopupStyleTests(unittest.TestCase):
 
     def test_the_codex_offer_shares_the_style(self):
         offer = _offer()
-        spec = importlib.util.spec_from_file_location(
-            'router_offer_platform_style', _ROOT / 'packaging' / 'claude_desktop_platform.py')
-        platform = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(platform)
+        platform = load(_ROOT / 'packaging' / 'claude_desktop_platform.py', 'router_offer_platform_style')
         for kind in offer.MESSAGES:
             with self.subTest(kind=kind):
                 script = platform.dialog_script(offer.MESSAGES[kind], True, ('Open Switch Codex', 'Later'))
@@ -213,10 +195,7 @@ class PopupStyleTests(unittest.TestCase):
                     self.assertIn(words, message)
 
     def test_confirmations_default_to_the_action_and_notices_offer_ok(self):
-        spec = importlib.util.spec_from_file_location(
-            'router_claude_desktop_platform', _ROOT / 'packaging' / 'claude_desktop_platform.py')
-        platform = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(platform)
+        platform = load(_ROOT / 'packaging' / 'claude_desktop_platform.py', 'router_claude_desktop_platform')
         self.assertIn('buttons {"Cancel", "Continue"} default button "Continue" cancel button "Cancel"',
                       platform.dialog_script('Switch Claude to OpenRouter?', True))
         # Setup progress keeps Cancel: it is the only way to stop setup.

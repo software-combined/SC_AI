@@ -1,6 +1,5 @@
 """A downloaded native installer must not become a service dependency."""
 import hashlib
-import importlib.util
 import io
 import json
 import os
@@ -16,16 +15,13 @@ from unittest import mock
 
 from tests.fakes import LAUNCHD
 from tests.install_fixtures import _craft_bundle, _ok_run, _patch_attrs, _static_fetch, install_mod
+from tests import loading
 
 ROOT = Path(__file__).resolve().parents[1]
 
 
 def module(name):
-    spec = importlib.util.spec_from_file_location(
-        'test_router_' + name, ROOT / 'packaging' / (name + '.py'))
-    loaded = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(loaded)
-    return loaded
+    return loading.load(ROOT / 'packaging' / (name + '.py'), 'test_router_' + name)
 
 
 payload = module('native_payload')

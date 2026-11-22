@@ -11,6 +11,7 @@ from pathlib import Path
 from unittest import mock
 
 from tests.install_fixtures import _ok_run, _patch_attrs, install_mod
+from tests.loading import load
 
 svc = install_mod._svc
 ORIGIN = 'https://dist.softwarecombined.com'
@@ -112,12 +113,7 @@ class FeedTests(unittest.TestCase):
                   'sha256': hashlib.sha256(b'blob').hexdigest(), 'serial': 1,
                   'download_auth': {'legacy': 'ignored'}}
         seen = []
-        import importlib.util as _ilu
-        _spec = _ilu.spec_from_file_location(
-            'router_feed_verify_mig',
-            Path(__file__).resolve().parents[1] / 'packaging' / 'feed_verify.py')
-        _fv = _ilu.module_from_spec(_spec)
-        _spec.loader.exec_module(_fv)
+        _fv = load('packaging/feed_verify.py', 'router_feed_verify_mig')
         _seed, _pub = _fv.generate_keypair()
         _doc = json.dumps(latest).encode()
         _sig = _fv.sign_hex(_seed, _doc).encode()

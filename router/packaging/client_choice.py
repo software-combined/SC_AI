@@ -177,9 +177,10 @@ def attach_codex(home, state, mode, codex_config, previous=None,
     except OSError:
         pass
     block, before, desktop, reviewer = codex_config.attach_config(
-        config_path, block, previous, seed_external=mode == 'none' or variant in _switch.ROUTED_VARIANTS)
+        config_path, block, previous, seed_external=mode == 'none' or variant in _switch.ROUTED_VARIANTS,
+        python=python)
     after = codex_config._owned.read(config_path)
-    codex_config._owned.inspect(after, block)
+    codex_config._owned.inspect(after, block, python=python)
     event = previous.get('repair_notice') if after == before else None
     event = event or uuid.uuid4().hex
     fallback_return = previous.get(_switch.FALLBACK_RETURN)
@@ -188,7 +189,7 @@ def attach_codex(home, state, mode, codex_config, previous=None,
                                reviewer=reviewer, repair_notice=event, fallback_return=fallback_return
                                if variant == _switch.SWITCHED else None)
     entry = codex_config.codex_attachment(home)
-    codex_config._owned.inspect(codex_config._owned.read(config_path), block)
+    codex_config._owned.inspect(codex_config._owned.read(config_path), block, python=python)
     if entry.get('inserted_block') != block or entry.get('repair_notice') != event:
         raise OSError('attachment readback failed')
     try:
