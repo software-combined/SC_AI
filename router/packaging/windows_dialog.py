@@ -14,6 +14,10 @@ def _load(name):
     return loader.load(Path(__file__).with_name(name + '.py'))
 
 
+_shell = _load('windows_shell')
+_ps = _shell.ps_quote
+
+
 def command(home, mode, text, labels):
     resources = _load('native_resources').current(home)
     metadata = _load('native_payload').metadata(resources, 'windows/x86_64')
@@ -64,14 +68,9 @@ def progress(home, text, button):
     return child
 
 
-def _ps(value):
-    return "'" + str(value).replace("'", "''") + "'"
-
-
 def _powershell(text, confirm, labels):
     """The styled script form, for old packages or a helper that cannot start."""
-    return ['powershell', '-NoProfile', '-NonInteractive', '-Command',
-            script(text, confirm, labels)]
+    return _shell.argv(script(text, confirm, labels))
 
 
 def script(message, confirm, labels=('Continue', 'Cancel')):

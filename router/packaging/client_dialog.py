@@ -14,6 +14,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import loader  # noqa: E402
 _tool = loader.load(Path(__file__).resolve().parents[1] / 'ai_router/dialog_tool.py')
+_shell = loader.load(Path(__file__).resolve().with_name('windows_shell.py'))
 
 TITLE = 'SCG Router'
 ICON = Path(__file__).resolve().parent / 'assets' / 'router-icon.png'
@@ -106,12 +107,10 @@ def _windows_script(question, items, labels):
     straight to a form the location (0, 0), so a flat script stacks the
     list and both buttons in the corner (found live on Windows).
     """
-    icon = _icon()
+    icon, quote = _icon(), _shell.ps_quote
     icon_line = ("$f.Icon = [System.Drawing.Icon]::FromHandle("
-                 "(New-Object System.Drawing.Bitmap '%s').GetHicon()); "
-                 % icon.replace("'", "''")) if icon else ''
-    choices = ','.join("'%s'" % label.replace("'", "''")
-                       for label in _labels(items))
+                 "(New-Object System.Drawing.Bitmap %s).GetHicon()); " % quote(icon)) if icon else ''
+    choices = ','.join(quote(label) for label in _labels(items))
     return ("Add-Type -AssemblyName System.Windows.Forms,System.Drawing; "
             "$f = New-Object System.Windows.Forms.Form; $f.TopMost = $true; "
             "$f.AutoSize = $true; $f.AutoSizeMode = 'GrowAndShrink'; $f.StartPosition = 'CenterScreen'; "
@@ -121,7 +120,7 @@ def _windows_script(question, items, labels):
             "$p.AutoSize = $true; $p.Dock = 'Fill'; "
             "$p.Padding = New-Object System.Windows.Forms.Padding(12); "
             "$l = New-Object System.Windows.Forms.Label; "
-            "$l.Text = '%s'; $l.AutoSize = $true; $l.MaximumSize = '640,0'; "
+            "$l.Text = %s; $l.AutoSize = $true; $l.MaximumSize = '640,0'; "
             "$b = New-Object System.Windows.Forms.ListBox; "
             "@(%s) | ForEach-Object { [void]$b.Items.Add($_) }; "
             "$b.Width = [Math]::Min(640, [Math]::Max(260, (($b.Items | ForEach-Object { "
@@ -132,9 +131,9 @@ def _windows_script(question, items, labels):
             "$r = New-Object System.Windows.Forms.FlowLayoutPanel; "
             "$r.FlowDirection = 'LeftToRight'; $r.WrapContents = $false; "
             "$r.AutoSize = $true; "
-            "$ok = New-Object System.Windows.Forms.Button; $ok.Text = '%s'; "
+            "$ok = New-Object System.Windows.Forms.Button; $ok.Text = %s; "
             "$ok.AutoSize = $true; $ok.DialogResult = 'OK'; "
-            "$c = New-Object System.Windows.Forms.Button; $c.Text = '%s'; "
+            "$c = New-Object System.Windows.Forms.Button; $c.Text = %s; "
             "$c.AutoSize = $true; $c.DialogResult = 'Cancel'; "
             "$r.Controls.Add($ok); $r.Controls.Add($c); "
             "$p.Controls.Add($l); $p.Controls.Add($b); $p.Controls.Add($r); "
@@ -143,8 +142,7 @@ def _windows_script(question, items, labels):
             "$f.Add_Shown({ $f.Activate(); $b.Focus() }); "
             "if ($f.ShowDialog() -ne [System.Windows.Forms.DialogResult]::OK) "
             "{ exit 2 }; Write-Output $b.SelectedItem"
-            % (TITLE, icon_line, question.replace("'", "''"), choices,
-               *(label.replace("'", "''") for label in labels)))
+            % (TITLE, icon_line, quote(question), choices, *map(quote, labels)))
 
 
 def _zenity_argv(tool_path, question, items, labels):
@@ -163,8 +161,7 @@ def argv(tool_path, platform_name, question, items, *, labels=('Continue', 'Canc
     if platform_name == 'darwin':
         return [tool_path, '-l', 'JavaScript', '-e', _macos_script(question, items, labels)]
     if platform_name == 'win32':
-        return [tool_path, '-NoProfile', '-WindowStyle', 'Hidden', '-Command',
-                _windows_script(question, items, labels)]
+        return _shell.argv(_windows_script(question, items, labels), tool_path)
     return _zenity_argv(tool_path, question, items, labels)
 
 

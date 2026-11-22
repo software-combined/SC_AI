@@ -46,7 +46,8 @@ def _windows(home, python, on, user_home, run):
     target = windows_target(user_home)
     directory = target.parent
     directory.mkdir(parents=True, exist_ok=True)
-    quote = lambda value: "'" + str(value).replace("'", "''") + "'"
+    shell = load('windows_shell')
+    quote = shell.ps_quote
     arguments = subprocess.list2cmdline([str(home / 'desktop_launch.py'), '--autostart'])
     marker = IDENTITY + ':' + str(home)
     script = ("$ErrorActionPreference='Stop';$w=New-Object -ComObject WScript.Shell;"
@@ -58,9 +59,7 @@ def _windows(home, python, on, user_home, run):
                    (quote(python), quote(arguments), quote(marker)))
     else:
         script += 'if(Test-Path -LiteralPath %s){Remove-Item -LiteralPath %s}' % (quote(target), quote(target))
-    run(['powershell', '-NoProfile', '-WindowStyle', 'Hidden', '-Command', script],
-        check=True, capture_output=True, timeout=30,
-        **({'creationflags': subprocess.CREATE_NO_WINDOW} if os.name == 'nt' else {}))
+    shell.run_script(script, run, check=True, capture_output=True, timeout=30)
 
 
 def configure(home, resources, on, *, platform_name=None, user_home=None, run=subprocess.run):

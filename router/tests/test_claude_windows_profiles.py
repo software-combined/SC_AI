@@ -1,5 +1,6 @@
 """Store and unpackaged profile paths use current-user package registration."""
 import json
+import os
 from pathlib import Path
 import subprocess
 import tempfile
@@ -22,7 +23,7 @@ class WindowsProfileTests(unittest.TestCase):
         (self.local / 'Packages').mkdir(parents=True)
         self.env = {'APPDATA': str(self.roaming), 'LOCALAPPDATA': str(self.local)}
         self.system_root = self.root / 'Windows'
-        system = mock.patch.dict(windows.os.environ, {'SystemRoot': str(self.system_root)})
+        system = mock.patch.dict(os.environ, {'SystemRoot': str(self.system_root)})
         system.start()
         self.addCleanup(system.stop)
 
@@ -58,7 +59,7 @@ class WindowsProfileTests(unittest.TestCase):
         run = mock.Mock(side_effect=AssertionError('unsafe executable lookup'))
         for system_root in ('', 'relative-windows'):
             with self.subTest(system_root=system_root), \
-                    mock.patch.dict(windows.os.environ, {'SystemRoot': system_root}), \
+                    mock.patch.dict(os.environ, {'SystemRoot': system_root}), \
                     self.assertRaises(OSError):
                 windows.claude_roaming_root(self.roaming, self.local, run)
         run.assert_not_called()

@@ -26,6 +26,7 @@ _windows_identity = _load('router_desktop_windows', 'desktop_windows.py')
 _windows_codex = _load('router_windows_codex', 'windows_codex.py')
 _windows_dialogs = _load('router_windows_dialog', 'windows_dialog.py')
 _dialogs = _load('router_client_dialog', 'client_dialog.py')
+_shell = _load('router_windows_shell', 'windows_shell.py')
 TITLE = 'SCG Router'
 ICON = Path(__file__).parent / 'assets' / 'router-icon.png'
 BUNDLE_ID = 'com.anthropic.claudefordesktop'
@@ -47,10 +48,7 @@ def dialog_script(message, confirm=False, labels=('Continue', 'Cancel')):
             % (quote(message), quote(TITLE), buttons, default, safe, quote(ICON)))
 
 
-def _ps(value):
-    return "'" + str(value).replace("'", "''") + "'"
-
-
+_ps = _shell.ps_quote
 _windows_dialog = _windows_dialogs.script
 
 def _run(command, run, timeout=5, platform_name=None):
@@ -63,7 +61,7 @@ def _dialog(message, platform_name, confirm, run, tool_path=None, detailed=False
     if platform_name == 'darwin':
         argv = [tool_path or '/usr/bin/osascript', '-e', dialog_script(message, confirm, labels)]
     elif platform_name == 'win32':
-        argv = [tool_path or 'powershell', '-NoProfile', '-Command', _windows_dialog(message, confirm, labels)]
+        argv = _shell.argv(_windows_dialog(message, confirm, labels), tool_path)
     else:
         argv = [tool_path or _dialogs.tool(platform_name) or 'zenity',
                 '--title', TITLE, '--window-icon', str(ICON), '--width=460',
@@ -272,9 +270,8 @@ def open_app(platform_name, run=subprocess.run, app=CLAUDE, *, identity=None):
     elif platform_name == 'win32':
         if identity.get('family') == _windows_codex.FAMILY:
             return _windows_codex.open_app(identity)
-        argv = ['powershell', '-NoProfile', '-Command',
-                "$ErrorActionPreference='Stop';Start-Process " + _ps(
-                    _windows_codex._native.app_uri(identity['app']))]
+        argv = _shell.argv("$ErrorActionPreference='Stop';Start-Process " + _ps(
+            _windows_codex._native.app_uri(identity['app'])))
     else:
         argv = ['gtk-launch', identity['desktop_id']]
     answer = _run(argv, run, 10, platform_name)
@@ -321,7 +318,7 @@ def install_launcher(home, python, action='switch', applications=None,
                   "$s.TargetPath=%s;$s.Arguments=%s;$s.Description=%s;$s.IconLocation=%s;$s.Save()"
                   % tuple(map(_ps, (path, path, marker, arguments, python, arguments, marker, ICON))))
         applications.mkdir(parents=True, exist_ok=True)
-        answer = _run(['powershell', '-NoProfile', '-Command', script], run, 15, platform_name)
+        answer = _run(_shell.argv(script), run, 15, platform_name)
         if answer.returncode:
             raise OSError('unowned or unavailable Claude launcher')
     elif platform_name != 'darwin':

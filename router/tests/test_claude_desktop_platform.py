@@ -242,7 +242,8 @@ class DesktopPlatformTests(unittest.TestCase):
 
         def run(argv, **kwargs):
             script = argv[-1]
-            self.assertEqual(argv[:3], ['powershell', '-NoProfile', '-Command'])
+            flags = ['-NoLogo', '-NoProfile', '-NonInteractive', '-Command']
+            self.assertEqual(argv[:-1], [platform._shell.executable(), *flags])
             # Strictly parse PowerShell single-quoted literals, including doubled quotes.
             values = re.findall(r"'(?:[^']|'')*'", script)
             decoded = [v[1:-1].replace("''", "'") for v in values]

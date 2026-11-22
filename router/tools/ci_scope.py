@@ -209,6 +209,7 @@ INSTALLER_TESTS = (
     'tests.test_windows_native',
     'tests.test_windows_codex',
     'tests.test_windows_dialog',
+    'tests.test_windows_shell',
     'tests.test_windows_switch_transaction',
     'tests.test_windows_native_lifecycle',
     'tests.test_windows_process_generation',

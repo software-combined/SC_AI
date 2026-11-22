@@ -121,6 +121,7 @@ class WindowsDesktopTests(unittest.TestCase):
         self.assertNotIn('private', json.dumps(switcher._platform.error_facts(
             subprocess.TimeoutExpired('private command', 30, stderr='private path'), 'app_identity')))
 
+    @mock.patch.object(subprocess, 'CREATE_NO_WINDOW', NO_WINDOW, create=True)
     def test_windows_shared_runner_chooser_progress_and_notice_hide_console(self):
         run = mock.Mock(return_value=SimpleNamespace(returncode=0, stdout='{}', stderr=''))
         platform = switcher._platform

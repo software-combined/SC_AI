@@ -13,6 +13,8 @@ BUNDLE_ID = 'com.softwarecombined.router.setup'
 # opening SCG Router shows setup again. Installing entry points clears it.
 REMOVED = '.router-removed'
 UNINSTALL_KEY = r'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\SCG.Router'
+_shell = load('windows_shell')
+_quote = _shell.ps_quote
 
 
 def _desktop_arg(value):
@@ -67,10 +69,6 @@ def _linux(home, resources, python, atomic):
     atomic.replace_text(target, text)
 
 
-def _quote(value):
-    return "'" + str(value).replace("'", "''") + "'"
-
-
 def _start_menu():
     return Path(os.environ['APPDATA']) / 'Microsoft/Windows/Start Menu/Programs/Software Combined'
 
@@ -102,9 +100,7 @@ def _windows(home, resources, python, run):
                       for name, value in values)
     script += ("foreach($n in 'NoModify','NoRepair'){New-ItemProperty -LiteralPath $k -Name $n "
                "-Value 1 -PropertyType DWord -Force | Out-Null}")
-    run(['powershell', '-NoProfile', '-WindowStyle', 'Hidden', '-Command', script],
-        check=True, capture_output=True, timeout=30,
-        **({'creationflags': subprocess.CREATE_NO_WINDOW} if os.name == 'nt' else {}))
+    _shell.run_script(script, run, check=True, capture_output=True, timeout=30)
 
 
 def _windows_remove(home, run):
@@ -117,9 +113,7 @@ def _windows_remove(home, run):
               " -eq %s){Remove-Item -LiteralPath $k}"
               % (_quote(_start_menu() / 'SCG Router.lnk'), _quote(_start_menu() / 'Uninstall SCG Router.lnk'),
                  _quote(launch), _quote(UNINSTALL_KEY), _quote(home)))
-    run(['powershell', '-NoProfile', '-WindowStyle', 'Hidden', '-Command', script],
-        check=True, capture_output=True, timeout=30,
-        **({'creationflags': subprocess.CREATE_NO_WINDOW} if os.name == 'nt' else {}))
+    _shell.run_script(script, run, check=True, capture_output=True, timeout=30)
 
 
 _REGISTRY_NAMES = ('DisplayName', 'Publisher', 'DisplayVersion', 'DisplayIcon',
@@ -208,10 +202,7 @@ def _read_links(rows, run):
     if absent:
         links = {row['name']: None for row in rows}
     else:
-        result = run(['powershell', '-NoProfile', '-NonInteractive', '-Command', _LINK_READ],
-                     input=json.dumps(rows), capture_output=True, text=True, encoding='utf-8',
-                     check=True, timeout=30,
-                     **({'creationflags': subprocess.CREATE_NO_WINDOW} if os.name == 'nt' else {}))
+        result = _shell.run_json(_LINK_READ, rows, run, check=True, timeout=30)
         links = json.loads(result.stdout)
     if not isinstance(links, dict) or set(links) != {'open', 'remove', 'startup'}:
         raise ValueError('Invalid SCG Router shortcut snapshot')

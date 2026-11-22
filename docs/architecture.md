@@ -754,6 +754,10 @@ parent metadata before selection. The verified root exits first, allowing its
 job to close workers before remaining verified survivors are ended.
 `windows_dialog.py` verifies the retained compiled helper for switch confirmation
 and progress. The helper owns presentation; Python owns consent and configuration.
+`windows_shell.py` is the PowerShell launcher for shipped installer code (the setup chooser's shared dialog tool and
+the checkout build tools still find PowerShell themselves). It starts the
+system copy by absolute path with one flag set and no console window. Values reach a
+script as JSON on stdin or through `ps_quote`, which doubles every single-quote variant.
 `claude_desktop_switch.py` owns the switch lifecycle. After Claude exits normally,
 it shares the current account's local tasks and changes the mode only when all
 required copies succeed. `claude_profile_accounts.py` checks the current native
