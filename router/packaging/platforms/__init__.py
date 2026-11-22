@@ -1,8 +1,10 @@
 """One backend per OS behind a single interface (Plan 056).
 
 `select()` returns a backend or None; None means unsupported, never macOS.
-Backends own service lifecycle only: plists/units, reload, restart, stop,
-updater job, uninstall. Shared feed/verify/config logic stays in install.py.
+Backends own service lifecycle (plists/units, reload, restart, stop, updater
+job, uninstall) and answer the installation repair hooks below, so shared
+modules ask `host()` instead of naming a platform. Shared feed/verify/config
+logic stays in install.py.
 Loaded via the installer's file-based import pattern, never
 `import packaging.platforms`, so installed bundles keep working without a
 `packaging` distribution.
@@ -57,3 +59,52 @@ def select(platform, svc, run):
     if platform == 'win32':
         return _windows_mod().Backend(svc, run)
     return None
+
+
+def host(svc):
+    """Backend for the running machine; no-op repair hooks when unsupported."""
+    return select(sys.platform, svc, svc.run) or NoRepair()
+
+
+class NoRepair:
+    """Repair hooks for a backend without an installation journal (macOS, Linux).
+
+    Windows answers the same hooks from `windows_installation.Repair`. Each
+    default reports nothing to recover and leaves the shared path in charge.
+    """
+
+    def recover_interrupted(self, home):
+        """Restore an interrupted installation; the caller holds install.lock."""
+        return 'inactive'
+
+    def reconcile_after_update(self, home, service):
+        """Retry an interrupted installation after an update, without waiting."""
+        return 'inactive'
+
+    def recover_pending(self, python, home, release_dir, version):
+        """Finish a legacy install whose scheduled tasks are still pending."""
+        return None
+
+    def prepare_maintenance(self, home, source, latest, delivery):
+        """Stage maintenance inside the installation; None runs the shared pass."""
+        return None
+
+    def finish_maintenance(self, home, native, fetch):
+        """Deliver required controls first: False stops, True marks maintenance done, None runs the shared finish."""
+        return None
+
+    def verified_after_timeout(self, home, latest, service):
+        """Whether a timed-out installer child provably completed this release."""
+        return False
+
+    def controls_ready(self, home):
+        """Whether an applied update also has the controls this platform requires."""
+        return True
+
+    def installation_ready(self, home):
+        """Whether the installation is one coherent release."""
+        return True
+
+    def repair_controls(self, home, latest, feed_url, fetch):
+        """Repair required controls through the installation; None runs shared delivery."""
+        return None

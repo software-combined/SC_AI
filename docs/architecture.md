@@ -167,9 +167,12 @@ An attachment repair, runtime repair or changed attention result takes the lock 
 and repeats verification. Healthy unchanged checks do not acquire it.
 Restart-notice presentation runs after the lock closes.
 `windows_installation` owns required Windows completion and interrupted recovery under
-that existing lock. It stages matching core, controller and native resources before
-activation. Its private journal captures only fixed owned files, task definitions
-and entry points. It never captures client configuration, credentials or full state.
+that existing lock. Shared modules reach its recovery, maintenance and readiness steps
+through the Windows backend's repair hooks. Activating and finalising a staged cohort
+(`install_delivery.activate` and `_finalize`) call it directly, because only a Windows
+delivery stages one. It stages matching core, controller and native resources before activation.
+Its private journal captures only fixed owned files, task definitions and entry points.
+It never captures client configuration, credentials or full state.
 Completion verifies health and component bindings before writing the cohort receipt.
 After a runtime rollback, this transaction may select a verified matching older controller.
 Newer controller files stay retained; independent callers keep their non-downgrade rule.
@@ -637,6 +640,15 @@ is in [runtime files](runtime-files.md#codex-usage-limit-record).
    `bundle.py` owns the release lifecycle (verify, install, prune,
    rollback). Unsupported OS is an explicit refusal. Backends do not import
    runtime providers or client catalogue policy.
+   Shared installer modules add no platform tests; the few existing checks
+   remain in `install.py` and `service.py`. Repair decisions ask the selected
+   backend, or `platforms.host()` for the running machine. Every backend answers
+   the repair hooks that `platforms.NoRepair` declares (interrupted recovery,
+   maintenance staging and finish, timeout proof, control readiness and repair).
+   macOS and Linux inherit its no-op defaults. The Windows backend inherits
+   `windows_installation.Repair`, whose hooks run the installation journal, and
+   `windows_installation` uses only public backend methods such as `state` and
+   `drain_router`.
    `platforms/windows_tasks.py` owns fixed task names, structured access,
    principal/action checks and definition snapshots. `windows.py` scopes names to
    the account and owns lifecycle

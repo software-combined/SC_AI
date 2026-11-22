@@ -17,6 +17,11 @@ def _load(name):
     return loader.load(Path(__file__).with_name(name + '.py'))
 
 
+def _host():
+    platforms = loader.load(Path(__file__).parent / 'platforms' / '__init__.py', 'router_platforms')
+    return platforms.host(_load('service'))
+
+
 def run_logged(home, origin, task, launch):
     """Record menu/setup launches without copying command output or exception text."""
     def event(name, status=None, error=None):
@@ -164,28 +169,17 @@ def maintain(home, source, state, python=None, backend=None):
 
 
 def prepare(home, tarball, latest, manifest, state, python, backend, delivery=None):
-    """Verify maintenance before client discovery; Windows activation waits."""
+    """Verify maintenance before client discovery; a backend may stage it for later activation."""
     if 'packaging/native_controller.py' not in manifest.get('files', {}):
         return None
     with tempfile.TemporaryDirectory(prefix='scg-maintenance-') as temporary:
         source = Path(temporary)
         _load('service').safe_extract(tarball, source)
         _load('bundle').check_identity(latest['version'], manifest, source)
-        if delivery is not None and delivery.get('platform') == 'win32':
-            owner = _load('windows_installation')
-            try:
-                resources = None
-                if delivery.get('repair_version') and _load('bundle').newer(delivery['repair_version'], latest['version']):
-                    resources = _load('native_resources').for_version(home, delivery['repair_version'])
-                    doc = _load('native_payload').metadata(resources)
-                    if doc['version'] != delivery['repair_version']:
-                        raise ValueError('Retained repair resources do not match')
-                    source = _load('service').current_release_dir(home)
-                    latest = dict(version=doc['version'], sha256=doc['sha256'])
-                delivery['cohort'] = owner.prepare(home, source, latest, delivery['feed'], delivery.get('fetch'), resources=resources)
-            except (OSError, ValueError):
-                owner.defer(home, latest['version'], 'bundle_invalid')
-            return delivery['cohort']['source']
+        if delivery is not None:
+            staged = backend.prepare_maintenance(home, source, latest, delivery)
+            if staged is not None:
+                return staged
         return maintain(home, source, state, python, backend)
 
 
@@ -201,15 +195,14 @@ def recover(home, delivery):
     if delivery.get('automatic') and (Path(home) / '.router-removed').exists():
         print('deferred: SCG Router was removed; open setup to install it again')
         raise SystemExit(0)
-    if delivery.get('platform') == 'win32' and not delivery.get('dry_run'):
-        owner = _load('windows_installation')
-        if owner.pending(home) and owner.restore(home, delivery['backend']) == 'failed':
-            raise SystemExit('Installation recovery needs repair. Open SCG Router to retry.')
+    backend = delivery.get('backend')
+    if backend and not delivery.get('dry_run') and backend.recover_interrupted(home) == 'failed':
+        raise SystemExit('Installation recovery needs repair. Open SCG Router to retry.')
 
 
 def recover_current(home, delivery, python, version):
     """Retain the pending-task protocol for legacy runtime-only installations."""
-    if (delivery and delivery.get('platform') == 'win32' and not delivery.get('dry_run')
+    if (delivery and not delivery.get('dry_run')
             and not delivery['latest'].get('native_resources') and not os.environ.get('SCG_NATIVE_RESOURCES')
             and not any((Path(home) / name).exists() for name in ('setup-current', 'control-version'))):
         delivery['backend'].recover_pending(python, home,
@@ -243,9 +236,10 @@ def finish(home, run=subprocess.run, native=None, fetch=None, *,
            maintenance_done=False, controller_source=None, python=None, backend=None):
     """Delivery failures stay separate from router health and are retryable."""
     home = Path(home)
-    if sys.platform == 'win32':
-        if native and 'latest' in native and not _load('native_resources').deliver(home, native['latest'], native['feed'], fetch):
-            return
+    finished = (backend or _host()).finish_maintenance(home, native, fetch)
+    if finished is False:
+        return
+    if finished:
         maintenance_done, native = True, None
     try:
         version = (home / 'current').read_text().strip()

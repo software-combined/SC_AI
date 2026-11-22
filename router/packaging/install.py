@@ -303,7 +303,8 @@ def _do_install(args, _fetch=fetch, _run=None, delivery=None):
                       if PLATFORM == 'win32' else 'brew install python@3.14')
             print(f'No Python 3.14 found: {remedy}')
             raise SystemExit(2)
-    if delivery is not None: delivery.update(python=python, backend=platform_backend(), platform=PLATFORM)
+    if delivery is not None:
+        delivery.update(python=python, backend=platform_backend())
     _delivery.recover(home, delivery or {})
     feed = args.feed or _svc.channel_feed(home)
     latest = _updater._verified_feed(feed, _svc.feed_read(_fetch, feed), _fetch)

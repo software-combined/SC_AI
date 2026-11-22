@@ -172,12 +172,14 @@ class ChooserGateTests(unittest.TestCase):
                     mock.patch.object(dialog, 'tool', return_value='/dialog'), \
                     mock.patch.object(dialog, 'ask',
                                       return_value=dialog.CANCELLED) as asked:
+                backend.return_value.finish_maintenance.return_value = None  # No platform-owned finish.
                 for extra in ([], ['--claude-mode', 'none']):
                     code, out, _, _, _ = _install(tmp, home, ['--choose-clients', *extra])
                     self.assertEqual(tuple(path.read_bytes() for path in paths), before)
             self.assertEqual(code, 0)
             self.assertEqual(asked.call_count, 2)
-            self.assertEqual(backend.return_value.method_calls, [])
+            hooks = set(vars(install_mod._platforms.NoRepair))  # Repair hooks are a mock here; lifecycle stays idle.
+            self.assertEqual([call[0] for call in backend.return_value.method_calls if call[0] not in hooks], [])
             self.assertNotIn('connected', out)
             self.assertEqual(tuple(path.read_bytes() for path in paths), before)
 

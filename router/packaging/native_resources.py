@@ -1,4 +1,4 @@
-"""Verify target Resources; Windows joins required installation completion."""
+"""Verify target Resources; a platform backend may make them part of required installation completion."""
 import hashlib
 import json
 import os
@@ -15,6 +15,11 @@ import loader  # noqa: E402
 
 MAX_BYTES = 250 * 1024 * 1024
 HASH = re.compile('[0-9a-f]{64}')
+
+
+def _backend():
+    platforms = loader.load(Path(__file__).parent / 'platforms' / '__init__.py', 'router_platforms')
+    return platforms.host(load('service'))
 
 
 def current(home):
@@ -50,7 +55,7 @@ def ready(home):
         delivery = json.loads(record.read_text()) if record.exists() else {}
         failed = not isinstance(delivery, dict) or delivery.get('status') == 'failed'
         newer_core = load('bundle').newer(service.current_version(Path(home)), doc['version'])
-        coherent = sys.platform != 'win32' or load('windows_installation').ready(home)
+        coherent = _backend().installation_ready(home)
         return bool(doc.get('menu_sha256')) and not failed and not newer_core and coherent
     except (OSError, ValueError, KeyError, TypeError):
         return False
@@ -160,8 +165,9 @@ def reconcile(home, latest, feed_url, fetch=None):
     row = descriptor(latest)
     if row is None or load('service').current_version(home) != latest['version']:
         return False
-    if sys.platform == 'win32':
-        return load('windows_installation').controls(home, latest, feed_url, fetch)
+    repaired = _backend().repair_controls(home, latest, feed_url, fetch)
+    if repaired is not None:
+        return repaired
     previous = None
     try:
         previous = current(home)

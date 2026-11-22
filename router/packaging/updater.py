@@ -26,6 +26,7 @@ _models = _svc.load('router_control_models', Path(__file__).with_name('control_m
 _resources = _svc.load('router_native_resources', Path(__file__).with_name('native_resources.py'))
 _status = _svc.load('router_update_status', Path(__file__).with_name('update_status.py'))
 _reconcile = _svc.load('router_update_reconcile', Path(__file__).with_name('update_reconcile.py'))
+_platforms = _svc.load('router_platforms', Path(__file__).with_name('platforms') / '__init__.py')
 
 MAX_VERSION_FAILURES = 3
 ANNOUNCE_TIMEOUT_S = 5
@@ -425,12 +426,13 @@ def _apply_update(args, home, sleep, _fetch, _read_feed, _announce):
         cmd = [sys.executable, str(installer), '--home', str(home), '--python', sys.executable]
         if args.feed:
             cmd += ['--feed', feed]
+        backend = _platforms.host(_svc)
         try:
             result = _svc.run(cmd, capture_output=True, text=True, timeout=900,
                               env=dict(os.environ, ROUTER_NO_KEY_WINDOW='1', ROUTER_AUTOMATIC_UPDATE='1'))
         except subprocess.SubprocessError as exc:
-            if (sys.platform == 'win32' and isinstance(exc, subprocess.TimeoutExpired)
-                    and _reconcile.verified_timeout(home, latest, _svc)):
+            if (isinstance(exc, subprocess.TimeoutExpired)
+                    and backend.verified_after_timeout(home, latest, _svc)):
                 _reconcile.log(home, 'install', 'timeout_verified', version=latest['version'], error='TimeoutExpired')
                 result = subprocess.CompletedProcess(cmd, 0)
             else:
@@ -446,7 +448,7 @@ def _apply_update(args, home, sleep, _fetch, _read_feed, _announce):
             # without a serving router is a release to retry and park.
             landed = (_svc.current_version(home) == latest['version']
                       and _svc.wait_version(state, latest['version'])
-                      and (sys.platform != 'win32' or _resources.ready(home)))
+                      and backend.controls_ready(home))
             if not landed:
                 _park(home, etag, etag_path, latest['version'])
                 _record_pass(home, error='installer_failed')
@@ -455,8 +457,7 @@ def _apply_update(args, home, sleep, _fetch, _read_feed, _announce):
             failure = result.returncode
         else:
             failure = 0
-    if (_svc.current_version(home) != latest['version'] or
-            sys.platform == 'win32' and not _resources.ready(home)):
+    if _svc.current_version(home) != latest['version'] or not backend.controls_ready(home):
         print('deferred: installer did not activate the requested version')
         _record_pass(home)
         return failure

@@ -10,9 +10,10 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import loader  # noqa: E402
 _systemd = loader.load(Path(__file__).resolve().parent.parent / 'systemd.py')
 systemd = _systemd  # unit-name constants for tests; lifecycle goes through Backend
+_platforms = loader.load(Path(__file__).with_name('__init__.py'), 'router_platforms')
 
 
-class Backend:
+class Backend(_platforms.NoRepair):
     name = 'linux'
 
     def __init__(self, svc, run):

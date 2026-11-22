@@ -86,7 +86,7 @@ class TaskStateTests(unittest.TestCase):
             with self.subTest(action=action):
                 calls = []
                 obj = _backend(calls=calls)
-                with mock.patch.object(obj, '_state', return_value={}), \
+                with mock.patch.object(obj, 'state', return_value={}), \
                         mock.patch.object(obj._svc, 'current_version', return_value='1.0.0'), \
                         mock.patch.object(obj, '_drain', return_value=False), \
                         mock.patch.object(obj, '_wait_stopped', return_value=False):
@@ -208,7 +208,7 @@ class CurrentInstallerRecoveryTests(_CurrentInstallerFixture, unittest.TestCase)
                                           side_effect=lambda _: tasks['query'].update(instances=[])):
                     with self.assertRaisesRegex(SystemExit, '1.0.0'):
                         if action == 'install':
-                            obj.install(PY, home, obj._state(home), install_mod.current_release_dir(home), None)
+                            obj.install(PY, home, obj.state(home), install_mod.current_release_dir(home), None)
                         else:
                             obj.restart(home)
                 self.assertTrue(tasks['query']['pending'])

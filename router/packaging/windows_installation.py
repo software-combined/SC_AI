@@ -78,19 +78,17 @@ def defer(home, version, code='update_failed'):
     raise Deferred()
 
 
-def controls(home, latest, feed, fetch=None):
+def controls(home, latest, feed, fetch, backend):
     """Unchanged checks repair required controls through the same transaction."""
     if ready(home):
         return True
     service = load('service')
-    platforms = service.load('router_controls_platforms', Path(__file__).parent / 'platforms/__init__.py')
-    backend = platforms.select('win32', service, service.run)
     prepared = None
     try:
         source = service.current_release_dir(home)
         prepared = prepare(home, source, latest, feed, fetch)
         python = activate(home, prepared, backend)
-        backend.install(python, home, backend._state(home), source, None)
+        backend.install(python, home, backend.state(home), source, None)
         complete(home, prepared, backend)
         return True
     except Deferred:
@@ -157,16 +155,15 @@ def pending(home):
     return (Path(home) / JOURNAL).exists()
 
 
-def reconcile(home, service):
+def reconcile(home, service, backend):
     """Outer regular/Express maintenance retries only a pending journal, without waiting."""
     home = Path(home)
-    if sys.platform != 'win32' or not pending(home) or (home / '.router-removed').exists():
+    if not pending(home) or (home / '.router-removed').exists():
         return 'inactive'
     with service.install_lock(home) as held:
         if not held:
             return 'deferred'
-        platforms = service.load('router_installation_platforms', Path(__file__).parent / 'platforms/__init__.py')
-        return restore(home, platforms.select('win32', service, service.run))
+        return restore(home, backend)
 
 
 def begin(home, version, backend):
@@ -247,7 +244,7 @@ def complete(home, prepared, backend):
     python = resources / 'runtime' / native['runtime_exec']
     if doc['target'] != native['version'] or load('service').current_version(home) != doc['target']:
         raise ValueError('Installation target did not match')
-    if not backend.ensure_serving(home, backend._state(home), doc['target']):
+    if not backend.ensure_serving(home, backend.state(home), doc['target']):
         raise ValueError('Installation health did not match')
     load('native_shortcuts').install(home, resources, python)
     load('native_shortcuts').verify(home, resources, python)
@@ -282,10 +279,7 @@ def restore(home, backend):
     try:
         doc, before = _journal(home)
         if not doc['restored']:
-            for legacy in (False, True):
-                if backend._task_state(TASKS[0], home, legacy=legacy) is not None:
-                    backend._task_state(TASKS[0], home, 'disable', legacy=legacy)
-                    backend._end_router(home, 180, legacy=legacy)
+            backend.drain_router(home)
             atomic = load('atomic_write')
             for name in FILES:
                 wanted, actual = _decode(doc['files'][name]), _read(home, name)
@@ -302,7 +296,7 @@ def restore(home, backend):
                     raise ValueError('Installation restoration did not match')
             active = any(rows[TASKS[0]] and rows[TASKS[0]]['active']
                          for rows in doc['tasks'].values())
-            if active and not backend.ensure_serving(home, backend._state(home), doc['previous']):
+            if active and not backend.ensure_serving(home, backend.state(home), doc['previous']):
                 raise ValueError('Restored Router health did not match')
             doc['restored'] = True
             atomic.replace_json(home / JOURNAL, doc, expected=before)
@@ -329,3 +323,48 @@ def restore(home, backend):
         _attention(home, True)
         load('update_reconcile').log(home, 'installation', 'restore_failed', status=1)
         return 'failed'
+
+
+class Repair:
+    """The Windows backend's repair hooks (contract: `platforms.NoRepair`)."""
+
+    def recover_interrupted(self, home):
+        return restore(home, self) if pending(home) else 'inactive'
+
+    def reconcile_after_update(self, home, service):
+        return reconcile(home, service, self)
+
+    def prepare_maintenance(self, home, source, latest, delivery):
+        """Retain the whole cohort now; activation waits for the shared installer."""
+        try:
+            resources, repair = None, delivery.get('repair_version')
+            if repair and load('bundle').newer(repair, latest['version']):
+                resources = load('native_resources').for_version(home, repair)
+                doc = load('native_payload').metadata(resources)
+                if doc['version'] != repair:
+                    raise ValueError('Retained repair resources do not match')
+                source = load('service').current_release_dir(home)
+                latest = dict(version=doc['version'], sha256=doc['sha256'])
+            delivery['cohort'] = prepare(home, source, latest, delivery['feed'], delivery.get('fetch'),
+                                         resources=resources)
+        except (OSError, ValueError):
+            defer(home, latest['version'], 'bundle_invalid')
+        return delivery['cohort']['source']
+
+    def finish_maintenance(self, home, native, fetch):
+        """The transaction owns maintenance; required controls arrive before setup tools."""
+        if native and 'latest' in native:
+            return bool(load('native_resources').deliver(home, native['latest'], native['feed'], fetch))
+        return True
+
+    def verified_after_timeout(self, home, latest, service):
+        return load('update_reconcile').verified_timeout(home, latest, service)
+
+    def controls_ready(self, home):
+        return load('native_resources').ready(home)
+
+    def installation_ready(self, home):
+        return ready(home)
+
+    def repair_controls(self, home, latest, feed_url, fetch):
+        return controls(home, latest, feed_url, fetch, self)

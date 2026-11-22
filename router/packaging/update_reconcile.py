@@ -45,7 +45,8 @@ def verified_timeout(home, latest, service):
 def run(home, service):
     outcomes = {'attachment': 'deferred'}
     try:
-        outcomes['installation'] = load('windows_installation').reconcile(home, service)
+        platforms = service.load('router_platforms', Path(__file__).parent / 'platforms' / '__init__.py')
+        outcomes['installation'] = platforms.host(service).reconcile_after_update(home, service)
         recovery, runtime = load('codex_recovery'), load('runtime_rebind')
         outcomes['attachment'] = _attachment(recovery, home, service, apply=False)
         outcomes['runtime'] = runtime.reconcile(home, apply=False)
