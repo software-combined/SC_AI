@@ -9,23 +9,29 @@ Add `-beta` for a pre-release, `-express` for an urgent stable release, or
 `-beta-express` for an urgent beta. The release workflow runs on `v*` tags
 only. A beta tag needs a commit that `development` or `main` moved to, such as a
 PR merge commit, not a commit inside a merged branch. A
-stable tag needs a commit merged into `main` with a successful `Check` run for
-that exact commit, so tag the `main` merge commit after that run passes. The
+stable tag needs the `main` merge commit of a pull request whose main
+acceptance `Check` run passed, with the merge keeping that pull request's
+exact tree, and `main` must not move after that run began. Before merging,
+check that `main` has not moved since the run started; if it has, push to the
+pull request or reopen it for a fresh run (a re-run keeps the old start time).
+After such a merge, only a new release merge can be tagged. Tag that merge
+commit as soon as the pull request merges. The
 workflow then validates the exact version, builds the bundle, publishes the
 release to the public feed and creates the GitHub Release with
 `latest.json` as a public mirror for humans. The semantic version remains in
 the public tag, bundle and feed, where the updater uses it for ordering.
 Healthy current updaters check their saved channel every four hours. Old installs
 blocked by download sign-in need the [current public setup once](recovery.md); publication alone
-does not recover them. Never push to `main` directly for a release; a direct push runs
-checks but publishes nothing.
+does not recover them. Never push to `main` directly for a release; only a pull
+request merge carries the acceptance run the stable gate needs.
 
 Develop PRs and branch pushes run fast static checks. The full offline suite,
 scoped native installer checks, plugin scheduler checks and hook-adapter
-portability checks run for main PRs and pushes to `main`. A beta tag does not
+portability checks run for pull requests into `main`. A beta tag does not
 wait for them: `development` accepts commits only through pull requests that pass
 the required `Test` check, and local tests and review run before every commit.
-A stable tag reuses the exact-commit `main` acceptance instead of repeating it.
+A stable tag reuses its pull request's `main` acceptance when the merge commit
+keeps the tested tree, instead of repeating it on `main`.
 Both channels then run packaging, runtime-pin verification, signing and
 publication. A tag runs the copy of the release workflow saved in the tagged
 commit, so a tag on a commit made before this acceptance check existed can
@@ -484,9 +490,9 @@ in the `channel` file beside the state directory), so it updates first;
 watch its `/health` version and `logs/update.log` before promoting `development`
 to `main` through its PR. Promote only what the beta ran: before merging the
 release PR, confirm its head is still the beta commit; if `development` has moved,
-tag and watch a new beta on the new `development` commit first. Once the `Check`
-run for the push to `main` passes on the merge commit, tag that merge commit
-`v<VERSION>` for stable.
+tag and watch a new beta on the new `development` commit first. Once the
+release PR merges after its checks pass, tag the merge commit `v<VERSION>` for
+stable.
 
 The stable publisher refreshes the legacy public install page independently
 of native-installer acceptance. It publishes the stable feed before shared setup

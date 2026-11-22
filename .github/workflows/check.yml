@@ -8,7 +8,10 @@ on:
     # for a title or body edit (a text edit), and every job below skips that.
     types: [opened, synchronize, reopened, edited]
   push:
-    branches: [main, development]
+    # Main acceptance runs on the pull request into main. The merge commit
+    # keeps that tree, so a push to main would repeat it; release.yml reuses
+    # the pull request's run instead.
+    branches: [development]
 
 permissions:
   contents: read
@@ -29,7 +32,7 @@ jobs:
     name: Change scope
     # Native installer jobs are part of main acceptance. Develop runs skip
     # them (Plan 156, narrowed 2026-09-15), and so does a text edit.
-    if: (github.event.action != 'edited' || github.event.changes.base) && ((github.event_name == 'pull_request' && github.base_ref == 'main') || (github.event_name == 'push' && github.ref == 'refs/heads/main'))
+    if: (github.event.action != 'edited' || github.event.changes.base) && (github.event_name == 'pull_request' && github.base_ref == 'main')
     runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
@@ -48,14 +51,8 @@ jobs:
         # changed" and silently skipping the native checks.
         run: |
           set -o pipefail
-          if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
-            git diff --name-only "origin/${{ github.base_ref }}...HEAD"
-          elif [ "${{ github.event.before }}" = 0000000000000000000000000000000000000000 ]; then
-            # A new branch has no before commit. Inspect the whole candidate.
-            git ls-tree --full-tree -r --name-only "${{ github.sha }}"
-          else
-            git diff --name-only "${{ github.event.before }}...${{ github.sha }}"
-          fi | python3 tools/ci_scope.py --installer >> "$GITHUB_OUTPUT"
+          git diff --name-only "origin/${{ github.base_ref }}...HEAD" \
+            | python3 tools/ci_scope.py --installer >> "$GITHUB_OUTPUT"
 
   installer-macos:
     name: Installer (macOS)
@@ -137,7 +134,7 @@ jobs:
     name: Offline unit suite
     # Independent of native acceptance. Starting both together avoids paying
     # for their durations in series; Test still requires every result.
-    if: (github.event.action != 'edited' || github.event.changes.base) && ((github.event_name == 'pull_request' && github.base_ref == 'main') || (github.event_name == 'push' && github.ref == 'refs/heads/main'))
+    if: (github.event.action != 'edited' || github.event.changes.base) && (github.event_name == 'pull_request' && github.base_ref == 'main')
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -149,7 +146,7 @@ jobs:
       - name: Unit suite (offline)
         env:
           SCG_RUN_INSTALLER_TESTS: '1'
-          VERIFICATION_BASE: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+          VERIFICATION_BASE: ${{ github.event.pull_request.base.sha }}
         run: python tools/plugin_verification.py --base "$VERIFICATION_BASE" --run --workers 2 --report "$RUNNER_TEMP/unit-results.json"
 
   test:
@@ -277,7 +274,7 @@ jobs:
     name: Plugin schedulers
     # Native plugin schedules and Router recovery use real service managers
     # on disposable runners. Run for main acceptance; development stays lightweight.
-    if: (github.event.action != 'edited' || github.event.changes.base) && ((github.event_name == 'pull_request' && github.base_ref == 'main') || (github.event_name == 'push' && github.ref == 'refs/heads/main'))
+    if: (github.event.action != 'edited' || github.event.changes.base) && (github.event_name == 'pull_request' && github.base_ref == 'main')
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest]
@@ -313,7 +310,7 @@ jobs:
     # runs its tests, so this is their only executor: without the matrix, the
     # Windows claim would be asserted rather than exercised. Main acceptance
     # only, like the scheduler job above.
-    if: (github.event.action != 'edited' || github.event.changes.base) && ((github.event_name == 'pull_request' && github.base_ref == 'main') || (github.event_name == 'push' && github.ref == 'refs/heads/main'))
+    if: (github.event.action != 'edited' || github.event.changes.base) && (github.event_name == 'pull_request' && github.base_ref == 'main')
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest]

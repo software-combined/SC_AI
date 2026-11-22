@@ -59,8 +59,8 @@ Complete those checks before timing the new cohort.
 
 Diagnostic refs use `cyril/windows-ci-bench-` and emit diagnostic acceptance names,
 never the required `Test` name. They have read-only repository permissions and
-cannot publish or deploy. Stable release acceptance still requires the unchanged
-release workflow's successful exact-commit `check.yml` push to `main`.
+cannot publish or deploy. Stable release acceptance requires the release
+workflow's successful `check.yml` run for the pull request into `main`.
 
 ## Prospective budget and input checks
 

@@ -128,13 +128,15 @@ type `feat`, `fix`, `refactor`, `test`, `chore` or `docs`.
 
 Test discovery runs the fast core suite. Installer tests are opt-in via
 `SCG_RUN_INSTALLER_TESTS=1` (native CI runners cover them on scope for release
-PRs into `main` and pushes to `main`). Development continuous integration (CI)
-runs fast static checks; main acceptance uses the same selector and retains full
-remote regression outside the narrow plugin documentation path.
-Stable tags publish only an exact
-main commit with a successful `Check` run; beta tags publish a commit that
-`development` or `main` moved to (their first-parent line). Neither repeats those
-acceptance checks.
+PRs into `main`). Development continuous integration (CI)
+runs fast static checks; main acceptance runs on pull requests into `main`, uses
+the same selector and retains full remote regression outside the narrow plugin
+documentation path. A push to `main` runs no second copy. Stable tags publish
+only a `main` merge commit whose tree equals its pull request head, after that
+pull request's main acceptance `Check` run succeeded and only if `main` did not
+move after that run began; beta tags publish a commit
+that `development` or `main` moved to (their first-parent line). Neither repeats
+those acceptance checks.
 Local pre-commit requirements above still apply.
 
 ### Bounded live regression probes
