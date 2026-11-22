@@ -78,7 +78,7 @@ class SubscriptionCatalogueTests(unittest.TestCase):
         self.assertEqual(seen['timeout'], subscription_discovery.TIMEOUT_S)
         self.assertIn('client_version=0.155.0', seen['url'])
 
-    def test_router_bearer_is_not_forwarded_to_chatgpt(self):
+    def test_router_bearer_and_client_compression_are_not_forwarded(self):
         seen = {}
 
         def urlopen(request, timeout):
@@ -86,9 +86,11 @@ class SubscriptionCatalogueTests(unittest.TestCase):
             return _Response(b'{\"models\": []}')
 
         subscription_discovery.fetch_native(
-            {'Authorization': 'Bearer router-token', 'User-Agent': 'Codex'},
+            {'Authorization': 'Bearer router-token', 'User-Agent': 'Codex',
+             'Accept-Encoding': 'gzip, deflate, br, zstd'},
             router_token='router-token', _urlopen=urlopen)
         self.assertNotIn('Authorization', seen['headers'])
+        self.assertNotIn('Accept-encoding', seen['headers'])
         self.assertEqual(seen['headers']['User-agent'], 'Codex')
 
     def test_cache_identity_separates_account_and_client_version(self):
