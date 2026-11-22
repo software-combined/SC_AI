@@ -4,7 +4,8 @@ Every reader parses the same JSON document but keeps its own tolerance:
 `read` degrades, while `read_strict` fails closed for the router boot and the
 installer's state check. This leaf owns the shared parse and the required-key
 check, so a caller's tolerance stays visible at the call site instead of
-hidden in a private copy of the parse.
+hidden in a private copy of the parse. `update` is the shared read-modify-write
+path: a writer that loses a race reruns its change on the newer document.
 
 Python 3.9-safe and stdlib only; the installer loads it by path.
 """
@@ -40,6 +41,12 @@ def setup_pending(state, now=None):
     if not isinstance(cfg.get('expires'), (int, float)) or isinstance(cfg.get('expires'), bool):
         return False
     return cfg['expires'] > (time.time() if now is None else now)
+
+
+def saved_clients(doc):
+    """Saved attachment set: `clients`, else legacy `client` (absence means Codex)."""
+    legacy = doc.get('client', 'codex')
+    return doc.get('clients', 'none' if legacy == 'none' else 'codex')
 
 
 class StateUnreadable(ValueError):
@@ -82,3 +89,36 @@ def read_strict(path):
 def required_keys(doc, spec):
     """Names whose value is absent or of the wrong type per spec."""
     return [k for k, t in spec.items() if not isinstance(doc.get(k), t)]
+
+
+def update(home, mutate, writer, attempts=5, **options):
+    """Apply `mutate(doc)` to the saved document, rerunning it after a concurrent save.
+
+    This leaf imports nothing local, so the caller passes its atomic writer
+    module (`replace_json` and `ConcurrentChange`) and any write options.
+    Each attempt rereads the file and writes only when `mutate` changed the
+    document, comparing the saved bytes first; a change in between reruns
+    `mutate` on the newer content. Returns the saved document, or None when
+    it is missing or unreadable (as `read`). Raises the writer's
+    ConcurrentChange when every attempt lost a race.
+    """
+    # ponytail: the compare and the rename are two steps, so a write landing
+    # between them can still be lost; add a shared state lock if that occurs.
+    target = path(home)
+    for _ in range(attempts):
+        try:
+            before = target.read_bytes()
+            doc = json.loads(before)
+        except (OSError, ValueError):
+            return None
+        if not isinstance(doc, dict):
+            return None
+        mutate(doc)
+        if doc == json.loads(before):
+            return doc
+        try:
+            writer.replace_json(target, doc, expected=before, **options)
+            return doc
+        except writer.ConcurrentChange:
+            continue
+    raise writer.ConcurrentChange('Router state kept changing; retry the operation.')

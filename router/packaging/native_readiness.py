@@ -66,9 +66,10 @@ def plugins_available(client, names, run=subprocess.run, which=shutil.which, rea
 def choices_applied(home):
     """Saved answers need matching receipts before setup can be Ready."""
     try:
-        state = json.loads((Path(home) / 'mixed-router-state.json').read_text())
+        state_mod = load('service')._state
+        state = state_mod.read_strict(state_mod.path(home))
         attached = load('codex_config').read_receipt(home).get('clients', {})
-        return (not load('service')._state.setup_pending(state)
+        return (not state_mod.setup_pending(state)
                 and not load('client_choice').mode_flags(state, attached))
     except (OSError, ValueError, TypeError, AttributeError):
         return False

@@ -9,6 +9,9 @@ import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from native_payload import Deferred  # noqa: E402,F401 (install.main converts it to exit code 0)
+
 
 def _load(name):
     spec = importlib.util.spec_from_file_location(
@@ -68,17 +71,17 @@ def result(home, delivery, successful, cancelled=False):
     state = service._state.read(service._state.path(home))
     if not isinstance(state, dict):
         return
-    components = state.get('component_repairs')
-    if not isinstance(components, dict):
-        components = state['component_repairs'] = {}
-    components['assistants'] = assistant_status(home, state, delivery.get('python'))
-    if delivery.get('maintenance_done'):
-        status.verified(state, delivery['latest'], delivery['feed'], status.channel(home), None)
+    assistants = assistant_status(home, state, delivery.get('python'))
     current = service.current_version(home)
-    repaired = successful and components.get('assistants') == 'ready' and 'failed' not in components.values()
-    status.record(state, error=None if cancelled else '' if successful else 'installer_failed',
-                  applied=current if successful else None, repaired=repaired)
-    service._write_state(home, state)
+
+    def record(state):
+        components = status.set_components(state, assistants=assistants)
+        if delivery.get('maintenance_done'):
+            status.verified(state, delivery['latest'], delivery['feed'], status.channel(home), None)
+        repaired = successful and assistants == 'ready' and 'failed' not in components.values()
+        status.record(state, error=None if cancelled else '' if successful else 'installer_failed',
+                      applied=current if successful else None, repaired=repaired)
+    service._state.update(home, record, service._atomic_write)
 
 
 def assistant_status(home, state, python=None):
@@ -125,37 +128,35 @@ def maintain(home, source, state, python=None, backend=None):
     """Maintenance does not read or change any assistant attachment."""
     if not (source / 'packaging/native_controller.py').is_file():
         return None  # Older bundles and the small installer fixtures have no controller.
-    components = state.get('component_repairs')
-    if not isinstance(components, dict):
-        components = state['component_repairs'] = {}
-    service = _load('service')
+    service, status, results = _load('service'), _load('update_status'), {}
     step = 'controller'
     selected = None
     try:
         selected = _load('native_controller').install(home, source).parent.parent
-        components[step] = 'ready'
+        results[step] = 'ready'
         step = 'updater_launcher'
         service.install_launcher(home, selected)
         if (selected / 'packaging/task_launch.py').is_file():
             service.install_task_launcher(home, selected)
-        components[step] = 'ready'
+        results[step] = 'ready'
         step = 'controls_launchers'
         copied = 0
         for name in ('native_launch.py', 'desktop_launch.py'):
             if (selected / 'packaging' / name).is_file():
                 service._install_home_file(home, selected, name)
                 copied += 1
-        components[step] = 'ready' if copied == 2 else 'unknown'
+        results[step] = 'ready' if copied == 2 else 'unknown'
         repair = getattr(backend, 'repair_updates', None)
         if repair is not None and (home / 'current').exists():
             step = 'scheduler'
             repair(python, home)
-            components[step] = 'ready'
+            results[step] = 'ready'
     except (OSError, ValueError, KeyError, TypeError, SystemExit, subprocess.SubprocessError):
-        components[step] = 'failed'
+        results[step] = 'failed'
         print('Automatic updates need repair; run the current public setup again.')
+    status.set_components(state, **results)  # The caller's copy stays current for its later writes.
     try:
-        service._write_state(home, state)
+        service._state.update(home, lambda saved: status.set_components(saved, **results), service._atomic_write)
     except OSError:
         print('The maintenance result could not be saved; run setup again.')
     return selected
@@ -250,7 +251,8 @@ def finish(home, run=subprocess.run, native=None, fetch=None, *,
         if Path(version).name != version:
             raise ValueError('invalid release pointer')
         source = home / 'releases' / version
-        state = json.loads((home / 'mixed-router-state.json').read_text())
+        state_mod = _load('service')._state
+        state = state_mod.read_strict(state_mod.path(home))
         if not maintenance_done:
             controller_source = maintain(home, source, state, python, backend)
         source = controller_source or source

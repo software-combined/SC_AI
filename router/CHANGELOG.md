@@ -4,6 +4,8 @@
 
 - Remove retired download sign-in code. Downloads were already public, so updates work as before.
 - `tools/build_native_installer.py` no longer accepts `--download-config` or the no-op `--allow-unsigned`.
+- Setup and update saves retry on the newer settings instead of overwriting a concurrent save. A very short window remains, and an installer run can still replace a save made while it runs.
+- Count a deferred Windows update once. The retry counter no longer rises twice, and the deferral message appears once.
 
 ## 1.3.65
 

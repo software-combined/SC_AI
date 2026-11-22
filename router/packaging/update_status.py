@@ -94,6 +94,13 @@ def components(state):
             if key in COMPONENTS and value in ('ready', 'failed', 'unknown')}
 
 
+def set_components(state, **results):
+    """Merge component results, replacing an unusable saved map."""
+    saved = state.get('component_repairs')
+    state['component_repairs'] = dict(saved if isinstance(saved, dict) else {}, **results)
+    return state['component_repairs']
+
+
 def _parts(value):
     values = tuple(map(int, value.split('.')))
     return values + (0,) * (4 - len(values))

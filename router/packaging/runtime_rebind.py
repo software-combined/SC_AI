@@ -30,13 +30,8 @@ def reconcile(home, *, apply=True):
     if not apply:
         return outcome
     try:
-        state = service._state.read(service._state.path(home))
-        if isinstance(state, dict):
-            components = state.get('component_repairs')
-            if not isinstance(components, dict):
-                components = state['component_repairs'] = {}
-            components['scheduler'] = outcome
-            service._write_state(home, state)
+        service._state.update(home, lambda state: load('update_status').set_components(state, scheduler=outcome),
+                              service._atomic_write)
     except (OSError, ValueError, TypeError):
         pass
     return outcome

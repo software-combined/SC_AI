@@ -256,9 +256,10 @@ class InstallationRecoveryTests(unittest.TestCase):
                     return 0
                 with mock.patch.object(delivery, 'finish'), contextlib.redirect_stdout(io.StringIO()) as output:
                     if failure:
-                        with self.assertRaises(SystemExit) as stopped:
+                        deferred = isinstance(failure, OSError)
+                        with self.assertRaises(owner.Deferred if deferred else SystemExit) as stopped:
                             delivery.run_install(args, install, run=mock.Mock(), fetch=None)
-                        self.assertEqual(stopped.exception.code, 0 if isinstance(failure, OSError) else 7)
+                        self.assertTrue(deferred or stopped.exception.code == 7)
                     else:
                         self.assertEqual(delivery.run_install(args, install, run=mock.Mock(), fetch=None), 0)
                 log = home / 'logs/update.log'
@@ -275,9 +276,8 @@ class InstallationRecoveryTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             owner, home, backend, _, _, _, new = self.fixture(Path(temporary))
             backend.snapshot_cohort = mock.Mock(side_effect=OSError('temporary scheduler failure'))
-            with self.assertRaises(SystemExit) as stopped, contextlib.redirect_stdout(io.StringIO()):
+            with self.assertRaises(owner.Deferred), contextlib.redirect_stdout(io.StringIO()):
                 owner.activate(home, dict(version=new), backend)
-            self.assertEqual(stopped.exception.code, 0)
             self.assertFalse(owner.pending(home))
             state = json.loads((home / 'mixed-router-state.json').read_text())
             self.assertFalse(module('update_status').summary(state)['offer_repair'])

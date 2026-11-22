@@ -8,7 +8,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from native_payload import load
+from native_payload import Deferred, load
 
 _tasks = load('service').load('router_installation_tasks',
     Path(__file__).parent / 'platforms/windows_tasks.py')
@@ -71,12 +71,11 @@ def defer(home, version, code='update_failed'):
     service = load('service')
     if version not in service.update_failures(home):
         service.record_update_failure(home, version)  # Express defers to the regular cadence.
-    state = service._state.read(service._state.path(home))
-    load('update_status').record(state, error=code)
-    service._write_state(home, state)
+    service._state.update(home, lambda state: load('update_status').record(state, error=code),
+                          service._atomic_write)
     load('update_reconcile').log(home, 'installation', 'deferred', version=version, status=0)
     print('deferred: required Windows files could not finish; updates will retry automatically')
-    raise SystemExit(0)
+    raise Deferred()
 
 
 def controls(home, latest, feed, fetch=None):
@@ -94,6 +93,8 @@ def controls(home, latest, feed, fetch=None):
         backend.install(python, home, backend._state(home), source, None)
         complete(home, prepared, backend)
         return True
+    except Deferred:
+        raise  # activate already recorded and announced this deferral.
     except (Exception, SystemExit):
         if prepared and prepared.get('started') and restore(home, backend) != 'restored':
             raise
@@ -141,15 +142,15 @@ def _journal(home):
 
 def _attention(home, failed):
     service = load('service')
-    state = service._state.read(service._state.path(home))
-    if isinstance(state, dict):
+
+    def mark(state):
         if failed:
             state['installation_repair_required'] = True
         else:
             state.setdefault('component_repairs', {}).update({name: 'ready' for name in
                 ('controller', 'updater_launcher', 'scheduler', 'controls', 'controls_launchers')})
             load('update_status').record(state, error='', repaired=True)
-        service._write_state(home, state)
+    service._state.update(home, mark, service._atomic_write)
 
 
 def pending(home):

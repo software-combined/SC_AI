@@ -176,6 +176,40 @@ class InstallationEvidenceTests(unittest.TestCase):
             self.assertNotIn('private configuration', text)
 
 
+    def test_controls_record_one_deferral_when_activation_defers(self):
+        from tests.test_native_setup import module
+        owner = module('windows_installation')
+        with tempfile.TemporaryDirectory() as home:
+            home = Path(home)
+            (home / 'mixed-router-state.json').write_text('{"port": 1}')
+            with mock.patch.object(owner, 'ready', return_value=False), \
+                    mock.patch.object(owner, 'prepare', return_value=dict(version='1.0.1')), \
+                    mock.patch.object(owner, 'begin', side_effect=OSError('scheduler unavailable')), \
+                    contextlib.redirect_stdout(io.StringIO()) as output, self.assertRaises(owner.Deferred):
+                owner.controls(home, dict(version='1.0.1'), 'file:///feed.json')
+            state = json.loads((home / 'mixed-router-state.json').read_text())
+            self.assertEqual((state['update_failure_streak'], state['update_failures']), (1, {'1.0.1': 1}))
+            self.assertEqual(output.getvalue().count('deferred:'), 1)
+            self.assertEqual((home / 'logs/maintenance.jsonl').read_text().count('"deferred"'), 1)
+
+
+    def test_menu_delivery_retries_quietly_after_a_deferral(self):
+        from tests.test_native_setup import module
+        resources = module('native_resources')
+        with tempfile.TemporaryDirectory() as home, \
+                mock.patch.object(resources, 'reconcile', side_effect=resources.Deferred()):
+            self.assertFalse(resources.deliver(home, {}, 'file:///feed.json'))
+            self.assertFalse((Path(home) / 'desktop-delivery.json').exists())
+
+    def test_installer_entry_point_exits_zero_after_a_deferral(self):
+        installer = fixtures.install_mod
+        with tempfile.TemporaryDirectory() as home, \
+                mock.patch.object(installer, 'require_supported_platform'), \
+                mock.patch.object(installer, 'require_live_home'), \
+                mock.patch.object(installer, 'platform_backend'), \
+                mock.patch.object(installer, 'do_install', side_effect=installer._delivery.Deferred()):
+            self.assertEqual(installer.main(['--home', home]), 0)
+
 class AutomaticRemovalTests(unittest.TestCase):
     def test_native_components_never_use_the_legacy_unjournaled_recovery_path(self):
         delivery = fixtures.install_mod._delivery

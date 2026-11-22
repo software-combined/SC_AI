@@ -89,16 +89,12 @@ def _attention(home, service, outcome, *, apply=True):
     state = service._state.read(service._state.path(home))
     if not isinstance(state, dict):
         return
-    active = state.get('clients', 'codex' if state.get('client', 'codex') != 'none' else 'none')
-    if active not in ('codex', 'both'):
+    if service._state.saved_clients(state) not in ('codex', 'both'):
         return
-    components = state.get('component_repairs')
-    if not isinstance(components, dict):
-        components = state['component_repairs'] = {}
     verified = outcome in ('repaired', 'unchanged')
     status = load('install_delivery').assistant_status(home, state) if verified else 'failed'
-    if components.get('assistants') != status:
+    if load('update_status').components(state).get('assistants') != status:
         if apply:
-            components['assistants'] = status
-            service._write_state(home, state)
+            service._state.update(home, lambda doc: load('update_status').set_components(doc, assistants=status),
+                                  service._atomic_write)
         return True

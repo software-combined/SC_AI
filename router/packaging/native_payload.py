@@ -20,6 +20,14 @@ class OwnershipConflict(ValueError):
     ownership_conflict = True
 
 
+class Deferred(Exception):
+    """A Windows update stopped safely and will retry; the installer exits 0.
+
+    Importers share this class through the normal `native_payload` import,
+    so a file-loaded caller still catches what another file-loaded module raised.
+    """
+
+
 def load(name):
     spec = importlib.util.spec_from_file_location(
         'router_native_' + name, Path(__file__).with_name(name + '.py'))
