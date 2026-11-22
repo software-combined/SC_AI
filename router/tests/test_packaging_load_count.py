@@ -1,11 +1,9 @@
-"""Loading the installer may not execute router module files more often.
+"""Loading the installer executes each router module file once.
 
-`packaging/` has no module system: about fifty uncached path loaders each
-execute their target again, so one `install.py` load runs the same files many
-times (`ai_router/atomic_write.py` 45 times when this ceiling was recorded).
-A new uncached loader multiplies that cost and splits module state between
-copies. The ceiling may only fall; the cached-loader batch drives it to one
-execution per file and then tightens the assertion.
+`packaging/` has no module system, so its modules load siblings by path
+through the one cached loader in `packaging/loader.py`. A second execution of
+a file means an uncached loader: its copy has separate classes and globals,
+so exception checks and test seams on one copy miss the other.
 """
 import json
 import subprocess
@@ -16,9 +14,6 @@ from pathlib import Path
 from tests._platform import unix_only
 
 ROOT = Path(__file__).resolve().parents[1]
-
-# Measured on macOS: 239 executions of 50 files.
-LOAD_CEILING = 239
 
 # Same loader call as tests/install_fixtures.py, in a fresh isolated process
 # so the audit hook sees every module execution and leaves no hook behind.
@@ -54,15 +49,13 @@ def load_counts():
 
 
 # ponytail: unmeasured on Windows, where import-time branches may load other
-# files; add a win32 ceiling when a Windows run records one.
+# files; drop unix_only when a Windows run passes.
 @unix_only
 class PackagingLoadCountTests(unittest.TestCase):
-    def test_installer_load_executions_stay_under_the_ceiling(self):
+    def test_installer_load_executes_each_file_once(self):
         counts = load_counts()
-        total = sum(counts.values())
-        repeated = sorted((n, rel) for rel, n in counts.items() if n > 1)[-5:]
-        self.assertLessEqual(total, LOAD_CEILING,
-                             f'{total} module executions; most repeated: {repeated}')
+        self.assertIn('packaging/loader.py', counts)
+        self.assertEqual({rel: n for rel, n in counts.items() if n > 1}, {})
 
 
 if __name__ == '__main__':

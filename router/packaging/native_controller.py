@@ -4,12 +4,15 @@ Only manifest-verified release files enter the controller. Windows completion
 can select a matching retained version; other callers preserve a newer controller.
 """
 import hashlib
-import importlib.util
 import json
 import re
 import shutil
+import sys
 import tempfile
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import loader  # noqa: E402
 
 
 def _version(text):
@@ -86,8 +89,4 @@ def install(home, source, *, activate=True, allow_rollback=False):
 
 
 def _point(home, version):
-    spec = importlib.util.spec_from_file_location(
-        'router_controller_atomic', Path(__file__).with_name('atomic_write.py'))
-    atomic = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(atomic)
-    atomic.replace_text(home / 'control-version', version + '\n')
+    loader.load(Path(__file__).with_name('atomic_write.py')).replace_text(home / 'control-version', version + '\n')

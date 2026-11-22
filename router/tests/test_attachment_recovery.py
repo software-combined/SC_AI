@@ -102,14 +102,14 @@ class AttachmentRecoveryTests(unittest.TestCase):
         self.assertEqual(self.config.read_bytes(), self.before)
 
     def test_concurrent_config_edit_and_receipt_failure_preserve_owner_data(self):
-        atomic = self.recovery.load('atomic_write')
+        loaded, atomic = self.recovery.load, self.recovery.load('atomic_write')
         real = atomic.replace_text
         def concurrent(path, text, **kwargs):
             if Path(path) == self.config:
                 self.config.write_bytes(self.before + b'\n# concurrent owner edit')
             return real(path, text, **kwargs)
         with mock.patch.object(self.recovery, 'load', wraps=self.recovery.load) as load:
-            load.side_effect = lambda name: atomic if name == 'atomic_write' else module(name)
+            load.side_effect = lambda name: atomic if name == 'atomic_write' else loaded(name)
             with mock.patch.object(atomic, 'replace_text', side_effect=concurrent):
                 self.assertEqual(self.run_recovery()['attachment'], 'conflict')
         self.assertEqual(self.config.read_bytes(), self.before + b'\n# concurrent owner edit')
@@ -119,7 +119,7 @@ class AttachmentRecoveryTests(unittest.TestCase):
                 raise OSError('fixture write failure')
             return real(path, text, **kwargs)
         with mock.patch.object(self.recovery, 'load', side_effect=lambda name:
-                               atomic if name == 'atomic_write' else module(name)), \
+                               atomic if name == 'atomic_write' else loaded(name)), \
                 mock.patch.object(atomic, 'replace_text', side_effect=receipt_failure):
             self.assertEqual(self.run_recovery()['attachment'], 'failed')
         self.assertEqual(self.config.read_bytes(), self.before)

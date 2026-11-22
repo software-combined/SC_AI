@@ -14,14 +14,16 @@ router when its bundle id is `BUNDLE_ID` and it names this router home, so
 another home (a test's, say) never removes it. A failed build or removal
 prints one plain line and never fails an install.
 
-Python 3.9-safe, stdlib only and inert on import.
+Python 3.9-safe, stdlib only and side-effect free on import (apart from `sys.path`).
 """
-import importlib.util
 import plistlib
 import shutil
 import subprocess
 import sys
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import loader  # noqa: E402
 
 BUNDLE_ID = 'com.softwarecombined.router.codex-switch'
 LAUNCHER = 'codex_switch_launch.py'
@@ -29,11 +31,7 @@ HOME_KEY = 'SCGRouterHome'
 
 
 def _load(name):
-    spec = importlib.util.spec_from_file_location(
-        'router_codex_app_' + name, Path(__file__).with_name(name + '.py'))
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+    return loader.load(Path(__file__).with_name(name + '.py'))
 
 
 _offer = _load('codex_switch_offer')

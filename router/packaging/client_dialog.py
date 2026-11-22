@@ -5,17 +5,15 @@ update notice and the first-run key window, and follows the same popup
 style (AGENTS.md 4a): the title `SCG Router`, the bundled icon, plain
 language, a single selection and Continue/Cancel on both questions.
 """
-import importlib.util
 import json
 import os
 import subprocess
 import sys
 from pathlib import Path
 
-_spec = importlib.util.spec_from_file_location(
-    'router_dialog_tool', Path(__file__).resolve().parents[1] / 'ai_router/dialog_tool.py')
-_tool = importlib.util.module_from_spec(_spec)
-_spec.loader.exec_module(_tool)
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import loader  # noqa: E402
+_tool = loader.load(Path(__file__).resolve().parents[1] / 'ai_router/dialog_tool.py')
 
 TITLE = 'SCG Router'
 ICON = Path(__file__).resolve().parent / 'assets' / 'router-icon.png'

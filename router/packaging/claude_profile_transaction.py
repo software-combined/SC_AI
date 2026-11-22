@@ -1,15 +1,14 @@
 """Validate complete local journals before recovery of an interrupted sync."""
-import importlib.util
 import json
+import sys
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import loader  # noqa: E402
 
 
 def _load(name, filename):
-    spec = importlib.util.spec_from_file_location(
-        name, Path(__file__).resolve().parent / filename)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+    return loader.load(Path(__file__).resolve().parent / filename, name)
 
 
 _publish = _load('router_transaction_publish', 'claude_profile_publish.py')

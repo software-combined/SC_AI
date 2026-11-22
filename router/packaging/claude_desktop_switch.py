@@ -4,20 +4,18 @@ Claude must finish quitting before publication. An account change retains the
 old gateway profile before preparing a clean one; it never rebinds old tasks.
 """
 import argparse
-import importlib.util
 import json
 import os
 import subprocess
 import sys
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import loader  # noqa: E402
+
 
 def _load(name):
-    spec = importlib.util.spec_from_file_location(
-        'router_switch_' + name, Path(__file__).with_name(name + '.py'))
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+    return loader.load(Path(__file__).with_name(name + '.py'))
 
 
 _desktop = _load('claude_desktop_config')

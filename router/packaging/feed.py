@@ -5,16 +5,14 @@ An explicit `--feed` pin or a `feed` file is the manual path. Python 3.9+.
 Loaded via the installer's file-based import pattern, never
 `import packaging.feed`.
 """
+import sys
 import urllib.error
 import urllib.request
 from pathlib import Path
 
-import importlib.util as _ilu
-_spec = _ilu.spec_from_file_location(
-    'router_feed_verify',
-    Path(__file__).resolve().parent / 'feed_verify.py')
-_feed_verify = _ilu.module_from_spec(_spec)
-_spec.loader.exec_module(_feed_verify)
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import loader  # noqa: E402
+_feed_verify = loader.load(Path(__file__).resolve().parent / 'feed_verify.py')
 
 FEED_ORIGIN = 'https://dist.softwarecombined.com'
 FEED_URL = FEED_ORIGIN + '/stable/latest.json'

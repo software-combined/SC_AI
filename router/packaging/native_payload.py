@@ -4,15 +4,18 @@ The download is disposable. Services and the installed setup shortcut must
 only refer to the retained copy, never a disk image or temporary mount.
 """
 import hashlib
-import importlib.util
 import json
 import os
 import platform
 import re
 import shutil
+import sys
 import tempfile
 import uuid
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import loader  # noqa: E402
 
 
 class OwnershipConflict(ValueError):
@@ -29,11 +32,7 @@ class Deferred(Exception):
 
 
 def load(name):
-    spec = importlib.util.spec_from_file_location(
-        'router_native_' + name, Path(__file__).with_name(name + '.py'))
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+    return loader.load(Path(__file__).with_name(name + '.py'), 'router_native_' + name)
 
 
 def succeeded(result):
@@ -108,10 +107,7 @@ def retained(resources, home, expected_target=None, *, repair=False):
     home.mkdir(parents=True, mode=0o700, exist_ok=True)
     service = load('service')
     # The backend protects Windows ACLs as well as POSIX permissions.
-    spec = importlib.util.spec_from_file_location(
-        'router_native_platforms', Path(__file__).parent / 'platforms' / '__init__.py')
-    platforms = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(platforms)
+    platforms = loader.load(Path(__file__).parent / 'platforms' / '__init__.py')
     backend = platforms.select(os.sys.platform, service, service.run)
     if backend is None:
         raise ValueError('This computer is not supported.')

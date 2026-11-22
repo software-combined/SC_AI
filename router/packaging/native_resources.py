@@ -1,6 +1,5 @@
 """Verify target Resources; Windows joins required installation completion."""
 import hashlib
-import importlib.util
 import json
 import os
 import re
@@ -12,6 +11,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from native_payload import Deferred, load, metadata, retained, target
+import loader  # noqa: E402
 
 MAX_BYTES = 250 * 1024 * 1024
 HASH = re.compile('[0-9a-f]{64}')
@@ -99,10 +99,7 @@ def download(url, destination, row, fetch=None):
 def unpack(archive, destination):
     """Portable data-only extraction, including internal runtime links, on Python 3.9+."""
     root = (Path(destination) / 'Resources').resolve()
-    spec = importlib.util.spec_from_file_location('router_native_stage',
-        Path(__file__).parent / 'native/native_stage.py')
-    stage = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(stage)
+    stage = loader.load(Path(__file__).parent / 'native/native_stage.py')
     hardlinks = []
     with tarfile.open(archive, 'r:gz') as stream:
         names = stage._member_names(stream, links=True)

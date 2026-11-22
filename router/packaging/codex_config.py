@@ -8,12 +8,12 @@ from this helper.
 import hashlib
 import json
 import os
+import sys
 from pathlib import Path
-import importlib.util
 
-_spec = importlib.util.spec_from_file_location('router_codex_owned', Path(__file__).with_name('codex_owned.py'))
-_owned = importlib.util.module_from_spec(_spec)
-_spec.loader.exec_module(_owned)
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import loader  # noqa: E402
+_owned = loader.load(Path(__file__).with_name('codex_owned.py'))
 
 BEGIN = '# BEGIN local mixed model picker'
 END = '# END local mixed model picker'
@@ -36,9 +36,8 @@ DEFAULT_MODEL_EFFORT = 'max'
 # Root keys Codex writes for the owner's pick, in the shape the client uses.
 PICK_KEYS = ('model', 'model_reasoning_effort')
 
-# Atomic text writer, injected by install.py via service.load() (Plan 123):
-# no spec_from_file_location copy lives here, so direct spec-loads of this
-# file (portability/receipt tests) only need it when replacing blocks.
+# Atomic text writer, injected by the modules that load this one (install.py
+# first), so direct test loads of this file only need it when replacing blocks.
 _atomic_write = None
 
 

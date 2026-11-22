@@ -1,16 +1,14 @@
 """Interactive maintenance uses the existing graceful assistant-close flow."""
-import importlib.util
 import subprocess
 import sys
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import loader  # noqa: E402
+
 
 def _load(name):
-    spec = importlib.util.spec_from_file_location('router_repair_' + name,
-                                                Path(__file__).with_name(name + '.py'))
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+    return loader.load(Path(__file__).with_name(name + '.py'))
 
 
 def close_assistants(home, run=subprocess.run, *, removing=False, owned=False):

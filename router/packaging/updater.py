@@ -19,14 +19,9 @@ import urllib.request
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-import importlib.util
-# Bootstrap loader (Plan 123 exception): service must be spec-loaded before
-# service.load() exists, and this module stays usable when loaded directly.
-_spec = importlib.util.spec_from_file_location(
-    'packaging.service',
-    Path(__file__).resolve().parent / 'service.py')
-_svc = importlib.util.module_from_spec(_spec)
-_spec.loader.exec_module(_svc)
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import loader  # noqa: E402
+_svc = loader.load(Path(__file__).resolve().parent / 'service.py', 'packaging.service')
 _models = _svc.load('router_control_models', Path(__file__).with_name('control_models.py'))
 _resources = _svc.load('router_native_resources', Path(__file__).with_name('native_resources.py'))
 _status = _svc.load('router_update_status', Path(__file__).with_name('update_status.py'))
@@ -272,17 +267,8 @@ def _verified_feed(feed, body, _fetch):
     `UpdateError('feed_signature', ...)`. A `file://` feed stays
     operator-trusted without a sidecar, and must verify with one.
     """
-    import importlib.util as _ilu
-    spec = _ilu.spec_from_file_location(
-        'router_feed_verify_upd',
-        Path(__file__).resolve().parent / 'feed_verify.py')
-    fv = _ilu.module_from_spec(spec)
-    spec.loader.exec_module(fv)
-    _fspec = _ilu.spec_from_file_location(
-        'router_feed_sig',
-        Path(__file__).resolve().parent / 'feed.py')
-    _fmod = _ilu.module_from_spec(_fspec)
-    _fspec.loader.exec_module(_fmod)
+    fv = loader.load(Path(__file__).resolve().parent / 'feed_verify.py')
+    _fmod = loader.load(Path(__file__).resolve().parent / 'feed.py')
     if feed.startswith('file://') and _FEED_VERIFY_KEY is None:
         try:
             return json.loads(body.decode())

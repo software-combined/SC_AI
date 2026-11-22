@@ -239,7 +239,7 @@ class StoreOnboardingTests(unittest.TestCase):
 
     def test_store_only_setup_does_not_offer_another_download(self):
         setup = module('native_setup')
-        import windows_codex
+        windows_codex = setup.client_executable.windows_codex
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary).resolve() / 'StoreCodex'
             app = root / 'app/ChatGPT.exe'

@@ -14,20 +14,16 @@ import json
 import ntpath
 import shutil
 import subprocess
+import sys
 import time
 import urllib.request
 import xml.sax.saxutils as _sax
 from pathlib import Path
 
-import importlib.util as _ilu
-_winacl_spec = _ilu.spec_from_file_location(
-    'router_winacl', Path(__file__).resolve().parents[2] / 'ai_router' / 'winacl.py')
-_winacl = _ilu.module_from_spec(_winacl_spec)
-_winacl_spec.loader.exec_module(_winacl)
-_tasks_spec = _ilu.spec_from_file_location(
-    'router_windows_tasks', Path(__file__).with_name('windows_tasks.py'))
-_tasks = _ilu.module_from_spec(_tasks_spec)
-_tasks_spec.loader.exec_module(_tasks)
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+import loader  # noqa: E402
+_winacl = loader.load(Path(__file__).resolve().parents[2] / 'ai_router' / 'winacl.py')
+_tasks = loader.load(Path(__file__).with_name('windows_tasks.py'))
 
 _XML_ENTITIES = {'"': '&quot;', "'": '&apos;'}
 

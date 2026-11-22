@@ -1,6 +1,5 @@
 """Desktop identity, lifecycle, dialogs and owned shortcuts; `app` defaults to Claude."""
 import collections
-import importlib.util
 import json
 import os
 import plistlib
@@ -12,12 +11,12 @@ import tempfile
 import time
 from pathlib import Path, PurePosixPath
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import loader  # noqa: E402
+
 
 def _load(name, filename):
-    spec = importlib.util.spec_from_file_location(name, Path(__file__).with_name(filename))
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+    return loader.load(Path(__file__).with_name(filename), name)
 
 
 _atomic = _load('router_claude_desktop_atomic', 'atomic_write.py')

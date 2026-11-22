@@ -17,11 +17,10 @@ anything. It applies only to Codex installs in subscription mode. A detached
 worker from the retained controller shows it on every platform. Missing
 dialogs leave the offer pending.
 
-Python 3.9-safe, stdlib only and inert on import: the updater loads it by
+Python 3.9-safe, stdlib only and side-effect free on import (apart from `sys.path`): the updater loads it by
 path, and Switch Codex's installer reuses `APP`.
 """
 import argparse
-import importlib.util
 import json
 import os
 import plistlib
@@ -30,6 +29,9 @@ import sys
 import time
 from datetime import datetime
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import loader  # noqa: E402
 
 APP = Path.home() / 'Applications' / 'Switch Codex.app'
 CHATGPT_APP = Path('/Applications/ChatGPT.app')
@@ -56,10 +58,7 @@ _VERSION = re.compile(r'\d{1,9}(?:\.\d{1,9}){0,5}')
 
 
 def _load(name, filename):
-    spec = importlib.util.spec_from_file_location(name, filename)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+    return loader.load(filename, name)
 
 
 _HERE = Path(__file__).resolve().parent

@@ -80,7 +80,7 @@ def _attachment(recovery, home, service, *, apply):
     except (SystemExit, ValueError, KeyError, TypeError):
         return 'conflict'
     except OSError as exc:
-        return 'conflict' if type(exc).__name__ == 'ConcurrentChange' else 'failed'
+        return 'conflict' if isinstance(exc, load('atomic_write').ConcurrentChange) else 'failed'
 
 
 def _attention(home, service, outcome, *, apply=True):

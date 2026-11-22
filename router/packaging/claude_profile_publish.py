@@ -1,7 +1,6 @@
 """Exclusive pair publication. Journals cover process crashes, not disk failure."""
 import ctypes
 import hashlib
-import importlib.util
 import json
 import operator
 import os
@@ -12,13 +11,12 @@ import sys
 import tempfile
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import loader  # noqa: E402
+
 
 def _load(name, filename):
-    spec = importlib.util.spec_from_file_location(
-        name, Path(__file__).resolve().parent / filename)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+    return loader.load(Path(__file__).resolve().parent / filename, name)
 
 
 _records = _load('router_publish_records', 'claude_profile_records.py')

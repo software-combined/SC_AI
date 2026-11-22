@@ -10,19 +10,18 @@ is asked, `codex_switch_config` which Codex block an attach writes and
 owns what the answer attaches, and loads those siblings so the entry point
 keeps loading one module per concern.
 """
-import importlib.util
 import os
+import sys
 import time
 import uuid
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import loader  # noqa: E402
+
 
 def _load(name):
-    spec = importlib.util.spec_from_file_location(
-        'router_' + name, Path(__file__).resolve().parent / (name + '.py'))
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+    return loader.load(Path(__file__).resolve().parent / (name + '.py'))
 
 
 _dialog = _load('client_dialog')

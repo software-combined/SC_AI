@@ -3,7 +3,6 @@ No installation path is persisted; subscription recovery needs no CLI.
 """
 import argparse
 import contextlib
-import importlib.util
 import json
 import os
 import subprocess
@@ -12,13 +11,12 @@ import time
 from datetime import datetime
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import loader  # noqa: E402
+
 
 def _load(name):
-    spec = importlib.util.spec_from_file_location(
-        'router_codex_switch_' + name, Path(__file__).with_name(name + '.py'))
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+    return loader.load(Path(__file__).with_name(name + '.py'))
 
 
 _platform = _load('claude_desktop_platform')
