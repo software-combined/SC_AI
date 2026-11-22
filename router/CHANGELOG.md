@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Remove retired download sign-in code. Downloads were already public, so updates work as before.
+- `tools/build_native_installer.py` no longer accepts `--download-config` or the no-op `--allow-unsigned`.
+
 ## 1.3.65
 
 - Keep the Codex model list working when the ChatGPT app asks for a compressed

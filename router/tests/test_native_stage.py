@@ -193,35 +193,6 @@ class NativeStageTests(unittest.TestCase):
             stage.stage(bundle, runtime_path, 'windows/x86_64', 'stable',
                         self.root / 'Resources', lock_path=lock)
 
-    def test_optional_public_download_config_rejects_credentials_and_url_tricks(self):
-        bundle, runtime, lock = self._inputs('darwin/arm64')
-        public = {
-            'version': 1,
-            'distribution_origin': 'https://dist.softwarecombined.com',
-            'tenant_id': '11111111-1111-4111-8111-111111111111',
-            'client_id': '22222222-2222-4222-8222-222222222222',
-            'scope': 'api://33333333-3333-4333-8333-333333333333/Download.Read',
-            'exchange_url':
-                'https://abcd1234.execute-api.ap-southeast-2.amazonaws.com/download-access',
-        }
-        config = self.root / 'download-auth.json'
-        config.write_text(json.dumps(public))
-        resources = self.root / 'Resources'
-        stage.stage(bundle, runtime, 'darwin/arm64', 'stable', resources,
-                    lock_path=lock, download_config=config)
-        self.assertEqual(json.loads((resources / 'download-auth.json').read_text()),
-                         public)
-        for change in ({'bearer_token': 'secret'},
-                       {'exchange_url': public['exchange_url'] + '?token=secret'},
-                       {'scope': 'api://wrong/Download.Read'}):
-            with self.subTest(change=change):
-                config.write_text(json.dumps(public | change))
-                with self.assertRaises(ValueError):
-                    stage.stage(bundle, runtime, 'darwin/arm64', 'stable',
-                                self.root / 'bad-resources', lock_path=lock,
-                                download_config=config)
-                self.assertFalse((self.root / 'bad-resources').exists())
-
 
 if __name__ == '__main__':
     unittest.main()

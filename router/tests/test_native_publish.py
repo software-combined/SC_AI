@@ -7,7 +7,7 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest import mock
 
-from tests.test_download_auth import load
+from tests.test_download_oauth import load
 
 publish = load('native_publish_under_test', 'tools/publish_native_installers.py')
 

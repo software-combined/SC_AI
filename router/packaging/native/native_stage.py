@@ -6,9 +6,7 @@ import json
 import re
 import shutil
 import tarfile
-import uuid
 from pathlib import Path, PurePosixPath
-from urllib.parse import urlsplit
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -112,59 +110,7 @@ def _verify_bundle(bundle, channel):
     return version
 
 
-def _download_config(path):
-    """The optional public-only bootstrap settings; reject secret-shaped extras."""
-    path = Path(path)
-    if path.stat().st_size > 8192:
-        raise ValueError('download config is too large')
-    try:
-        doc = json.loads(path.read_text())
-    except (UnicodeError, ValueError) as exc:
-        raise ValueError('download config is not valid JSON') from exc
-    keys = {'version', 'distribution_origin', 'tenant_id', 'client_id',
-            'scope', 'exchange_url'}
-    if not isinstance(doc, dict) or set(doc) != keys:
-        raise ValueError('download config has missing or extra fields')
-    if type(doc['version']) is not int or doc['version'] != 1:
-        raise ValueError('download config version must be 1')
-    if doc['distribution_origin'] != 'https://dist.softwarecombined.com':
-        raise ValueError('download config has unexpected distribution origin')
-    for key in ('tenant_id', 'client_id'):
-        value = doc[key]
-        try:
-            valid = isinstance(value, str) and str(uuid.UUID(value)) == value
-        except (ValueError, AttributeError):
-            valid = False
-        if not valid:
-            raise ValueError('download config has invalid ' + key)
-    if (not isinstance(doc['scope'], str)
-            or not re.fullmatch(r'api://[0-9a-f-]{36}/Download\.Read', doc['scope'])):
-        raise ValueError('download config has invalid scope')
-    resource_id = doc['scope'][6:-len('/Download.Read')]
-    try:
-        scope_valid = str(uuid.UUID(resource_id)) == resource_id
-    except ValueError:
-        scope_valid = False
-    if not scope_valid:
-        raise ValueError('download config has invalid scope resource')
-    try:
-        if not isinstance(doc['exchange_url'], str):
-            raise ValueError('exchange URL must be a string')
-        url = urlsplit(doc['exchange_url'])
-        port = url.port
-    except ValueError as exc:
-        raise ValueError('download config has invalid exchange URL') from exc
-    host = re.fullmatch(r'[a-z0-9]+\.execute-api\.[a-z0-9-]+\.amazonaws\.com',
-                        url.hostname or '')
-    if (url.scheme != 'https' or not host or url.path != '/download-access'
-            or url.query or url.fragment or url.username or url.password
-            or port not in (None, 443)):
-        raise ValueError('download config has invalid exchange URL')
-    return doc
-
-
-def stage(bundle, runtime, target, channel, resources, *, lock_path=LOCK_PATH,
-          download_config=None):
+def stage(bundle, runtime, target, channel, resources, *, lock_path=LOCK_PATH):
     """Write a new Resources tree; caller owns cleanup on failure."""
     if target not in TARGETS:
         raise ValueError('unsupported target: ' + target)
@@ -173,8 +119,6 @@ def stage(bundle, runtime, target, channel, resources, *, lock_path=LOCK_PATH,
     bundle, runtime, resources = Path(bundle), Path(runtime), Path(resources)
     if not bundle.is_file() or not runtime.is_file():
         raise ValueError('bundle and runtime must be local files')
-    public_config = (_download_config(download_config)
-                     if download_config is not None else None)
     entry = _lock_entry(target, lock_path)
     runtime_sha = sha256_file(runtime)
     if runtime_sha != entry['sha256']:
@@ -212,7 +156,4 @@ def stage(bundle, runtime, target, channel, resources, *, lock_path=LOCK_PATH,
                 'runtime_exec': runtime_exec,
                 'native_signature': 'unsigned'}
     (resources / 'installer.json').write_text(json.dumps(metadata, indent=2) + '\n')
-    if public_config is not None:
-        (resources / 'download-auth.json').write_text(
-            json.dumps(public_config, indent=2) + '\n')
     return metadata

@@ -15,13 +15,10 @@ import webbrowser
 CALLBACK_PATH = '/scg-router/signin'
 MAX_RESPONSE = 65536
 MESSAGES = {
-    'configuration_required': 'Staff download sign-in has not been configured.',
-    'configuration_invalid': 'Staff download sign-in settings need IT attention.',
     'signin_required': 'Sign in with your work account to download updates.',
     'signin_failed': 'Work account sign-in did not finish. Try again.',
     'access_denied': 'This work account does not have download access.',
     'download_unavailable': 'Download access is temporarily unavailable. Try again later.',
-    'session_invalid': 'Saved download sign-in needs IT attention.',
 }
 
 
@@ -80,10 +77,6 @@ def _token(config, fields):
         raise SignInRequired('signin_failed')
     return {'access_token': access, 'refresh_token': refresh,
             'expires_at': time.time() + expiry}
-
-
-def refresh(config, refresh_token):
-    return _token(config, {'grant_type': 'refresh_token', 'refresh_token': refresh_token})
 
 
 def callback_code(query, expected_state):

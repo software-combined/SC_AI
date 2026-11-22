@@ -287,7 +287,6 @@ def do_install(args, _fetch=fetch, _run=None):
     if not args.dry_run and not _client_choice.require_recovered(
             Path(args.home).expanduser(), automatic=os.environ.get('ROUTER_AUTOMATIC_UPDATE') == '1'):
         return 0
-    _svc._feed.configure_home(Path(args.home).expanduser())
     return _delivery.run_install(args, lambda delivery: _do_install(args, _fetch, _run, delivery),
         run=lambda *a, **kw: run(*a, **kw), fetch=None if _fetch is fetch else _fetch)
 

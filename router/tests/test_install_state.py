@@ -82,8 +82,7 @@ class InstallStateTests(unittest.TestCase):
             (tmp / 'ai_router').mkdir()
             for name in ('service.py', 'launchd.py', 'feed.py',
                          'feed_verify.py', 'atomic_write.py', 'notice.py',
-                         'notice_text.py', 'windows_native.py', 'download_auth.py', 'download_oauth.py',
-                         'download_session.py'):
+                         'notice_text.py', 'windows_native.py'):
                 shutil.copy(root / 'packaging' / name, tmp / 'packaging' / name)
             for name in ('subscription_roster.py', 'retired_slugs.py',
                          'atomic_write.py', 'state.py', 'winacl.py', 'winsecurity.py'):

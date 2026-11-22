@@ -17,8 +17,8 @@ from tests._platform import unix_only
 
 ROOT = Path(__file__).resolve().parents[1]
 
-# Measured on macOS and on Linux-selected loads: 303 executions of 54 files.
-LOAD_CEILING = 303
+# Measured on macOS: 240 executions of 51 files.
+LOAD_CEILING = 240
 
 # Same loader call as tests/install_fixtures.py, in a fresh isolated process
 # so the audit hook sees every module execution and leaves no hook behind.

@@ -121,9 +121,7 @@ discards a late response before it can reach the local setup writer.
 OAuth tokens and management credentials never become release configuration.
 The Microsoft callback shows a self-contained Hub-style confirmation with bundled
 brand fonts and logo, and clears the consumed code from the browser address.
-`feed` downloads public software without credentials. Legacy `download_auth`,
-`download_oauth` and `download_session` helpers are retained for compatibility,
-but the installer and updater no longer require them. `control_models` checks
+`feed` downloads public software without credentials. `control_models` checks
 model bytes against a signed feed's checksum. The inference process only reads
 the resulting model cache. `infra/downloads` owns token verification and short
 download grants for legacy consumers. It cannot change model routing or provider credentials.
