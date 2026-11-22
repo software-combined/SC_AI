@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+## 1.3.65
+
+- Keep the Codex model list working when the ChatGPT app asks for a compressed
+  reply. Updated apps no longer fail with "The model list is temporarily unavailable".
+
 ## 1.3.64
 
 - Replace GPT-6 Astra and GPT-6.1 Sol in the OpenRouter pickers with GPT-6.2 Astra and GPT-6.2 Sol.

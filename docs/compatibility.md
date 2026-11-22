@@ -1,5 +1,28 @@
 # Compatibility
 
+## Router 1.3.65 release checks, 22 November 2026 AEDT
+
+Checks ran with Codex desktop `26.1117.41037` (build `29803`, bundled CLI
+`0.171.0-alpha.13`) and Claude Code `2.1.318`. This desktop update asks for a
+compressed model list, which Router 1.3.64 could not read.
+
+| Client and route | Model requested at Low | Result |
+| --- | --- | --- |
+| Codex picker, Router 1.3.64 | None (metadata only) | Failed: the picker listed only native ChatGPT models. |
+| Codex picker, Router 1.3.65 | None (metadata only) | Passed: native and OpenRouter models listed. |
+| Codex through OpenRouter, 1.3.65 | `deepseek/deepseek-v4.1-flash-1017` | Two upstream requests, one tool call; final message passed. |
+| Codex through ChatGPT | `gpt-6-luna` | Two upstream requests, one tool call, with the signed-in subscription. |
+| Claude Code through OpenRouter, 1.3.65 | `deepseek/deepseek-v4.1-flash-1017` | Three turns, two sequential Reads; final marker passed. |
+| Claude Code through its subscription | Sonnet | Two turns, one Read; exact marker returned. The client reported `claude-sonnet-5-5`. |
+
+The picker checks used `tools/probe_model_discovery.py` with zero inference
+calls. The Codex legs used `tools/probe_codex_runtime.py --effort low` and the
+Claude OpenRouter leg used `tools/probe_claude_code.py --candidate` with a
+0.10 USD cap. Both OpenRouter legs ran an isolated candidate listener. The ChatGPT leg
+used `--live-home` through the installed router; the fix does not change that
+request path. The Claude subscription leg ran as a real session from a
+terminal with the owner's settings. Served effort was unverified on all routes.
+
 ## Router 1.3.62 release checks, 19 November 2026 AEDT
 
 Checks ran with Codex desktop `26.1111.21308` (build `27194`, bundled CLI
