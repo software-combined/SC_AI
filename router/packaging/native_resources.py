@@ -11,7 +11,7 @@ import tempfile
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from native_payload import load, metadata, retained, target
+from native_payload import Deferred, load, metadata, retained, target
 
 MAX_BYTES = 250 * 1024 * 1024
 HASH = re.compile('[0-9a-f]{64}')
@@ -215,7 +215,7 @@ def deliver(home, latest, feed_url, fetch=None):
             _record(home, 'unknown')
             print('SCG Router menu delivery is blocked by an existing shortcut or startup entry.')
             return False
-        if sys.platform == 'win32' and isinstance(error, SystemExit) and error.code == 0:
+        if isinstance(error, Deferred):
             return False  # The unchanged or restored cohort remains usable; retry quietly.
         load('atomic_write').replace_json(Path(home) / 'desktop-delivery.json',
                                          dict(status='failed'))
@@ -241,20 +241,15 @@ def confirm_controls(home, resources):
 
 
 def _record(home, outcome, complete=False):
+    def mark(state):
+        components = status.set_components(state, controls=outcome)
+        if (complete and components.get('assistants') == 'ready'
+                and all(value == 'ready' for value in status.components(state).values())
+                and state.get('last_applied_version') == service.current_version(Path(home))):
+            error = '' if state.get('last_error') in ('installer_failed', 'installer_timeout') else None
+            status.record(state, error=error, repaired=True)
     try:
-        service = load('service')
-        state = service._state.read(service._state.path(Path(home)))
-        if isinstance(state, dict):
-            components = state.get('component_repairs')
-            if not isinstance(components, dict):
-                components = state['component_repairs'] = {}
-            components['controls'] = outcome
-            status = load('update_status')
-            if (complete and components.get('assistants') == 'ready'
-                    and all(value == 'ready' for value in status.components(state).values())
-                    and state.get('last_applied_version') == service.current_version(Path(home))):
-                error = '' if state.get('last_error') in ('installer_failed', 'installer_timeout') else None
-                status.record(state, error=error, repaired=True)
-            service._write_state(Path(home), state)
+        service, status = load('service'), load('update_status')
+        service._state.update(Path(home), mark, service._atomic_write)
     except (OSError, ValueError, TypeError):
         pass  # A notice cannot fail a completed routing update.

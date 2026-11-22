@@ -172,7 +172,7 @@ class BedrockSetupTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as home, \
                 mock.patch.object(setup_mod.state_mod, 'read',
                                   return_value=dict(state)), \
-                mock.patch.object(setup_mod, '_atomic_replace'), \
+                mock.patch.object(setup_mod, '_update_state'), \
                 mock.patch('ai_router.availability.current_key',
                            side_effect=lambda home, pid=None: (
                                'bedrock-key' if pid == 'bedrock' else None)), \

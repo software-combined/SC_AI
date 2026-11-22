@@ -126,7 +126,13 @@ model bytes against a signed feed's checksum. The inference process only reads
 the resulting model cache. `infra/downloads` owns token verification and short
 download grants for legacy consumers. It cannot change model routing or provider credentials.
 
+`state.update` is the shared read-modify-write path for `mixed-router-state.json`.
+It rereads the document, applies the caller's change and writes only when the saved
+bytes are unchanged. A concurrent save reruns the change on the newer document, a
+bounded number of times; a save landing in the short gap between that check and the
+rename can still be lost. `install.py` still writes its whole document under the installation lock.
 `update_status` owns verified channel facts, cache identity and repair summaries.
+It also owns version validation for packaging callers.
 Only a verified release for the same channel and source can support a cached
 current-version response. Diagnostics and controls read those facts without
 changing state. A successful feed check clears only earlier feed-verification or
@@ -165,7 +171,8 @@ and entry points. It never captures client configuration, credentials or full st
 Completion verifies health and component bindings before writing the cohort receipt.
 After a runtime rollback, this transaction may select a verified matching older controller.
 Newer controller files stay retained; independent callers keep their non-downgrade rule.
-Verified restoration defers the update quietly. Incomplete restoration keeps both
+Verified restoration defers the update quietly: it raises `native_payload.Deferred`,
+which the installer entry point turns into exit code 0. Incomplete restoration keeps both
 runtimes and exposes repair attention. Attachment and plugin outcomes remain separate.
 `codex_recovery` repairs only an absent block under a valid, active receipt and
 healthy Router. `codex_owned` validates absence, connection conflicts and TOML.

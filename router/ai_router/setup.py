@@ -16,8 +16,7 @@ import time
 from pathlib import Path
 from urllib.parse import parse_qsl
 
-from . import key_prompt, key_store, provider_defs, setup_page, state as state_mod
-from .atomic_write import StaleTmp, replace_json
+from . import atomic_write, key_prompt, key_store, provider_defs, setup_page, state as state_mod
 from .events import log_event
 
 _ON_WINDOWS = os.name == 'nt'
@@ -171,19 +170,17 @@ def open_key_window(server, home, provider_id=None, _opener=None, _prompt=None):
             return key_store.window_provider(state) == provider_id
         nonce = _secrets.token_urlsafe(32)
         expires = int(time.time()) + SETUP_TTL_S
-        path = state_mod.path(home)
-        try:
-            doc = state_mod.read(path)
-            if doc is None:
-                return False
+
+        def mint(doc):
             doc['setup'] = {'nonce': nonce, 'expires': expires,
                             'provider': provider_id}
-            _atomic_replace(path, doc)
+        try:
+            if _update_state(home, mint) is None:
+                return False
         except (OSError, ValueError):
             return False
         if isinstance(state, dict):
-            state['setup'] = {'nonce': nonce, 'expires': expires,
-                              'provider': provider_id}
+            mint(state)
         url = ('http://127.0.0.1:%s/%s/setup/%s'
                % (state.get('port'), state.get('token'), nonce))
     try:
@@ -205,26 +202,22 @@ def open_key_window(server, home, provider_id=None, _opener=None, _prompt=None):
 
 
 
-def _atomic_replace(path, doc):
+def _update_state(home, mutate):
     # A crash between create and replace leaves the deterministic tmp behind;
     # the writer's default policy clears it once and retries, so a later nonce
     # mint or close cannot fail closed forever until someone unlinks it by hand.
     try:
-        replace_json(path, doc, mode=None, tmp_name=path.name + '.setup.tmp')
-    except StaleTmp:
+        return state_mod.update(home, mutate, atomic_write, mode=None,
+                                tmp_name=state_mod.STATE_NAME + '.setup.tmp')
+    except atomic_write.StaleTmp:
         # Only a leftover we could not clear is remapped; every other OSError
         # keeps its own reason for the caller.
-        raise OSError('could not replace %s' % path)
+        raise OSError('could not replace %s' % state_mod.path(home))
 
 
 def _finish_setup(state, home, mode=None, profile=None, claude_mode=None):
     """Drop the nonce and persist mode, profile and Claude's choice."""
-    path = state_mod.path(home)
-    try:
-        from . import catalogue
-        doc = state_mod.read(path)
-        if doc is None:
-            return False
+    def finish(doc):
         doc.pop('setup', None)
         if mode in ('subscription', 'none'):
             doc['openai_mode'] = mode
@@ -233,6 +226,12 @@ def _finish_setup(state, home, mode=None, profile=None, claude_mode=None):
         if claude_mode in ('subscription', 'none'):
             doc['claude_mode'] = claude_mode
             doc['anthropic_mode'] = claude_mode
+
+    try:
+        from . import catalogue
+        doc = state_mod.read(state_mod.path(home))
+        if doc is None:
+            return False
         from . import availability as _availability
         from . import provider_defs as _defs
         # A fresh key changes what its provider allows: refresh every
@@ -255,18 +254,12 @@ def _finish_setup(state, home, mode=None, profile=None, claude_mode=None):
         catalogue.merge_file(Path(home) / 'mixed-models.json',
                              openai_mode=mode or doc.get('openai_mode', 'subscription'),
                              available=_avail)
-        _atomic_replace(path, doc)
+        if _update_state(home, finish) is None:
+            return False
     except (OSError, ValueError):
         return False
     if isinstance(state, dict):
-        state.pop('setup', None)
-        if mode in ('subscription', 'none'):
-            state['openai_mode'] = mode
-        if profile in ('general', 'dev'):
-            state['agents_profile'] = profile
-        if claude_mode in ('subscription', 'none'):
-            state['claude_mode'] = claude_mode
-            state['anthropic_mode'] = claude_mode
+        finish(state)
     return True
 
 

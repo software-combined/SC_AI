@@ -126,7 +126,6 @@ _bundle = _svc.load(
 # pushes the callable seams into the bundle module, while the rest travel as
 # explicit wrapper arguments. The aliases below keep test patch points resolving.
 
-
 verify_sha256 = _bundle.verify_sha256
 newer = _bundle.newer
 check_manifest = _bundle.check_manifest
@@ -686,7 +685,10 @@ def main(argv=None):
             print('deferred: another router operation is in progress')
             return 1 if args.uninstall else 0
         require_live_home(home, 'this action')
-        rc = action(args)
+        try:
+            rc = action(args)
+        except _delivery.Deferred:
+            return 0  # The deferral was recorded and announced; the next scheduled pass retries.
         if rc == 0 and action is do_install:
             # A pending restart notice fires only from this CLI entry point,
             # never from do_install, so in-process callers cannot spawn one.

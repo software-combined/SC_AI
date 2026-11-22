@@ -204,7 +204,7 @@ def _offer_desktop(home):
     """Start a retained, detached worker; a launch is not presentation."""
     try:
         version = (Path(home) / 'control-version').read_text().strip()
-        if not re.fullmatch(r'\d+(?:\.\d+){2,3}', version):
+        if not _load('router_offer_update_status', _HERE / 'update_status.py').version(version):
             return None
         helper = Path(home) / 'control' / version / 'packaging' / Path(__file__).name
         if not helper.is_file():

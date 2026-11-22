@@ -67,22 +67,18 @@ def _record_pass(home, error=_KEEP, applied=None, latest=None, feed=None, etag=N
 
     `error` is a code from ERROR_CODES, or '' to clear the previous one;
     omitted leaves the stored value alone. The read-modify-write goes through
-    the single state writer (Plan 131): counter and pass record stay together.
+    the single state update path: counter and pass record stay together.
     """
     _svc.prune_logs(home / 'logs')
+
+    def record(state):
+        if latest is not None:
+            _status.verified(state, latest, feed, channel or _status.channel(home), etag)
+        _status.record(state, error=None if error is _KEEP else error,
+                       applied=applied, repaired=bool(applied and error == ''))
     try:
-        state = _svc._state.read(_svc._state.path(home))
+        _svc._state.update(home, record, _svc._atomic_write)
     except (AttributeError, OSError, ValueError):
-        return
-    if not isinstance(state, dict):
-        return
-    if latest is not None:
-        _status.verified(state, latest, feed, channel or _status.channel(home), etag)
-    _status.record(state, error=None if error is _KEEP else error,
-                   applied=applied, repaired=bool(applied and error == ''))
-    try:
-        _svc._write_state(home, state)
-    except OSError:
         return
 
 
@@ -182,10 +178,7 @@ def _read_failures(home):
     stale copy would drop its changes.
     """
     state = _svc._state.read(_svc._state.path(home))
-    if state is None:
-        return None, {}
-    failures = state.get('update_failures')
-    return state, dict(failures) if isinstance(failures, dict) else {}
+    return (None, {}) if state is None else (state, _failures(state))
 
 
 def update_failures(home):
@@ -193,31 +186,35 @@ def update_failures(home):
     return _read_failures(home)[1]
 
 
+def _failures(state):
+    failures = state.get('update_failures')
+    return dict(failures) if isinstance(failures, dict) else {}
+
+
 def record_update_failure(home, version):
     """Count a failed attempt at one version; returns the new count."""
-    state, failures = _read_failures(home)
-    if state is None:
-        return 0
-    verified = state.get('latest_verified', {})
-    contexts = state.setdefault('update_failure_context', {})
-    if isinstance(verified, dict) and verified.get('version') == version and isinstance(contexts, dict):
-        context = {key: verified.get(key) for key in ('channel', 'source')}
-        if version in contexts and contexts[version] != context:
-            failures.pop(version, None)
-        contexts[version] = context
-    failures[version] = failures.get(version, 0) + 1
-    state['update_failures'] = failures
-    _svc._write_state(home, state)
-    return failures[version]
+    def count(state):
+        failures = _failures(state)
+        verified = state.get('latest_verified', {})
+        contexts = state.setdefault('update_failure_context', {})
+        if isinstance(verified, dict) and verified.get('version') == version and isinstance(contexts, dict):
+            context = {key: verified.get(key) for key in ('channel', 'source')}
+            if version in contexts and contexts[version] != context:
+                failures.pop(version, None)
+            contexts[version] = context
+        failures[version] = failures.get(version, 0) + 1
+        state['update_failures'] = failures
+    state = _svc._state.update(home, count, _svc._atomic_write)
+    return 0 if state is None else state['update_failures'][version]
 
 
 def clear_update_failures(home, version):
-    state, failures = _read_failures(home)
-    if state is None or version not in failures:
-        return
-    del failures[version]
-    state['update_failures'] = failures
-    _svc._write_state(home, state)
+    def clear(state):
+        failures = _failures(state)
+        if version in failures:
+            del failures[version]
+            state['update_failures'] = failures
+    _svc._state.update(home, clear, _svc._atomic_write)
 
 
 def _park(home, etag, etag_path, version):
@@ -325,7 +322,7 @@ def _up_to_date(home, announce, etag_path=None, etag=None, feed=None):
     prefix = {'repair': 'update needs repair; current ', 'update': 'update available; current '}
     print(prefix.get(facts['required_action'], 'up to date ') + _svc.current_version(home))
     try:
-        state = json.loads((home / 'mixed-router-state.json').read_text())
+        state = _svc._state.read_strict(_svc._state.path(home))
         (announce or _announce_new_models)(home, state)
     except Exception:
         pass
@@ -415,8 +412,8 @@ def _apply_update(args, home, sleep, _fetch, _read_feed, _announce):
               f"run the installer by hand to retry")
         return 0
     try:
-        state = json.loads((home / 'mixed-router-state.json').read_text())
-    except (OSError, ValueError):
+        state = _svc._state.read_strict(_svc._state.path(home))
+    except _svc._state.StateUnreadable:
         raise UpdateError('update_failed', 'router state is missing or unreadable')
     want = _required_sha256(latest)
     try:

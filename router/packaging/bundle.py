@@ -9,7 +9,6 @@ like the installer. Loaded via service.load(), never `import packaging.bundle`,
 so installed bundles keep working without a `packaging` distribution.
 """
 import hashlib
-import json
 import os
 import shutil
 import sys
@@ -243,8 +242,8 @@ def do_rollback(args, *, platform_backend, restart_router, wait_version,
         print(f'up to date {current}')
         return 0
     try:
-        state = json.loads((home / 'mixed-router-state.json').read_text())
-    except (OSError, ValueError):
+        state = _svc._state.read_strict(_svc._state.path(home))
+    except _svc._state.StateUnreadable:
         raise SystemExit(f'router state is missing or unreadable under {home}')
     previous = swap_current(home, target)
     restart_router(home)

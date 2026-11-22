@@ -401,13 +401,13 @@ class KeyWindowTests(unittest.TestCase):
         self.assertNotIn('post', seen)
 
 
-    def test_atomic_replace_recovers_from_stale_tmp(self):
+    def test_state_update_recovers_from_stale_tmp(self):
         home = Path(tempfile.mkdtemp())
         self.addCleanup(shutil.rmtree, home, True)
         path = home / 'mixed-router-state.json'
         path.write_text(json.dumps({'port': 1, 'token': 't'}))
         stale = path.with_name(path.name + '.setup.tmp')
         stale.write_text('crash residue')
-        setup._atomic_replace(path, {'port': 1, 'token': 't', 'setup': {'nonce': 'x', 'expires': 1}})
+        setup._update_state(home, lambda doc: doc.update(setup={'nonce': 'x', 'expires': 1}))
         self.assertEqual(json.loads(path.read_text())['setup']['nonce'], 'x')
         self.assertFalse(stale.exists())

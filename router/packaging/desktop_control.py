@@ -22,6 +22,7 @@ ACTIONS = MAINTENANCE + tuple(client + '.' + action for client in DESTINATIONS
                              for action in ('subscription', 'openrouter', 'open')) + (
                                  'codex.openrouter_fallback', 'codex.limit_offer')
 BUSY = 'SCG Router is busy. Try again shortly.'
+_status = load('update_status')
 
 
 class Notice(RuntimeError):
@@ -29,7 +30,7 @@ class Notice(RuntimeError):
 
 
 def version(value):
-    return value if isinstance(value, str) and re.fullmatch(r'\d+(?:\.\d+){2,3}', value) else 'Unknown'
+    return _status.version(value) or 'Unknown'
 
 
 def snapshot(home):

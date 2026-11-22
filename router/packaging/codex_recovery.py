@@ -54,7 +54,7 @@ def reconcile(home, service, *, apply=True):
     state = service._state.read(service._state.path(home))
     if not isinstance(state, dict):
         return 'conflict'
-    if state.get('clients', 'codex' if state.get('client', 'codex') != 'none' else 'none') not in ('codex', 'both'):
+    if service._state.saved_clients(state) not in ('codex', 'both'):
         return 'inactive'
     saved, mode = entry.get('inserted_block'), entry.get('openai_mode')
     if (not isinstance(saved, str) or mode not in ('subscription', 'none')

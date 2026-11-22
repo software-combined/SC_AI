@@ -161,7 +161,7 @@
     "packaging/native/native_build.py": 3,
     "packaging/native/native_menu_build.py": 3,
     "packaging/native_dialog.py": 9,
-    "packaging/native_resources.py": 3,
+    "packaging/native_resources.py": 2,
     "packaging/native_setup.py": 5,
     "packaging/native_shortcuts.py": 7,
     "packaging/notice.py": 3,
