@@ -5,7 +5,6 @@ provider and no account. An error reply, silence or a loader that cannot
 start fails. The CLI comes from the app that was found, and the child gets
 CODEX_HOME and none of the caller's OpenAI or Codex overrides.
 """
-import importlib.util
 import json
 import os
 import sys
@@ -14,15 +13,13 @@ import unittest
 from pathlib import Path
 
 from tests._platform import unix_only
+from tests.loading import load
 
 ROOT = Path(__file__).resolve().parents[1]
 
 
 def _load(name, path):
-    spec = importlib.util.spec_from_file_location(name, ROOT / path)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+    return load(ROOT / path, name)
 
 
 proof = _load('codex_config_proof_test', 'packaging/codex_config_proof.py')

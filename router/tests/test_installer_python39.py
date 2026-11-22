@@ -6,7 +6,6 @@ when it runs, so an unattended check unloaded the owner's service. The check
 now imports only `load` files, in a child process with a scratch HOME,
 ROUTER_HOME and PATH, and never executes `parse` files.
 """
-import importlib.util
 import json
 import os
 import subprocess
@@ -16,15 +15,14 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
+from tests.loading import load
+
 ROOT = Path(__file__).resolve().parents[1]
 CHECK = ROOT / 'tools' / 'check_installer_python39.py'
 
 
 def _check_module():
-    spec = importlib.util.spec_from_file_location('router_check_python39', CHECK)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+    return load(CHECK, 'router_check_python39')
 
 
 def _write_surface(root, lines):
@@ -132,10 +130,7 @@ class DisableToolImportTests(unittest.TestCase):
             before = config.read_text()
             with mock.patch.dict(os.environ, {'ROUTER_HOME': str(home)}), \
                     mock.patch('subprocess.run') as run:
-                spec = importlib.util.spec_from_file_location(
-                    'router_disable_tool', ROOT / 'tools' / 'disable.py')
-                module = importlib.util.module_from_spec(spec)
-                spec.loader.exec_module(module)
+                module = load(ROOT / 'tools' / 'disable.py', 'router_disable_tool')
             run.assert_not_called()
             self.assertEqual(config.read_text(), before,
                              'importing tools/disable.py modified the config')

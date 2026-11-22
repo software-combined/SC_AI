@@ -20,6 +20,7 @@ from unittest import mock
 from tests._platform import unix_only
 from tests.install_fixtures import _ok_run, _patch_attrs, install_mod
 from tests.test_install_config import _install
+from tests.loading import load
 
 
 @unix_only
@@ -130,18 +131,11 @@ class ReceiptVersionTests(unittest.TestCase):
     # Plan 112: versioned receipts carry a clients map; legacy flat
     # receipts import as the codex attachment with restore info intact.
     def _mod(self):
-        import importlib.util as _ilu
         root = Path(__file__).resolve().parents[1]
-        spec = _ilu.spec_from_file_location(
-            'router_codex_config', root / 'packaging' / 'codex_config.py')
-        mod = _ilu.module_from_spec(spec)
-        spec.loader.exec_module(mod)
+        mod = load(root / 'packaging' / 'codex_config.py', 'router_codex_config')
         # Same injection as install.py: receipt writes go through the
         # shared atomic writer, so the direct spec-load needs it too.
-        aspec = _ilu.spec_from_file_location(
-            'router_atomic_write', root / 'packaging' / 'atomic_write.py')
-        amod = _ilu.module_from_spec(aspec)
-        aspec.loader.exec_module(amod)
+        amod = load(root / 'packaging' / 'atomic_write.py', 'router_atomic_write')
         mod._atomic_write = amod
         return mod
 

@@ -278,8 +278,6 @@ def _verified_feed(feed, body, _fetch):
         Path(__file__).resolve().parent / 'feed_verify.py')
     fv = _ilu.module_from_spec(spec)
     spec.loader.exec_module(fv)
-    if _FEED_VERIFY_KEY is not None:
-        fv.FEED_PUBLIC_KEY = _FEED_VERIFY_KEY
     _fspec = _ilu.spec_from_file_location(
         'router_feed_sig',
         Path(__file__).resolve().parent / 'feed.py')
@@ -301,13 +299,13 @@ def _verified_feed(feed, body, _fetch):
             except ValueError:
                 raise UpdateError('feed_invalid', 'feed document is not JSON')
         try:
-            return fv.checked_feed(body, sig)
+            return fv.checked_feed(body, sig, _FEED_VERIFY_KEY)
         except SystemExit as exc:
             raise UpdateError('feed_signature', str(exc) or 'feed signature rejected')
     if sig is None:
         raise UpdateError('feed_signature', 'feed signature missing')
     try:
-        return fv.checked_feed(body, sig)
+        return fv.checked_feed(body, sig, _FEED_VERIFY_KEY)
     except SystemExit as exc:
         raise UpdateError('feed_signature', str(exc) or 'feed signature rejected')
 

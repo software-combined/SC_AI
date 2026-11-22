@@ -6,21 +6,19 @@ the only place either list lives, so this test pins its contract, including
 that every installer-surface file and every singleton installer test file
 reaches the native jobs.
 """
-import importlib.util
 import subprocess
 import sys
 import unittest
 from pathlib import Path
+
+from tests.loading import load
 
 ROOT = Path(__file__).resolve().parents[1]
 TOOL = ROOT / 'tools' / 'ci_scope.py'
 
 
 def scope_module():
-    spec = importlib.util.spec_from_file_location('router_ci_scope', TOOL)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+    return load(TOOL, 'router_ci_scope')
 
 
 def run_scope(*args, stdin=''):

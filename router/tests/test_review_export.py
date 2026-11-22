@@ -1,6 +1,5 @@
 """The PR export preserves review scope and excludes private receipt fields."""
 import hashlib
-import importlib.util
 import json
 import os
 from pathlib import Path
@@ -10,6 +9,8 @@ import sys
 import tempfile
 import time
 import unittest
+
+from tests.loading import load
 
 ROOT = Path(__file__).resolve().parents[1]
 EXPORT = ROOT.parent / "plugins/development/scg-review/scripts/export_review.py"
@@ -78,9 +79,7 @@ class ReviewExportTest(unittest.TestCase):
             self.assertNotIn(private, result.stdout)
 
     def test_router_bundle_can_execute_the_review_export(self):
-        spec = importlib.util.spec_from_file_location("release", ROOT / "packaging/release.py")
-        release = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(release)
+        release = load(ROOT / "packaging/release.py", "release")
         bundle = Path(self.temp.name) / "bundle"
         for name in release.plugin_files(ROOT):
             if not name.startswith("plugins/development/scg-review/"):

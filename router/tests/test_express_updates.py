@@ -14,6 +14,7 @@ from unittest import mock
 
 from tests.install_fixtures import _craft_bundle, _patch_attrs, install_mod
 from tests.test_release import release_mod
+from tests.loading import load
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -46,12 +47,7 @@ class ExpressUpdates(unittest.TestCase):
         args = install_mod.build_parser().parse_args(
             ['--home', str(self.home), '--update'] + (['--express-only'] if express else []))
 
-        import importlib.util as _ilu
-        _spec = _ilu.spec_from_file_location(
-            'router_feed_verify_express',
-            ROOT / 'packaging' / 'feed_verify.py')
-        _fv = _ilu.module_from_spec(_spec)
-        _spec.loader.exec_module(_fv)
+        _fv = load(ROOT / 'packaging' / 'feed_verify.py', 'router_feed_verify_express')
         _seed, _pub = _fv.generate_keypair()
 
         def read(feed, etag):

@@ -2,7 +2,6 @@
 import base64
 import hashlib
 import http.client
-import importlib.util
 import io
 import re
 import threading
@@ -13,14 +12,13 @@ import urllib.request
 from pathlib import Path
 from unittest import mock
 
+from tests import loading
+
 ROOT = Path(__file__).resolve().parents[1]
 
 
 def load(name, relative):
-    spec = importlib.util.spec_from_file_location(name, ROOT / relative)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+    return loading.load(ROOT / relative, name)
 
 
 oauth = load('download_oauth_under_test', 'packaging/download_oauth.py')

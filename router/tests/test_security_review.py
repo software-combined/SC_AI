@@ -1,14 +1,13 @@
 """Security is required by setup and represented in both client packages."""
-import importlib.util
 import json
 from pathlib import Path
 import unittest
 
+from tests.loading import load
+
 ROOT = Path(__file__).resolve().parents[1]
 PLUGIN = ROOT.parent / 'plugins/development/scg-review'
-spec = importlib.util.spec_from_file_location('security_review_setup', PLUGIN / 'scripts/setup.py')
-setup = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(setup)
+setup = load(PLUGIN / 'scripts/setup.py', 'security_review_setup')
 
 
 class SecurityReviewTests(unittest.TestCase):
@@ -31,9 +30,7 @@ class SecurityReviewTests(unittest.TestCase):
         self.assertEqual(claude['version'], codex['version'])
 
     def test_release_bundle_includes_security_agent_skill_and_licence(self):
-        spec = importlib.util.spec_from_file_location('security_review_release', ROOT / 'packaging/release.py')
-        release = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(release)
+        release = load(ROOT / 'packaging/release.py', 'security_review_release')
         files = release.plugin_files(ROOT)
         for name in ('agents/review-security.md', 'skills/security-review/SKILL.md',
                      'support/cloudflare-LICENSE.txt'):

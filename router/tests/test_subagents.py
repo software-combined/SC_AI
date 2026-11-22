@@ -1,7 +1,8 @@
-import importlib.util
 import json
 from pathlib import Path
 import unittest
+
+from tests.loading import load
 
 ROOT = Path(__file__).resolve().parents[1]
 PLUGIN = ROOT.parent / 'plugins/agents/scg-subagents'
@@ -9,10 +10,7 @@ SKILL = PLUGIN / 'skills/optimal-subagents'
 
 
 def module(name, path):
-    spec = importlib.util.spec_from_file_location(name, path)
-    result = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(result)
-    return result
+    return load(path, name)
 
 
 pareto = module('pareto', SKILL / 'scripts/pareto.py')

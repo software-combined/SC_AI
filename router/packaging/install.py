@@ -308,7 +308,6 @@ def _do_install(args, _fetch=fetch, _run=None, delivery=None):
                       if PLATFORM == 'win32' else 'brew install python@3.14')
             print(f'No Python 3.14 found: {remedy}')
             raise SystemExit(2)
-    _codex_config._owned.PYTHON = python
     if delivery is not None: delivery.update(python=python, backend=platform_backend(), platform=PLATFORM)
     _delivery.recover(home, delivery or {})
     feed = args.feed or _svc.channel_feed(home)
@@ -365,7 +364,7 @@ def _do_install(args, _fetch=fetch, _run=None, delivery=None):
         args.repair_cancelled = True
         raise SystemExit('Repair cancelled; run setup again when your assistants are ready.')
     client, clients, _, mode = _resolve_clients_and_modes(args, home, state, repair=repair)
-    python = _codex_config._owned.PYTHON = _delivery.activate(home, delivery, python)
+    python = _delivery.activate(home, delivery, python)
     # Keep first-run keys in the window. TTL mirrors setup.SETUP_TTL_S without
     # importing runtime code on Python 3.9; --setup or a keyless service arms it.
     missing = provider_keys().unhandled(home, state, _diag._key_private)
@@ -444,7 +443,7 @@ def _do_install(args, _fetch=fetch, _run=None, delivery=None):
         else:
             if args.client == 'none':
                 _delivery._load('client_removal').remove_all(home, _codex_config,
-                    lambda expected, entry: _restore_owned_config(home, python, expected, entry))
+                    lambda expected, entry: _restore_owned_config(home, python, expected, entry), python)
                 _delivery._load('claude_profile_hook').uninstall(home)
         prune_releases(home, latest['version'], previous,
                        backend.pinned_release(home))
@@ -552,11 +551,10 @@ def do_uninstall(args):
     python = find_python(args.python) if attached else None
     if attached and python is None:
         raise SystemExit('Python 3.14 is required to restore Codex settings safely.')
-    _codex_config._owned.PYTHON = python
     removal = _delivery._load('client_removal')
     try:
         removal.remove_all(home, _codex_config,
-            lambda expected, entry: _restore_owned_config(home, python, expected, entry))
+            lambda expected, entry: _restore_owned_config(home, python, expected, entry), python)
     except (OSError, ValueError) as exc:
         raise SystemExit('Removal conflict: damaged receipt. Services left running.') from exc
     try:

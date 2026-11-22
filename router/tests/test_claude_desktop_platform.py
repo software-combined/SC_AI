@@ -1,5 +1,4 @@
 """Executed platform boundaries using isolated app and process fixtures."""
-import importlib.util
 import base64
 import json
 import os
@@ -13,11 +12,10 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest import mock
 
+from tests.loading import load
+
 ROOT = Path(__file__).resolve().parents[1]
-SPEC = importlib.util.spec_from_file_location(
-    'claude_desktop_platform_test', ROOT / 'packaging/claude_desktop_platform.py')
-platform = importlib.util.module_from_spec(SPEC)
-SPEC.loader.exec_module(platform)
+platform = load(ROOT / 'packaging/claude_desktop_platform.py', 'claude_desktop_platform_test')
 
 
 def result(stdout='', returncode=0):

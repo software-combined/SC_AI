@@ -3,7 +3,6 @@
 Codex is found, quit and reopened by its own bundle id, and a running Claude
 blocks only a Claude switch.
 """
-import importlib.util
 import os
 import plistlib
 import tempfile
@@ -12,11 +11,10 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest import mock
 
+from tests.loading import load
+
 ROOT = Path(__file__).resolve().parents[1]
-SPEC = importlib.util.spec_from_file_location(
-    'codex_desktop_platform_test', ROOT / 'packaging' / 'claude_desktop_platform.py')
-platform = importlib.util.module_from_spec(SPEC)
-SPEC.loader.exec_module(platform)
+platform = load(ROOT / 'packaging' / 'claude_desktop_platform.py', 'codex_desktop_platform_test')
 CODEX = platform.App('com.openai.codex', ())
 
 

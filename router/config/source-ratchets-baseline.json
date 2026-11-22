@@ -70,7 +70,6 @@
     "tests/test_operator_surface.py": 1,
     "tests/test_outcome.py": 1,
     "tests/test_plugin.py": 1,
-    "tests/test_plugin_verification.py": 1,
     "tests/test_probe_desktop_handoff.py": 10,
     "tests/test_probe_harness.py": 1,
     "tests/test_probe_installed_handoff.py": 1,

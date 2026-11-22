@@ -1,5 +1,4 @@
 """Public packaging, legacy migration and history-free export boundaries."""
-import importlib.util
 import hashlib
 import json
 import os
@@ -13,16 +12,14 @@ from pathlib import Path
 from unittest import mock
 
 from tests.install_fixtures import install_mod
+from tests.loading import load
 
 ROOT = Path(__file__).resolve().parents[1]
 FLAG = '_CLAUDE_CODE_ASSUME_FIRST_PARTY_BASE_URL'
 
 
 def module(name, path):
-    spec = importlib.util.spec_from_file_location(name, ROOT / path)
-    result = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(result)
-    return result
+    return load(ROOT / path, name)
 
 
 def index_entry(mode, name, data):

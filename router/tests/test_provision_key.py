@@ -5,7 +5,6 @@ carries the verified email, limit, and monthly reset; a failed guardrail
 assignment deletes the unbudgeted key; the audit row holds the key id and
 never the secret.
 """
-import importlib.util
 import io
 import json
 import tempfile
@@ -14,15 +13,13 @@ from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
 from unittest import mock
 
+from tests.loading import load
+
 ROOT = Path(__file__).resolve().parents[1]
 
 
 def _load():
-    spec = importlib.util.spec_from_file_location(
-        'router_provision_key_under_test', ROOT / 'tools' / 'provision_key.py')
-    mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)
-    return mod
+    return load(ROOT / 'tools' / 'provision_key.py', 'router_provision_key_under_test')
 
 
 provision_mod = _load()

@@ -1,5 +1,4 @@
 """Profile-root, namespace and record grouping contracts."""
-import importlib.util
 import json
 import tempfile
 import unittest
@@ -8,13 +7,11 @@ from unittest import mock
 
 from tests import claude_profile_sync_fixtures as fixtures
 from tests._platform import symlink_or_skip
+from tests.loading import load
 
 
 ROOT = Path(__file__).resolve().parents[1]
-SPEC = importlib.util.spec_from_file_location(
-    'claude_profile_records', ROOT / 'packaging' / 'claude_profile_records.py')
-records = importlib.util.module_from_spec(SPEC)
-SPEC.loader.exec_module(records)
+records = load(ROOT / 'packaging' / 'claude_profile_records.py', 'claude_profile_records')
 
 
 class ProfileRecordsTests(unittest.TestCase):

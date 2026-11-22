@@ -10,18 +10,14 @@ from unittest import mock
 
 from tests._platform import assert_owner_only
 from tests.install_fixtures import install_mod
+from tests.loading import load
 
 
 def _mod():
     # File-based load: PyPI's `packaging` distribution shadows the local
     # installer directory on sys.path, so never `from packaging import ...`.
-    import importlib.util as _ilu
     root = Path(__file__).resolve().parents[1]
-    spec = _ilu.spec_from_file_location(
-        'router_atomic_write', root / 'packaging' / 'atomic_write.py')
-    mod = _ilu.module_from_spec(spec)
-    spec.loader.exec_module(mod)
-    return mod
+    return load(root / 'packaging' / 'atomic_write.py', 'router_atomic_write')
 
 
 class AtomicWriteTests(unittest.TestCase):
@@ -157,17 +153,13 @@ class AtomicWriteTests(unittest.TestCase):
     def test_packaging_alias_loads_from_a_home_style_layout(self):
         # An installed release keeps packaging/ and ai_router/ as siblings,
         # and the alias must resolve the runtime leaf from that layout.
-        import importlib.util as _ilu
         root = self._dir() / 'home'
         (root / 'ai_router').mkdir(parents=True)
         (root / 'packaging').mkdir()
         for rel in ('ai_router/atomic_write.py', 'packaging/atomic_write.py'):
             source = Path(__file__).resolve().parents[1] / rel
             (root / rel).write_text(source.read_text())
-        spec = _ilu.spec_from_file_location(
-            'home_router_atomic_write', root / 'packaging' / 'atomic_write.py')
-        mod = _ilu.module_from_spec(spec)
-        spec.loader.exec_module(mod)
+        mod = load(root / 'packaging' / 'atomic_write.py', 'home_router_atomic_write')
         target = root / 'config.toml'
         mod.replace_text(target, 'x = 1\n')
         self.assertEqual(target.read_text(), 'x = 1\n')

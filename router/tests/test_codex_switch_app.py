@@ -6,7 +6,6 @@ a Mac for an attached subscription install whose ChatGPT app is affected or
 that is switched now, never removed while switched, removed on detach, and
 runs a stable launcher that follows the current release.
 """
-import importlib.util
 import json
 import os
 import plistlib
@@ -19,15 +18,13 @@ from types import SimpleNamespace
 from unittest import mock
 
 from tests._platform import unix_only
+from tests.loading import load
 
 ROOT = Path(__file__).resolve().parents[1]
 
 
 def _load(name, rel):
-    spec = importlib.util.spec_from_file_location(name, ROOT / rel)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+    return load(ROOT / rel, name)
 
 
 app = _load('codex_switch_app_test', 'packaging/codex_switch_app.py')

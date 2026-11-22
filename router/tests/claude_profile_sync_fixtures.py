@@ -1,7 +1,6 @@
 """Shared synthetic fixtures for Claude profile session sync tests."""
 import base64
 import hashlib
-import importlib.util
 import json
 import os
 import stat
@@ -9,6 +8,8 @@ import tempfile
 import unittest
 from pathlib import Path
 from unittest import mock
+
+from tests.loading import load
 
 
 def fingerprint(root):
@@ -36,11 +37,7 @@ def fingerprint(root):
 
 
 def load_helper(name):
-    spec = importlib.util.spec_from_file_location(name, Path(__file__).resolve().parents[1] /
-                                                'packaging' / (name + '.py'))
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+    return load(Path(__file__).resolve().parents[1] / 'packaging' / (name + '.py'), name)
 
 
 def isolated_env(root):

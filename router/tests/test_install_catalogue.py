@@ -3,7 +3,6 @@
 Reuses the tests.install_fixtures rig, so test_install.py keeps tests only.
 """
 import hashlib
-import importlib.util
 import json
 import os
 import subprocess
@@ -19,6 +18,7 @@ from ai_router.catalogue import check, read_openai_mode
 from ai_router.clients import models_for
 from ai_router.registry import MODELS
 from tests.install_fixtures import _ok_run, _patch_attrs, _static_fetch, install_mod
+from tests.loading import load
 
 _ROOT = Path(__file__).resolve().parents[1]
 
@@ -26,10 +26,7 @@ _ROOT = Path(__file__).resolve().parents[1]
 def _release_bundle(tmp):
     feeddir = Path(tmp) / 'feed'
     feeddir.mkdir()
-    spec = importlib.util.spec_from_file_location(
-        'router_release', _ROOT / 'packaging' / 'release.py')
-    release_mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(release_mod)
+    release_mod = load(_ROOT / 'packaging' / 'release.py', 'router_release')
     release_mod.main(['--out', str(feeddir)])
     tarball = next(iter(feeddir.glob('*.tar.gz')))
     blob = tarball.read_bytes()

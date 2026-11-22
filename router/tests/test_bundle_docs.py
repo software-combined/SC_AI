@@ -7,7 +7,6 @@ itself, so it cannot catch a dropped docs rule; the pages below are pinned
 here instead. Plan 158 adds the exact-set and index gates: every page under
 `docs/` ships, and `docs/README.md` names every one of them.
 """
-import importlib.util
 import json
 import posixpath
 import re
@@ -19,13 +18,11 @@ from types import SimpleNamespace
 
 from tests._platform import symlink_or_skip
 from tests.install_fixtures import _patch_attrs, install_mod
+from tests.loading import load
 
 
 def _bundled(root):
-    spec = importlib.util.spec_from_file_location(
-        'router_release_docs', root / 'packaging' / 'release.py')
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
+    module = load(root / 'packaging' / 'release.py', 'router_release_docs')
     return module.bundle_files(root)
 
 

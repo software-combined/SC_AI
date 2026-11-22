@@ -6,7 +6,6 @@ test classes; the ~20 importer modules now import from here. Any
 behavioural difference from the originals is a defect.
 """
 import hashlib
-import importlib.util
 import io
 import json
 import os
@@ -18,6 +17,7 @@ from types import SimpleNamespace
 from unittest import mock
 
 from tests.fakes import LAUNCHD, static_fetch as _static_fetch
+from tests.loading import load
 
 _ROOT = Path(__file__).resolve().parents[1]
 
@@ -33,10 +33,7 @@ def real_bundle(tmp):
     """Build a real release bundle via packaging/release.py (slow; ~3s)."""
     feeddir = Path(tmp) / 'feed'
     feeddir.mkdir()
-    spec = importlib.util.spec_from_file_location(
-        'router_release', _ROOT / 'packaging' / 'release.py')
-    release_mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(release_mod)
+    release_mod = load(_ROOT / 'packaging' / 'release.py', 'router_release')
     release_mod.main(['--out', str(feeddir)])
     tarball = next(iter(feeddir.glob('*.tar.gz')))
     blob = tarball.read_bytes()
@@ -48,9 +45,7 @@ def real_bundle(tmp):
 
 
 def install_mod_factory():
-    spec = importlib.util.spec_from_file_location('router_install', _ROOT / 'packaging' / 'install.py')
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
+    module = load(_ROOT / 'packaging' / 'install.py', 'router_install')
     # This existing rig exercises launchd on every host. Linux lifecycle
     # tests explicitly select linux and use the same installer seams.
     module.PLATFORM = 'darwin'

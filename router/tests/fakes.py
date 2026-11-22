@@ -10,6 +10,8 @@ import plistlib
 from types import SimpleNamespace
 from unittest import mock
 
+from tests.loading import load
+
 def install_payloads(version):
     rules = Path(__file__).resolve().parents[1] / 'tools' / 'global_instructions.py'
     return {'packaging/VERSION': (version + '\n').encode(),
@@ -218,12 +220,7 @@ def signed_static_fetch(latest, blob, seed=None, pub=None):
     given seed. Returns (fetch, seed, public_key); tests assign the key to
     the updater's `_FEED_VERIFY_KEY` seam.
     """
-    import importlib.util as _ilu
-    spec = _ilu.spec_from_file_location(
-        'router_feed_verify_fake',
-        Path(__file__).resolve().parents[1] / 'packaging' / 'feed_verify.py')
-    fv = _ilu.module_from_spec(spec)
-    spec.loader.exec_module(fv)
+    fv = load('packaging/feed_verify.py', 'router_feed_verify_fake')
     if seed is None:
         seed, pub = fv.generate_keypair()
     elif pub is None:

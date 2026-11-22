@@ -14,6 +14,7 @@ from types import SimpleNamespace
 from unittest import mock
 
 from tests.test_native_beta_assets import NATIVE_NAMES, publish
+from tests.loading import load
 
 ROOT = Path(__file__).resolve().parents[1]
 WORKFLOWS = ROOT.parent / '.github/workflows'
@@ -199,11 +200,8 @@ class InstallerCiGateTests(unittest.TestCase):
         # Plan 156 guard: runtime coverage (port-hijack hardening, shutdown
         # auth, drain, containment, policy scans) must always run in the
         # default suite, never hide behind the installer opt-in.
-        import importlib.util
         tool = ROOT / 'tools' / 'ci_scope.py'
-        spec = importlib.util.spec_from_file_location('router_ci_scope', tool)
-        module = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(module)
+        module = load(tool, 'router_ci_scope')
         listed = set(module.INSTALLER_TESTS)
         for name in ('tests.test_lifecycle', 'tests.test_agent_containment',
                      'tests.test_stream_containment', 'tests.test_policy_scans'):

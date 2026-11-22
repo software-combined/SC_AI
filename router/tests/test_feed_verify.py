@@ -1,7 +1,6 @@
 """Detached Ed25519 feed signatures (Plan 047 A3): stdlib verifier, release
 signing, beta origin derivation. No network: feeds and signatures are bytes,
 keys are ephemeral, fetches are injected."""
-import importlib.util as _ilu
 import tempfile
 import unittest
 from pathlib import Path
@@ -9,12 +8,9 @@ from tests._platform import requires_posix_perms
 from unittest import mock
 
 from tests.test_release import _release_mod
+from tests.loading import load
 
-_feed_verify_spec = _ilu.spec_from_file_location(
-    'router_feed_verify',
-    Path(__file__).resolve().parents[1] / 'packaging' / 'feed_verify.py')
-feed_verify = _ilu.module_from_spec(_feed_verify_spec)
-_feed_verify_spec.loader.exec_module(feed_verify)
+feed_verify = load('packaging/feed_verify.py', 'router_feed_verify')
 
 # RFC 8032 section 7.1 TEST 1 (empty message). Cross-checked against the
 # published vectors after a from-memory transcription failed loudly here:

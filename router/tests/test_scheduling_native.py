@@ -1,5 +1,4 @@
 """Run real schedulers only on disposable CI runners, using a fake local Codex CLI."""
-import importlib.util
 import hashlib
 import json
 import os
@@ -11,21 +10,17 @@ import time
 import unittest
 from unittest.mock import patch
 
+from tests.loading import load
+
 ROOT = Path(__file__).resolve().parents[1]
 PLUGIN_ROOTS = {entry['name']: ROOT.parent / entry['source']['path'] for entry in
                 json.loads((ROOT.parent / '.agents/plugins/marketplace.json').read_text())['plugins']}
-spec = importlib.util.spec_from_file_location(
-    'native_scheduling', PLUGIN_ROOTS['scg-review'] / 'scripts/scheduling.py')
-scheduling = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(scheduling)
+scheduling = load(PLUGIN_ROOTS['scg-review'] / 'scripts/scheduling.py', 'native_scheduling')
 
 
 def load_updater(plugin):
     source = PLUGIN_ROOTS[plugin] / 'scripts/updater.py'
-    spec = importlib.util.spec_from_file_location('native_updater', source)
-    updater = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(updater)
-    return updater
+    return load(source, 'native_updater')
 
 
 class NativeSourceTest(unittest.TestCase):
@@ -40,10 +35,7 @@ class NativeSourceTest(unittest.TestCase):
 class NativeSchedulingTest(unittest.TestCase):
     @unittest.skipUnless(sys.platform == 'linux', 'systemd retirement is Linux-only')
     def test_router_retires_both_timers_and_clears_their_failed_services(self):
-        spec = importlib.util.spec_from_file_location(
-            'native_router_skills', ROOT / 'packaging/agent_skills.py')
-        skills = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(skills)
+        skills = load(ROOT / 'packaging/agent_skills.py', 'native_router_skills')
         config = Path.home() / '.config'
         units = config / 'systemd/user'
         names = skills.GIT_UPDATER_UNITS

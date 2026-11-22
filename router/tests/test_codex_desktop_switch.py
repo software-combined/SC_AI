@@ -4,7 +4,6 @@
 doubt refused first or undone exactly (the owner's latest model pick kept).
 Switching back depends on nothing it can lose: no proof, no app it can find.
 """
-import importlib.util
 import json
 import os
 import re
@@ -17,12 +16,10 @@ from unittest import mock
 
 from tests._platform import unix_only
 from tests.test_codex_config_proof import FAKE
+from tests.loading import load
 
 ROOT = Path(__file__).resolve().parents[1]
-SPEC = importlib.util.spec_from_file_location(
-    'codex_desktop_switch_test', ROOT / 'packaging' / 'codex_desktop_switch.py')
-switcher = importlib.util.module_from_spec(SPEC)
-SPEC.loader.exec_module(switcher)
+switcher = load(ROOT / 'packaging' / 'codex_desktop_switch.py', 'codex_desktop_switch_test')
 blocks, platform = switcher._blocks, switcher._platform
 PICK = 'model = "z-ai/glm-5.3"'
 JARGON = ('nonce', 'loopback', 'catalogue', 'owner-only', '127.0.0.1', 'token',

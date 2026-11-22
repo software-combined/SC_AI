@@ -264,42 +264,42 @@ def _picks(text):
     return picks
 
 
-def live_block(text, recorded):
+def live_block(text, recorded, python=None):
     """A semantically owned live region, or the old refusal sentinel."""
     if not recorded:
         return recorded
     try:
-        return _owned.region(text, recorded)
+        return _owned.region(text, recorded, python)
     except SystemExit:
         return recorded
 
 
-def removal_plan(config_path, entry):
+def removal_plan(config_path, entry, python=None):
     """Pure preflight, shared by the remover and all-client uninstall."""
     before = _read_text(config_path)
     previous = _owned.restore_evidence(entry, (QUEUE_KEY, EFFORTS_KEY))
-    after = _owned.replace(before, entry.get('inserted_block'), '', removing=True, restored=previous)
+    after = _owned.replace(before, entry.get('inserted_block'), '', removing=True, restored=previous, python=python)
     if BEGIN not in before and END not in before:
         return before, after  # A completed restore is verified, never replayed.
     after = restore_desktop(after, entry.get('desktop'))
     after = restore_reviewer(after, entry.get('reviewer'))
-    _owned.inspect(after)
+    _owned.inspect(after, python=python)
     return before, after
 
 
-def attach_config(config_path, block, previous=None, *, seed_external=True):
+def attach_config(config_path, block, previous=None, *, seed_external=True, python=None):
     """Apply the block and preferences; return their original restore records."""
     _owned.restore_evidence({} if previous is None else previous, (QUEUE_KEY, EFFORTS_KEY))
     recorded = (previous or {}).get('inserted_block')
-    previous_block = live_block(_read_text(config_path), recorded)
+    previous_block = live_block(_read_text(config_path), recorded, python)
     block = preserve_picker_selection(config_path, previous_block, block)
     block = seed_picker_selection(config_path, previous_block, block) if seed_external else block
-    before, removed = replace_config_block(config_path, block, previous_block, recorded)
+    before, removed = replace_config_block(config_path, block, previous_block, recorded, python)
     current = _read_text(config_path)
     carried = (previous or {}).get('desktop') or {}
     updated, desktop = desktop_preferences(current, carried.get('previous'), carried)
     if desktop and updated != current:
-        _owned.write(config_path, current, updated, _atomic_write.replace_text)
+        _owned.write(config_path, current, updated, _atomic_write.replace_text, python)
     elif not desktop:
         print('Codex desktop preferences left unchanged: unsupported or ambiguous settings')
     desktop = desktop or (previous or {}).get('desktop') or {}
@@ -353,7 +353,7 @@ def preserve_picker_selection(config_path, previous_block, block):
     return _insert_root_lines(block, list(picks.values()))
 
 
-def replace_config_block(config_path, block, previous_block=None, recorded_block=None):
+def replace_config_block(config_path, block, previous_block=None, recorded_block=None, python=None):
     """Insert or replace the marked block; refuse hand-edited markers.
 
     Returns (before, removed): the prior config text and the owner root
@@ -364,7 +364,7 @@ def replace_config_block(config_path, block, previous_block=None, recorded_block
     if previous_block and previous_block in before:
         if before.count(previous_block) != 1:
             raise SystemExit('config block was edited by hand; run tools/disable.py first')
-        after = _owned.replace(before, recorded_block or previous_block, block)
+        after = _owned.replace(before, recorded_block or previous_block, block, python=python)
     elif BEGIN in before or END in before:
         raise SystemExit('config block was edited by hand; run tools/disable.py first')
     else:
@@ -389,9 +389,9 @@ def replace_config_block(config_path, block, previous_block=None, recorded_block
     if not config_path.exists():
         home.mkdir(parents=True, exist_ok=True)
     if config_path.exists():
-        _owned.write(config_path, before, after, _atomic_write.replace_text)
+        _owned.write(config_path, before, after, _atomic_write.replace_text, python)
     else:
-        _owned.inspect(after)
+        _owned.inspect(after, python=python)
         _replace_text(config_path, after)
     try:
         os.chmod(config_path, 0o600)

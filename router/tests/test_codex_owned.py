@@ -145,7 +145,7 @@ class CodexOwnershipTests(unittest.TestCase):
         changed = before + '# another writer during verification\n'
         writer = mock.Mock()
         with mock.patch.object(self.owner._owned, 'inspect',
-                               side_effect=lambda *_: self.config.write_bytes(changed.encode())):
+                               side_effect=lambda *_, **__: self.config.write_bytes(changed.encode())):
             with self.assertRaisesRegex(SystemExit, 'concurrently'):
                 self.owner._owned.write(self.config, before, after, writer)
         writer.assert_not_called()

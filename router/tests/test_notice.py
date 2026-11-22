@@ -3,7 +3,6 @@
 MacOS here means AppleScript, Windows a WinForms/PowerShell dialog and
 Linux zenity; no test in this module launches a real dialog.
 """
-import importlib.util
 import json
 import subprocess
 import sys
@@ -12,15 +11,13 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
+from tests.loading import load
+
 _ROOT = Path(__file__).resolve().parents[1]
 
 
 def _notice_mod():
-    spec = importlib.util.spec_from_file_location(
-        'router_notice', _ROOT / 'packaging' / 'notice.py')
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+    return load(_ROOT / 'packaging' / 'notice.py', 'router_notice')
 
 
 notice_mod = _notice_mod()
@@ -323,10 +320,7 @@ class DialogCommandTests(unittest.TestCase):
 class ReleaseBundleTests(unittest.TestCase):
     def test_release_bundle_contains_the_notice_modules_and_icon(self):
         root = _ROOT
-        spec = importlib.util.spec_from_file_location(
-            'router_release', root / 'packaging' / 'release.py')
-        release_mod = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(release_mod)
+        release_mod = load(root / 'packaging' / 'release.py', 'router_release')
         for member in ('packaging/notice.py', 'packaging/notice_text.py', 'packaging/notice_windows.py',
                        'packaging/setup_restart.py', 'packaging/assets/router-icon.png'):
             self.assertIn(member, release_mod.bundle_files(root))

@@ -16,7 +16,6 @@ END = '# END local mixed model picker'
 PICKS = ('model', 'model_reasoning_effort')
 CONNECTION_KEYS = {'openai_base_url', 'model_provider', 'model_providers', 'model_catalog_json'}
 HAS_TOML = sys.version_info >= (3, 11)
-PYTHON = None  # The installer's resolved runtime, including an explicit --python.
 run = subprocess.run
 CONFLICT = 'Router settings changed; leaving configuration untouched for manual review.'
 REASONS = {'receipt': 'damaged_receipt', 'markers': 'marker_conflict',
@@ -98,9 +97,10 @@ def render_line(line, rendered):
             + trailing + separator + comment + ending)
 
 
-def parser_python():
-    if PYTHON:
-        return PYTHON
+def parser_python(python=None):
+    """The installer's resolved runtime (`python`), else the installed one."""
+    if python:
+        return python
     home = Path(__file__).resolve().parents[3]
     candidates = (home / 'runtime/python/bin/python3.14',
                   home / 'runtime/python/python.exe')
@@ -200,11 +200,11 @@ def _verified(text, recorded=None, removing=False, restored='', absent=False):
             'end': sum(map(len, lines[:last + 1])), 'keep': keep}
 
 
-def inspect(text, recorded=None, removing=False, restored='', absent=False):
+def inspect(text, recorded=None, removing=False, restored='', absent=False, python=None):
     try:
         if HAS_TOML:
             return _verified(text, recorded, removing, restored, absent)
-        python = parser_python()
+        python = parser_python(python)
         if not python:
             raise ValueError('interpreter')
         result = run([python, str(Path(__file__).resolve()), '--verify'],
@@ -242,13 +242,13 @@ def inspect(text, recorded=None, removing=False, restored='', absent=False):
         raise OwnershipConflict(_reason(exc)) from None
 
 
-def region(text, recorded):
-    proof = inspect(text, recorded)
+def region(text, recorded, python=None):
+    proof = inspect(text, recorded, python=python)
     return text[proof['start']:proof['end']]
 
 
-def replace(text, recorded, block, removing=False, restored=''):
-    proof = inspect(text, recorded, removing, restored)
+def replace(text, recorded, block, removing=False, restored='', python=None):
+    proof = inspect(text, recorded, removing, restored, python=python)
     if proof.get('detached'):
         return text
     lines = text.splitlines(keepends=True)
@@ -261,10 +261,10 @@ def replace(text, recorded, block, removing=False, restored=''):
     return text[:proof['start']] + block + preserved + text[proof['end']:]
 
 
-def write(path, before, after, writer):
+def write(path, before, after, writer, python=None):
     """Keep dotfile symlinks and refuse a changed file before replacing it."""
     path = Path(path)
-    inspect(after)
+    inspect(after, python=python)
     target = path.resolve()
     if read(path) != before or path.resolve() != target:
         raise SystemExit('Codex settings changed concurrently; retry the restore.')

@@ -1,17 +1,14 @@
 """Credential and path policy for cross-profile session artifacts."""
-import importlib.util
 import json
 import tempfile
 import unittest
 from pathlib import Path
 
 from tests._platform import ON_WINDOWS, assert_owner_only, requires_posix_perms
+from tests.loading import load
 
 ROOT = Path(__file__).resolve().parents[1]
-SPEC = importlib.util.spec_from_file_location(
-    'claude_profile_rules', ROOT / 'packaging' / 'claude_profile_rules.py')
-rules = importlib.util.module_from_spec(SPEC)
-SPEC.loader.exec_module(rules)
+rules = load(ROOT / 'packaging' / 'claude_profile_rules.py', 'claude_profile_rules')
 
 
 class ProfileRulesTests(unittest.TestCase):

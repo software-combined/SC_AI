@@ -1,5 +1,4 @@
 """Offline chooser regressions: selections reach the intended attachments."""
-import importlib.util
 import io
 import subprocess
 import unittest
@@ -8,12 +7,11 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
+from tests.loading import load
+
 
 _ROOT = Path(__file__).resolve().parents[1]
-_SPEC = importlib.util.spec_from_file_location(
-    'router_client_dialog', _ROOT / 'packaging' / 'client_dialog.py')
-dialog = importlib.util.module_from_spec(_SPEC)
-_SPEC.loader.exec_module(dialog)
+dialog = load(_ROOT / 'packaging' / 'client_dialog.py', 'router_client_dialog')
 
 
 def _args():
