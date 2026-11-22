@@ -154,8 +154,8 @@ def _waiting(issue=None):
         cancelled.set()
 
 
-def collect(tool_path, platform_name, clients, run=None, issue=None):
-    """Use the shared two-action chooser for sign-in and assistant choices."""
+def collect(tool_path, platform_name, run=None, issue=None):
+    """Ask the one access question with the shared two-action chooser."""
     run = run or subprocess.run
     dialog = _load('client_dialog')
     method = _ask(dialog, tool_path, platform_name, 'How do you want to connect?', CHOICES, run)
@@ -166,12 +166,4 @@ def collect(tool_path, platform_name, clients, run=None, issue=None):
     key = _waiting(issue)
     if key is CANCELLED:
         return CANCELLED
-    fields = {'key': key}
-    for field, question, answers in key_dialog.questions(clients):
-        table = key_dialog.STARTERS if field == 'profile' else key_dialog.MODES
-        items = tuple((table[label], label) for label in answers)
-        value = _ask(dialog, tool_path, platform_name, question, items, run)
-        if value is CANCELLED:
-            return CANCELLED
-        fields[field] = value
-    return fields
+    return {'key': key}

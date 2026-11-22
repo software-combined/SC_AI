@@ -1,8 +1,7 @@
 """Platform dialogs behind the first-run key window (Plan 139).
 
-One place owns how each OS asks for the key, the subscription choice for the
-client(s) this install serves (Codex, Claude Code, or both) and the starter,
-and how it reports a plain message. `ai_router.key_prompt` owns the flow on
+One place owns how each OS asks for the key and how it reports a plain
+message. `ai_router.key_prompt` owns the flow on
 top of it. The key is written by the dialog tool to stdout; it is never
 passed in argv, the environment, a file or a log.
 
@@ -18,9 +17,6 @@ from . import dialog_tool, provider_defs
 
 TITLE = 'SCG Router'
 ICON = Path(__file__).resolve().parents[1] / 'packaging' / 'assets' / 'router-icon.png'
-MODES = {'I have one': 'subscription', 'No subscription': 'none'}
-STARTERS = {'Everyday help': 'general', 'Coding help': 'dev'}
-CLIENTS = ('codex', 'claude', 'both', 'none')
 TIMEOUT_S = 900  # matches ai_router.setup.SETUP_TTL_S
 
 def key_prompt(provider_id=None):
@@ -32,34 +28,11 @@ def key_prompt(provider_id=None):
 
 
 KEY_PROMPT = key_prompt()
-CODEX_QUESTION = 'Do you also use a ChatGPT subscription on this computer?'
-CLAUDE_QUESTION = 'Do you also use a Claude subscription on this computer?'
-STARTER_QUESTION = 'How should Codex write for you by default?'
-
-
-def clients(value):
-    return value if value in CLIENTS else 'codex'
 
 
 def icon():
     """The bundled product icon, or None when the asset is not installed."""
     return str(ICON) if ICON.is_file() else None
-
-
-def questions(which='codex'):
-    """(field, question, answers) in the order the dialog asks them.
-
-    A service-only install asks only for the key; the starter follows the Codex question.
-    """
-    which = clients(which)
-    asked = []
-    if which in ('codex', 'both'):
-        asked.append(('mode', CODEX_QUESTION, tuple(MODES)))
-    if which in ('claude', 'both'):
-        asked.append(('claude_mode', CLAUDE_QUESTION, tuple(MODES)))
-    if which in ('codex', 'both'):
-        asked.append(('profile', STARTER_QUESTION, tuple(STARTERS)))
-    return asked
 
 
 def tool(platform_name=None, which=None):
@@ -75,53 +48,16 @@ def _icon_clause():
     return ' with icon (POSIX file %s)' % _quote(icon()) if icon() else ''
 
 
-def _macos_script(which='codex', provider_id=None):
-    """One AppleScript run: the key, then each question in order."""
-    clause = _icon_clause()
-    lines = ['set k to text returned of (display dialog %s default answer "" '
-             'buttons {"Cancel", "Continue"} default button "Continue" '
-             'with title "%s" with hidden answer%s)'
-             % (_quote(key_prompt(provider_id)), TITLE, clause)]
-    collected = ['k']
-    for index, (_field, question, answers) in enumerate(questions(which)):
-        var = 'a%d' % index
-        buttons = '{%s}' % ', '.join('"%s"' % answer
-                                     for answer in reversed(answers))
-        lines.append('set %s to button returned of (display dialog %s '
-                     'buttons %s default button "%s" with title "%s"%s)'
-                     % (var, _quote(question), buttons, answers[0], TITLE, clause))
-        collected.append(var)
-    # text returned of display dialog drops trailing newlines, so a blank
-    # key box would shift every later answer by one line; ask AppleScript
-    # for an explicit separator character instead of a literal.
-    lines.append('set line_break to ASCII character 10')
-    lines.append('return ' + ' & line_break & '.join(collected))
-    return '\n'.join(lines)
+def _macos_script(provider_id=None):
+    """One AppleScript run that returns the hidden key answer."""
+    return ('text returned of (display dialog %s default answer "" '
+            'buttons {"Cancel", "Continue"} default button "Continue" '
+            'with title "%s" with hidden answer%s)'
+            % (_quote(key_prompt(provider_id)), TITLE, _icon_clause()))
 
 
-def combo_name(index):
-    """The PowerShell variable holding answer `index`; one owner for it."""
-    return '$c%d' % index
-
-
-def _labelled(index, prompt, answers):
-    """PowerShell that adds one labelled combo box to the layout panel."""
-    label, combo = '$l%d' % index, combo_name(index)
-    return ("%s = New-Object System.Windows.Forms.Label; %s.AutoSize = $true; "
-            "%s.Margin = New-Object System.Windows.Forms.Padding(0, 8, 0, 2); "
-            "%s.Text = '%s'; $p.Controls.Add(%s); "
-            "%s = New-Object System.Windows.Forms.ComboBox; "
-            "%s.DropDownStyle = 'DropDownList'; "
-            "%s.Items.AddRange(@('%s')); %s.SelectedIndex = 0; "
-            "%s.Width = 420; $p.Controls.Add(%s); "
-            % (label, label, label, label, prompt.replace("'", "''"), label,
-               combo, combo, combo,
-               "', '".join(answer.replace("'", "''") for answer in answers),
-               combo, combo, combo))
-
-
-def _windows_script(which='codex', provider_id=None):
-    """One WinForms form: product icon, masked key and each question.
+def _windows_script(provider_id=None):
+    """One WinForms form: product icon and masked key.
 
     Every control goes into an explicit top-down FlowLayoutPanel. WinForms
     gives a control added straight to a Form the default Location (0, 0), so
@@ -140,12 +76,6 @@ def _windows_script(which='codex', provider_id=None):
                    "$pic.Margin = New-Object System.Windows.Forms.Padding(0, 0, 0, 8); "
                    "$p.Controls.Add($pic) }; "
                    % icon().replace("'", "''"))
-    asked = questions(which)
-    boxes = ''.join(_labelled(index, question, answers)
-                    for index, (_f, question, answers) in enumerate(asked))
-    output = '[Console]::Out.Write($k.Text' + ''.join(
-        ' + "`n" + %s.SelectedItem' % combo_name(index)
-        for index in range(len(asked))) + ')'
     return (
         "Add-Type -AssemblyName System.Windows.Forms; "
         "Add-Type -AssemblyName System.Drawing; "
@@ -166,7 +96,6 @@ def _windows_script(which='codex', provider_id=None):
         "$t.Text = '%s'; $p.Controls.Add($t); "
         "$k = New-Object System.Windows.Forms.TextBox; $k.Width = 420; "
         "$k.UseSystemPasswordChar = $true; $p.Controls.Add($k); "
-        "%s"
         "$r = New-Object System.Windows.Forms.FlowLayoutPanel; "
         "$r.FlowDirection = 'LeftToRight'; $r.WrapContents = $false; "
         "$r.AutoSize = $true; $r.AutoSizeMode = 'GrowAndShrink'; "
@@ -181,43 +110,38 @@ def _windows_script(which='codex', provider_id=None):
         "$f.AcceptButton = $b; $f.CancelButton = $c; "
         "$f.Add_Shown({ $f.Activate(); $k.Focus() }); "
         "[void]$f.ShowDialog(); if ($f.Tag -ne 'save') { exit 2 }; "
-        "%s" % (TITLE, picture, key_prompt(provider_id).replace("'", "''"), boxes, output))
+        "[Console]::Out.Write($k.Text)" % (TITLE, picture, key_prompt(provider_id).replace("'", "''")))
 
 
-def _zenity_argv(tool_path, which='codex', provider_id=None):
+def _zenity_argv(tool_path, provider_id=None):
     defn = provider_defs.get(provider_id) or provider_defs.OPENROUTER
     argv = [tool_path, '--forms', '--title=' + TITLE, '--text=' + key_prompt(provider_id)]
     if icon():
         argv.append('--window-icon=' + icon())
-    argv.append('--add-password=%s key' % defn.label)
-    for _field, question, answers in questions(which):
-        argv.append('--add-combo=' + question)
-        argv.append('--combo-values=' + '|'.join(answers))
-    return argv + ['--separator=	']
+    return argv + ['--add-password=%s key' % defn.label]
 
 
-def argv(tool_path, platform_name, which='codex', provider_id=None):
+def argv(tool_path, platform_name, provider_id=None):
     """The command that shows the key dialog on this platform."""
     if platform_name == 'darwin':
-        return [tool_path, '-e', _macos_script(which, provider_id)]
+        return [tool_path, '-e', _macos_script(provider_id)]
     if platform_name == 'win32':
         return [tool_path, '-NoProfile', '-WindowStyle', 'Hidden',
-                '-Command', _windows_script(which, provider_id)]
-    return _zenity_argv(tool_path, which, provider_id)
+                '-Command', _windows_script(provider_id)]
+    return _zenity_argv(tool_path, provider_id)
 
 
-def collect(tool_path, platform_name=None, run=None, which='codex',
-            provider_id=None):
-    """Choices from the platform dialog, or None when the operator cancels.
+def collect(tool_path, platform_name=None, run=None, provider_id=None):
+    """{'key': ...} from the platform dialog, or None when the operator cancels.
 
     OSError means the dialog itself could not be used, so the caller falls
-    back to the loopback page. The answer order matches `questions()`.
+    back to the loopback page.
     """
     if platform_name is None:
         platform_name = sys.platform
     if run is None:
         run = subprocess.run
-    result = run(argv(tool_path, platform_name, which, provider_id),
+    result = run(argv(tool_path, platform_name, provider_id),
                  stdout=subprocess.PIPE,
                  stderr=subprocess.PIPE, text=True, timeout=TIMEOUT_S)
     if (platform_name.startswith('linux') and result.returncode == 1) \
@@ -235,23 +159,9 @@ def collect(tool_path, platform_name=None, run=None, which='codex',
         if 'User cancel' in stderr or '(-128)' in stderr:
             return None
         raise OSError('the key dialog did not complete')
-    asked = questions(which)
-    parts = (result.stdout or '').split('\t' if platform_name.startswith('linux')
-                                        else '\n')
-    if not platform_name.startswith('linux') and parts and parts[-1] == '':
-        # osascript ends its return value with a newline; the blank key case
-        # keeps its leading empty field, so only the trailing one is dropped.
-        parts.pop()
-    if len(parts) != 1 + len(asked):
-        raise OSError('the key dialog returned the wrong number of answers')
-    fields = {'key': parts[0].strip()}
-    for (field, _question, _answers), raw in zip(asked, parts[1:]):
-        table = STARTERS if field == 'profile' else MODES
-        value = table.get(raw.strip())
-        if value is None:
-            raise OSError('the key dialog returned an unknown choice')
-        fields[field] = value
-    return fields
+    # The tool may add a trailing newline; strip it. A blank key stays blank,
+    # so the caller asks again.
+    return {'key': (result.stdout or '').strip()}
 
 
 def message_argv(tool_path, message, platform_name):

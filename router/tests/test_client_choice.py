@@ -220,5 +220,32 @@ class CurrentInstallAttachTests(unittest.TestCase):
             self.assertIn('Claude desktop connected', out)
 
 
+class SubscriptionDefaultTests(unittest.TestCase):
+    """Nobody is asked about subscriptions: defaults apply, saved answers win."""
+
+    def resolve(self, state, *flags):
+        args = install_mod.build_parser().parse_args(['--clients', 'both', *flags])
+        receipts = mock.Mock(read_receipt=mock.Mock(return_value={'clients': {}}),
+                             default_mode=mock.Mock(return_value='subscription'))
+        written = []
+        with mock.patch.dict(os.environ, {'ROUTER_NO_CLIENT_CHOOSER': '1'}):
+            result = install_mod._client_choice.resolve(
+                args, Path('unused'), dict(state), receipts, lambda home, doc: written.append(doc))
+        return result[2:], written[-1] if written else state
+
+    def test_nothing_saved_defaults_both_subscriptions(self):
+        modes, saved = self.resolve({})
+        self.assertEqual(modes, ('subscription', 'subscription'))
+        self.assertEqual((saved['openai_mode'], saved['claude_mode']), ('subscription', 'subscription'))
+
+    def test_saved_modes_are_not_overwritten(self):
+        state = {'openai_mode': 'none', 'claude_mode': 'none', 'anthropic_mode': 'none'}
+        self.assertEqual(self.resolve(state)[0], ('none', 'none'))
+
+    def test_explicit_flags_still_choose_no_subscription(self):
+        modes, _ = self.resolve({}, '--claude-mode', 'none', '--openai-mode', 'none')
+        self.assertEqual(modes, ('none', 'none'))
+
+
 if __name__ == '__main__':
     unittest.main()

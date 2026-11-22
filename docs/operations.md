@@ -429,15 +429,11 @@ Existing machines first need this version through their current update
 schedule or a manual update. Sleeping/offline machines check when available.
 A missing interpreter or broken updater still needs local recovery.
 
-## Global starter instructions
+## Global instructions
 
-The setup window offers an Everyday help or Coding help starter after the key is stored and
-installs the chosen one as the full global `AGENTS.md` (or non-empty
-`AGENTS.override.md`) beside `config.toml`, exactly once. An existing file is
-never overwritten; updates and uninstall leave global instructions alone, so
-the owner's edits always win. Start a fresh Codex task to load the file. It
-applies across models without duplicating text in the catalogue and grants no
-new permission.
+Setup, updates and uninstall never write, change or remove the global
+`AGENTS.md` or `AGENTS.override.md` beside `config.toml`. The owner's file is
+always authoritative.
 
 ## New model notifications
 
@@ -1001,10 +997,10 @@ back to another region or provider.
 1. IT creates the key in the OpenRouter dashboard with a monthly allowance
    and hands it to the user over an existing trusted channel (never commit
    it, never paste it into chat or email threads beyond that handoff).
-2. The user installs and a native window opens by itself to ask for the key,
-   the subscription choice for the client(s) being set up (ChatGPT for Codex,
-   Claude for Claude Code, both when both are attached) and the starter. It
-   validates the key against OpenRouter before storing anything and shows
+2. The user installs and a native window opens by itself. It asks one
+   question: sign in with a work account or use their own key. Subscription
+   modes come from the installer defaults, saved choices or IT flags. The
+   window validates the key against OpenRouter before storing anything and shows
    remaining credit; the key lands in `openrouter.key` (mode 600), which the
    router reads per request. A host with no dialog tool (headless Linux, SSH)
    opens the loopback page instead, and an interactive terminal prints the

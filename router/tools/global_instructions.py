@@ -1,7 +1,6 @@
-"""Legacy global-instructions shim: starters are install-once now.
+"""Legacy global-instructions shim: the router writes no global instructions.
 
-The setup window installs a full starter AGENTS.md exactly once via
-`ai_router.agents`; updates and uninstall never touch global instructions.
+Setup, updates and uninstall never touch global instructions.
 These names survive so old releases and tests importing this module keep
 working: prepare reports nothing to do, write changes nothing, restore is
 a no-op, and BLOCK stays for receipt-compat reads only.
@@ -16,10 +15,9 @@ BLOCK = ''
 
 
 def prepare(codex_home, previous=None):
-    """Nothing to install: starters are written once by the setup window.
+    """Nothing to install; the path stays only for legacy receipt-compat reads.
 
-    Frozen shim: the override rule here must not evolve. `ai_router.agents.target`
-    is canonical; this copy stays only for legacy receipt-compat reads.
+    Frozen shim: the override rule here must not evolve.
     """
     override = Path(codex_home) / 'AGENTS.override.md'
     path = (override if override.exists() and override.read_text().strip()
@@ -29,7 +27,7 @@ def prepare(codex_home, previous=None):
 
 
 def write(path, before, after):
-    """No-op: the installer no longer rewrites global instructions."""
+    """No-op: the installer leaves global instructions unchanged."""
     return None
 
 

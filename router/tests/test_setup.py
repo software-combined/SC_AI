@@ -91,11 +91,9 @@ class SetupUnitTests(unittest.TestCase):
         body = setup_page.form('n' * 16, 'openrouter').decode()
         self.assertIn('<form method="post" action="./' + 'n' * 16 + '">', body)
         self.assertIn('type="password" name="key" autocomplete="off"', body)
-        self.assertIn('<input type="radio" name="mode" value="subscription" checked>', body)
-        self.assertIn('<input type="radio" name="mode" value="none">', body)
         self.assertIn('<button type="submit">', body)
-        self.assertIn('<input type="radio" name="profile" value="general" checked>', body)
-        self.assertIn('<input type="radio" name="profile" value="dev">', body)
+        # The page asks only for the key: no subscription or starter choice.
+        self.assertNotIn('type="radio"', body)
         # Inline style only: a loopback page must not fetch an external asset.
         self.assertIn('<style>', body)
         self.assertNotIn('<link', body)

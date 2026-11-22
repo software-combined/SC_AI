@@ -93,23 +93,25 @@ class SetupTests(unittest.TestCase):
         self.enterContext(mock.patch.object(work_account, '_waiting',
             side_effect=lambda issue=None: (issue or work_account.provision)()))
 
-    def collect(self, platform, responses, issue=None, clients='both'):
+    def collect(self, platform, responses, issue=None):
         calls = []
         def run(argv, **kwargs):
             calls.append(argv)
             return subprocess.CompletedProcess(argv, 0, responses.pop(0), '')
-        fields = work_account.collect('/dialog', platform, clients, run,
+        fields = work_account.collect('/dialog', platform, run,
                                        issue=issue or (lambda: KEY))
         return fields, calls
 
     def test_staff_flow_on_each_platform_uses_no_key_input_or_key_arguments(self):
         for platform in ('darwin', 'win32', 'linux'):
             with self.subTest(platform):
-                fields, calls = self.collect(platform, ['Sign in with my work account',
-                    'No subscription', 'I have one', 'Coding help'])
-                self.assertEqual(fields, {'key': KEY, 'mode': 'none',
-                                          'claude_mode': 'subscription', 'profile': 'dev'})
+                fields, calls = self.collect(platform, ['Sign in with my work account'])
+                self.assertEqual(fields, {'key': KEY})
+                self.assertEqual(len(calls), 1, 'the access question is the only question')
                 commands = str(calls)
+                self.assertIn('How do you want to connect?', commands)
+                self.assertNotIn('subscription', commands.lower())
+                self.assertNotIn('write for you', commands)
                 self.assertNotIn(KEY, commands)
                 self.assertNotIn('add-password', commands)
                 self.assertNotIn('hidden answer', commands)
@@ -124,7 +126,7 @@ class SetupTests(unittest.TestCase):
         for platform, code in (('darwin', 0), ('win32', 2), ('linux', 1)):
             issue = mock.Mock()
             run = lambda *a, **k: subprocess.CompletedProcess([], code, '', '')
-            self.assertIs(work_account.collect('/dialog', platform, 'codex', run, issue),
+            self.assertIs(work_account.collect('/dialog', platform, run, issue),
                           work_account.CANCELLED)
             issue.assert_not_called()
 
@@ -132,7 +134,7 @@ class SetupTests(unittest.TestCase):
         issue = mock.Mock()
         run = lambda *a, **k: subprocess.CompletedProcess([], 3, '', 'synthetic failure')
         with self.assertRaises(OSError):
-            work_account.collect('/dialog', 'linux', 'codex', run, issue)
+            work_account.collect('/dialog', 'linux', run, issue)
         issue.assert_not_called()
 
     def test_headless_linux_preserves_the_existing_browser_fallback(self):
@@ -147,12 +149,12 @@ class SetupTests(unittest.TestCase):
         fallback.assert_called_once_with('http://127.0.0.1:1/t/setup/n')
         issue.assert_not_called()
 
-    def test_denied_sign_in_does_not_ask_assistant_questions(self):
+    def test_denied_sign_in_asks_nothing_more(self):
         run = mock.Mock(return_value=subprocess.CompletedProcess([], 0,
             'Sign in with my work account', ''))
         issue = mock.Mock(side_effect=work_account.SignInFailed('Contact IT.'))
         with self.assertRaises(work_account.SignInFailed):
-            work_account.collect('/dialog', 'darwin', 'both', run, issue)
+            work_account.collect('/dialog', 'darwin', run, issue)
         self.assertEqual(run.call_count, 1)
 
     def test_managed_local_failure_does_not_repeat_browser_sign_in(self):
@@ -164,29 +166,17 @@ class SetupTests(unittest.TestCase):
         issue.assert_called_once()
         self.assertNotIn('Your work key is ready', message.call_args.args[1])
 
-    def test_work_key_confirmation_follows_success_and_names_installed_clients(self):
-        for clients, expected in (('codex', 'Codex'),
-                                  ('claude', 'Claude Code'),
-                                  ('both', 'Codex and Claude Code'),
-                                  ('none', 'Continue installation')):
-            with self.subTest(clients), \
-                 mock.patch.object(work_account, 'collect', return_value={'key': KEY}), \
-                 mock.patch.object(key_dialog, 'message') as message, \
-                 mock.patch.object(key_prompt, 'submit', return_value=(200, {'ok': True})):
-                self.assertEqual(key_prompt.run_window('http://127.0.0.1:1/t/setup/n',
-                    tool_path='/dialog', platform_name='linux', work=True, clients=clients), 0)
-            text = message.call_args.args[1]
-            self.assertIn('Your work key and choices are saved.', text)
-            self.assertIn('Check setup', text)
-            self.assertIn(expected, text)
-            if clients == 'claude':
-                self.assertNotIn('Codex', text)
-            if clients == 'none':
-                self.assertNotIn('Restart', text)
-            self.assertNotIn('Credit left', text)
+    def test_work_key_confirmation_follows_success_and_names_only_the_sign_in(self):
+        with mock.patch.object(work_account, 'collect', return_value={'key': KEY}), \
+             mock.patch.object(key_dialog, 'message') as message, \
+             mock.patch.object(key_prompt, 'submit', return_value=(200, {'ok': True})):
+            self.assertEqual(key_prompt.run_window('http://127.0.0.1:1/t/setup/n',
+                tool_path='/dialog', platform_name='linux', work=True), 0)
+        self.assertEqual(message.call_args.args[1],
+                         'You are signed in. Your work key is saved on this computer.')
 
     def test_managed_key_uses_the_existing_setup_submission(self):
-        fields = {'key': KEY, 'mode': 'none', 'profile': 'general'}
+        fields = {'key': KEY}
         with mock.patch.object(work_account, 'collect', return_value=fields), \
              mock.patch.object(key_dialog, 'message'), \
              mock.patch.object(key_dialog, 'collect') as manual, \

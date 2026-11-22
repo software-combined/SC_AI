@@ -1,8 +1,8 @@
 """Install-once global starter instructions (no vault, no personal data).
 
-Owns the Dev/General starter templates and one create-only install used by
-the setup window. Updates and uninstall never touch global instructions:
-the owner's file is authoritative the moment it exists.
+Owns the Dev/General starter templates and one create-only install. Setup does
+not call it; delete this module, its templates and their tests together.
+Updates and uninstall never touch global instructions.
 """
 from pathlib import Path
 

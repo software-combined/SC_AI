@@ -259,7 +259,6 @@ if ($LASTEXITCODE -ne 0) { throw 'SCG Router did not restart. Stop and contact I
 
 4. The second command restarts SCG Router and opens its key window. If your key
    already works, choose **Cancel**; the connection change and restart still apply.
-   If you enter a key, choose **No subscription**, then save it in that window.
 5. Reopen Codex and start a new chat. Select a model labelled `· OpenRouter`, then send a short greeting.
 6. Check that Send works and that you receive a reply. OpenRouter charges your key.
 
@@ -273,8 +272,7 @@ if ($LASTEXITCODE -ne 0) { throw 'The connection change failed. Stop and contact
 if ($LASTEXITCODE -ne 0) { throw 'SCG Router did not restart. Stop and contact IT.' }
 ```
 
-In the key window, choose **Cancel** if your key already works. If you save a
-key again, choose **I have one** for the ChatGPT subscription question.
+In the key window, choose **Cancel** if your key already works.
 Reopen Codex, start a new chat and choose a subscription model without the `· OpenRouter` suffix.
 Check that it replies. Switching back cannot restore an expired plan or exhausted allowance.
 These commands keep your sign-in and other attached assistants in place.
@@ -292,8 +290,8 @@ Confirm the restart. Select an OpenRouter model and check that it replies.
 When subscription access returns, open **Switch Codex** again, confirm, and
 choose a subscription model after Codex reopens.
 
-For a first setup without a ChatGPT subscription, choose **No subscription**
-in the key window. The Switch Codex helper is unnecessary in that mode.
+For a first setup without a ChatGPT subscription, ask IT to install with
+`--openai-mode none`. The Switch Codex helper is unnecessary in that mode.
 The helper verifies the loaded settings and restores the previous connection if switching fails.
 See [Switch Codex](operations.md#switch-codex) for the affected versions and recovery details.
 
@@ -371,8 +369,7 @@ saved data and leaves Claude closed; contact IT rather than forcing it open.
 
 ## I have no Claude subscription access
 
-Choose **No subscription** for the Claude question in the key window. From a
-terminal, add `--claude-mode none` to the install command. Then:
+Ask IT to add `--claude-mode none` to the install command. Then:
 
 - Claude Code in the terminal needs no Claude sign-in. It starts on OpenAI
   GPT-6 Luna at max effort. Its Opus, Sonnet, Haiku and Fable choices use the
@@ -382,8 +379,8 @@ terminal, add `--claude-mode none` to the install command. Then:
   in the SCG Router menu.
 
 Setup stops with a message when your OpenRouter key cannot use Claude Sonnet.
-Ask IT to check the key. To add a subscription later, choose **Replace model
-key** in the SCG Router menu and answer **I have one**.
+Ask IT to check the key. To add a subscription later, ask IT to run the
+installer with `--claude-mode subscription`.
 
 ## The installer stops before it downloads anything
 

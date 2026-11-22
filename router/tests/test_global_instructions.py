@@ -1,4 +1,4 @@
-"""Starters install once via the setup window and survive updates untouched."""
+"""The unused starter helper never overwrites; installs leave instructions alone."""
 import json
 import os
 import subprocess

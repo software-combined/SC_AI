@@ -116,11 +116,7 @@ class SetupHandlerTests(unittest.TestCase):
         home = Path(tempfile.mkdtemp())
         self.addCleanup(shutil.rmtree, home, True)
         server = self._server(home, clients='claude', openai_mode='none')
-        (home / 'mixed-router-state.json').write_text(json.dumps(
-            json.loads((home / 'mixed-router-state.json').read_text()) | {
-                'agents_profile': 'dev'}))
-        with mock.patch('ai_router.key_store._open_without_redirects', _key_ok()), \
-                mock.patch('ai_router.agents.install') as installed:
+        with mock.patch('ai_router.key_store._open_without_redirects', _key_ok()):
             response = self._post(server.server_port,
                                   '/test-token/setup/' + 'n' * 16,
                                   b'key=sk-live&claude_mode=none',
@@ -129,9 +125,7 @@ class SetupHandlerTests(unittest.TestCase):
         saved = json.loads((home / 'mixed-router-state.json').read_text())
         self.assertEqual(payload['ok'], True)
         self.assertEqual(saved['openai_mode'], 'none', 'Codex mode untouched')
-        self.assertEqual(saved['agents_profile'], 'dev', 'starter untouched')
         self.assertEqual(saved['claude_mode'], 'none')
-        installed.assert_not_called()
 
     def test_foreign_origin_rejected(self):
         home = Path(tempfile.mkdtemp())

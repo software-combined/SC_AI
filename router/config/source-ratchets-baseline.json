@@ -9,7 +9,7 @@
     "ai_router/models.py": 1,
     "ai_router/outbound.py": 1,
     "ai_router/relay.py": 8,
-    "ai_router/setup_page.py": 7,
+    "ai_router/setup_page.py": 6,
     "ai_router/stream_errors.py": 1,
     "ai_router/tool_adapter.py": 1,
     "packaging/claude_desktop_platform.py": 1,

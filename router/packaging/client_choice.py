@@ -166,8 +166,7 @@ def attach_codex(home, state, mode, codex_config, previous=None,
     if variant != _switch.DEFAULT and previous.get('openai_mode') not in (None, mode):
         variant = _switch.SWITCHED_BACK
     block = _switch.build(home, state, mode, static_catalogue, variant)
-    # Global instructions are install-once via the setup window's starter
-    # choice: this installer never writes, rewrites, or re-enforces them.
+    # The installer never writes, rewrites, or re-enforces global instructions.
     rules_receipt = previous.get('global_instructions')
     stamp = time.strftime('%Y%m%d-%H%M%S', time.gmtime()) + '-' + uuid.uuid4().hex[:8]
     (home / f'config-before-{stamp}.toml').write_bytes(
