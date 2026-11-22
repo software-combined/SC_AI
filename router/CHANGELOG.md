@@ -8,6 +8,9 @@
 - Count a deferred Windows update once. The retry counter no longer rises twice, and the deferral message appears once.
 - Setup asks one access question: sign in with your work account or use your own key. It no longer asks about ChatGPT or Claude subscriptions and assumes you use them; IT can still pass `--openai-mode none` or `--claude-mode none`. Saved choices are kept.
 - Setup no longer offers or writes starter instructions (`AGENTS.md`). An existing file is untouched.
+- Setup ends with one notice that names your assistants and how to restart them. During setup it no longer asks for a test message, an SC tool check, a Claude switch to OpenRouter or (on Windows) a Codex restart, and the access window shows no separate confirmation. **Check setup** and the Claude menu still offer those checks and the switch.
+- Opening the Mac installer again installs, updates or repairs, as on Windows, instead of showing a list of actions. With the same or an older installer it only says SCG Router is up to date.
+- **Update or repair** asks you to close your assistants only when a connection must change, or when Claude desktop uses OpenRouter.
 
 ## 1.3.65
 

@@ -2,7 +2,6 @@
 import argparse
 import json
 import os
-import subprocess
 import sys
 from pathlib import Path
 
@@ -23,14 +22,14 @@ def command(home):
     return [str(resources / 'runtime' / doc['runtime_exec']), str(worker), '--home', str(home)]
 
 
-def pending(home, setup_completion=False):
+def pending(home):
     path = Path(home) / 'update-notice.json'
     raw = path.read_bytes()
     doc = json.loads(raw)
     if not isinstance(doc, dict) or not isinstance(doc.get('version'), str) or not doc['version']:
         return path, raw, None
     text = load('notice_text')
-    if doc.get('completion_selected') and not setup_completion:
+    if doc.get('completion_selected'):  # Recorded by older setup, which showed its own offer.
         return path, raw, None
     if doc.get('shown'):
         if doc.get('names'):
@@ -61,63 +60,27 @@ def save(atomic, path, doc, raw):
     return updated
 
 
-def show(home, setup_completion=False):
+def show(home):
     if os.environ.get('ROUTER_NO_NOTICE') == '1':
         return False
     home = Path(home)
     with load('service').install_lock(home, '.update-notice.lock') as held:
         if not held:
-            if setup_completion:
-                try:
-                    _, raw, notice = pending(home, setup_completion=setup_completion)
-                    prior = json.loads(raw)
-                    return bool(notice is not None or prior.get('shown') and
-                                (prior.get('attachment') or prior.get('client_change')))
-                except (OSError, ValueError, TypeError, AttributeError):
-                    pass
             return False
-        path, raw, doc = pending(home, setup_completion=setup_completion)
+        path, raw, doc = pending(home)
         if doc is None:
-            if setup_completion:
-                try:
-                    prior = json.loads(raw)
-                    return bool(prior.get('shown') and
-                                (prior.get('attachment') or prior.get('client_change')))
-                except (ValueError, TypeError, AttributeError):
-                    pass
             return False
         text, dialog, atomic = load('notice_text'), load('windows_dialog'), load('atomic_write')
         clients = text.clients(doc.get('clients'))
         restart = clients in ('codex', 'both')
         has_restart_reason = bool(doc.get('attachment') or doc.get('client_change'))
-        platform = None
-        app = None
-        identity = None
-        if setup_completion:
-            if not has_restart_reason or not restart:
-                return False
-            platform = load('claude_desktop_platform')
-            app = platform.App('com.openai.codex', ())
-            try:
-                if not platform.is_running('win32', app=app):
-                    return False
-                identity = platform.app_identity('win32', app=app)
-            except (OSError, subprocess.SubprocessError):
-                return False
-            message = ("We couldn't confirm Codex loaded the changes. You can restart Codex, then "
-                       'choose Check setup.\n\nFinish any running work first. Restarting will '
-                       'close and reopen Codex.')
-        else:
-            message = text.message(doc['version'], clients, doc['names'],
-                                   has_restart_reason)
-        if restart and not setup_completion:
+        message = text.message(doc['version'], clients, doc['names'], has_restart_reason)
+        if restart:
             message += '\n\nFinish active work before restarting Codex.'
         answer = dialog.show(message, home, restart, labels=('Restart Codex', 'Later')
                              if restart else ('OK',))
         doc.update(shown=True, restart_pending=restart,
                    restart_result=('pending' if answer else 'later') if restart else 'not_required')
-        if setup_completion:
-            doc['freshness'] = 'unknown'
         try:
             raw = save(atomic, path, doc, raw)
         except atomic.ConcurrentChange:
@@ -129,18 +92,13 @@ def show(home, setup_completion=False):
             text.acknowledge(home, doc['names'])
         if not restart or not answer:
             return True
-        if platform is None:
-            platform = load('claude_desktop_platform')
-            app = platform.App('com.openai.codex', ())
+        platform = load('claude_desktop_platform')
+        app = platform.App('com.openai.codex', ())
         try:
             with load('native_dialog').Progress(
                     'Restarting Codex. This may take a minute.\n\n'
                     'OK only hides this message; the restart will continue.', button='OK', home=home):
-                if setup_completion and not platform.is_running('win32', app=app):
-                    doc.update(restart_pending=False, restart_result='not_open')
-                    save(atomic, path, doc, raw)
-                    return True
-                identity = identity or platform.app_identity('win32', app=app)
+                identity = platform.app_identity('win32', app=app)
                 if not platform.request_stop('win32', app=app, identity=identity):
                     raise OSError('Codex is still running')
                 platform.open_app('win32', app=app, identity=identity)

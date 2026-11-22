@@ -100,8 +100,9 @@ dialog child, so service processes do not inherit bundled library overrides.
 
 **Update or repair** uses the newest verified maintenance controller and the
 public release for the saved channel. The explicit `--repair` path preserves
-keys, subscription sign-ins, connected assistants and disabled tools. It uses
-the existing graceful assistant-close flow before changing connections. Automatic
+keys, subscription sign-ins, connected assistants and disabled tools. It asks
+to close assistants only when a connection needs rewriting, or when Claude desktop
+uses OpenRouter, because that connection changes while Claude is closed. Automatic
 updates never force an assistant closed. A one-shot public repair does not
 replace a saved custom feed. Controller and stable-launcher delivery can finish
 even when an assistant receipt needs attention. Connection conflicts retain
@@ -111,7 +112,9 @@ remains available for recovery. A saved key is kept unless the provider confirms
 that it no longer works; an outage or an unknown result does not permit replacement.
 Fresh subscription installs retain the assistant's native model default.
 Explicit model choices and the default for users without a subscription are preserved.
-Setup applies subscription answers to the connected assistants before it asks for a test reply.
+Setup applies subscription answers to the connected assistants before its closing notice.
+That one notice names each connected assistant and how to restart it. It does not
+claim that a reply works; **Check setup** in the menu checks that.
 
 Claude desktop can connect without a terminal client. Automatic SC tool delivery
 also needs the Claude Code setup tools from the desktop app's Install page.
@@ -134,7 +137,7 @@ separate from native-package acceptance.
 | Retained files | Delete the download or eject the DMG, then restart the router and the SCG Router app. |
 | Existing user | Upgrade and same-version repair preserve key, channel, custom feed, instructions, policy and disabled plugins. |
 | Assistant attachment | Verify desktop-only setup and attaching another assistant without detaching the first. |
-| Ready state | Observe a new routed reply, enabled SC tools and explicit fresh-session confirmation. |
+| Ready state | See one closing notice naming the attached assistants. After their restart, **Check setup** observes a routed reply and enabled SC tools. Reopening the same installer shows only the up-to-date notice. |
 | Cancellation | Cancel before attachment, during setup; reopening must resume safely. |
 | Recovery | Interrupt setup, run scheduled updates, restore an older runtime and verify public update recovery. |
 | Removal | Restore the prior assistant configuration and stop the owned services. |

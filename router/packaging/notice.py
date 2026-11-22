@@ -238,42 +238,6 @@ def record_attachment(home, version, event):
         return False
 
 
-def current_restart(home, version):
-    """A current Codex restart decision belongs to the whole setup journey."""
-    try:
-        doc = json.loads((Path(home) / NOTICE_FILE).read_text())
-    except (OSError, ValueError):
-        return False
-    if (not isinstance(doc, dict) or doc.get('version') != version
-            or _text.clients(doc.get('clients')) not in ('codex', 'both')):
-        return False
-    names = doc.get('names')
-    return bool(doc.get('attachment') or doc.get('client_change') or doc.get('shown')
-                or (names if isinstance(names, list) else _text.pending_names(home)))
-
-
-def record_client_change(home, version, event):
-    """Stage one restart reason for a changed, verified Codex setup target."""
-    try:
-        path = Path(home) / NOTICE_FILE
-        try:
-            doc = json.loads(path.read_text())
-        except (OSError, ValueError):
-            doc = {}
-        doc = doc if isinstance(doc, dict) else {}
-        if doc.get('client_change') == event or doc.get('version') == version and doc.get('shown'):
-            return False
-        if doc.get('shown'):
-            doc.pop('names', None)
-        doc.update(version=version, client_change=event, clients='codex', at=_utcnow(),
-                   completion_selected=True)
-        doc.pop('shown', None)
-        _atomic_write.replace_json(path, doc)
-        return True
-    except (OSError, ValueError):
-        return False
-
-
 def suppress_closed_client_restart(home):
     """Do not queue a restart notice when the client can read settings on next launch."""
     try:
@@ -281,7 +245,13 @@ def suppress_closed_client_restart(home):
         doc = json.loads(path.read_text())
         if not isinstance(doc, dict) or not (doc.get('attachment') or doc.get('client_change')):
             return False
-        doc.update(shown=True, restart_pending=False, restart_result='not_open', freshness='unknown')
+        if doc.get('names'):
+            # Drop only the restart reason; the added models still need their notice.
+            for key in ('attachment', 'client_change'):
+                doc.pop(key, None)
+            doc.update(restart_pending=False)
+        else:
+            doc.update(shown=True, restart_pending=False, restart_result='not_open', freshness='unknown')
         _atomic_write.replace_json(path, doc)
         return True
     except (OSError, ValueError):

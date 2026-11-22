@@ -27,7 +27,7 @@ If SCG Router cannot verify ChatGPT sign-in, it can offer the signed-out
 connection. It asks for confirmation before the fallback and before the restart.
 The menu status shows whether ChatGPT sign-in is required for OpenRouter.
 Connecting Claude leaves it on your Claude subscription, which it is already using.
-Choose **OpenRouter** to switch; setup offers the same switch when you connect Claude.
+Choose **OpenRouter** to switch. Setup does not switch Claude; its closing notice points here.
 Before a change, SCG Router explains the required assistant restart.
 **Continue** is the default button. Choose **Cancel** to leave the connection unchanged.
 Finish any work the assistant asks you to save before it closes.

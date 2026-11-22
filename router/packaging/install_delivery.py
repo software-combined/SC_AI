@@ -21,9 +21,6 @@ def _load(name):
     return module
 
 
-close_assistants = _load('repair_ui').close_assistants
-
-
 def run_logged(home, origin, task, launch):
     """Record menu/setup launches without copying command output or exception text."""
     def event(name, status=None, error=None):
@@ -94,6 +91,15 @@ def assistant_status(home, state, python=None):
     elif report.get('receipt') == 'missing' and state.get('clients') == 'none':
         return 'ready'
     return 'failed' if report.get('receipt') == 'conflict' else 'unknown'
+
+
+def close_assistants(home):
+    """Repair asks to close assistants only when an attachment needs rewriting."""
+    try:
+        owned = assistant_status(home, {}) == 'ready'
+    except (OSError, ValueError):
+        owned = False  # An unknown classification keeps the close question.
+    return _load('repair_ui').close_assistants(home, owned=owned)
 
 
 def clients(home, state):

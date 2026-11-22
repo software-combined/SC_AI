@@ -27,6 +27,19 @@ MSG = ('SCG Router was updated to 1.0.1. '
 
 
 class RecordTests(unittest.TestCase):
+    def test_restart_suppression_keeps_an_added_models_notice(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            home = Path(tmp)
+            path = home / notice_mod.NOTICE_FILE
+            path.write_text(json.dumps({'attachment': ['codex'], 'names': ['Model A'], 'restart_pending': True}))
+            self.assertTrue(notice_mod.suppress_closed_client_restart(home))
+            doc = json.loads(path.read_text())
+            self.assertEqual((doc.get('shown'), doc['names'], doc['restart_pending']), (None, ['Model A'], False))
+            self.assertNotIn('attachment', doc)
+            path.write_text(json.dumps({'attachment': ['codex'], 'restart_pending': True}))
+            notice_mod.suppress_closed_client_restart(home)
+            self.assertTrue(json.loads(path.read_text())['shown'])
+
     def test_fresh_install_stages_nothing(self):
         with tempfile.TemporaryDirectory() as tmp:
             home = Path(tmp) / 'home'
@@ -322,7 +335,7 @@ class ReleaseBundleTests(unittest.TestCase):
         root = _ROOT
         release_mod = load(root / 'packaging' / 'release.py', 'router_release')
         for member in ('packaging/notice.py', 'packaging/notice_text.py', 'packaging/notice_windows.py',
-                       'packaging/setup_restart.py', 'packaging/assets/router-icon.png'):
+                       'packaging/assets/router-icon.png'):
             self.assertIn(member, release_mod.bundle_files(root))
         self.assertTrue(
             (root / 'packaging' / 'assets' / 'router-icon.png').is_file())

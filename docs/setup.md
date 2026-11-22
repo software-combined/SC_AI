@@ -38,18 +38,18 @@ An unclear or denied lookup offers **Try again** and **Cancel**, without another
 download instruction. Subscription choices and disabled plugins stay preserved.
 
 The SCG Router app saves setup in your user account. After setup, you can
-delete the download or eject the disk image. Reopen SCG Router to check setup,
-repair it, connect another assistant, replace your key
-or remove the router. Reopening preserves the existing channel and settings.
-With the same or an older download, **Update or repair** restores the service
-using its installed release. **Connect another assistant** adds your selection
-while preserving existing connections.
+delete the download or eject the disk image. Opening a newer installer updates
+SCG Router. With the same or an older download, the installer keeps the
+installed version and shows **SCG Router is up to date**. Open SCG Router to
+check setup, repair it, connect another assistant, replace your key or remove
+the router. These keep the existing channel and settings. **Connect another assistant** adds your
+selection while preserving existing connections.
 
 The default channel is `stable`. Use `--channel=beta` on macOS/Linux or
 `-Channel beta` in PowerShell only when you intend to follow pre-releases.
-After setup, restart your assistant, choose a model and check that it replies.
-Native setup also checks installed SC tools and asks you to confirm they work
-in a fresh assistant session. It leaves unfinished setup pending.
+Native setup ends with one notice. It names the connected assistants and says
+how to restart each one. Restart your assistant, choose a model and check that
+it replies. **Check setup** in the SCG Router menu checks the reply and SC tools.
 
 ## Choose or change assistants
 
@@ -93,7 +93,9 @@ Claude sign-in and every reply goes to OpenRouter.
 It verifies the bundle checksum, tests the runtime, installs the service and
 writes the chosen client configuration. A missing key opens the setup window.
 That window asks one question: sign in with your work account or use your own
-key. Setup assumes you use the ChatGPT and Claude subscriptions you sign in to.
+key. In native setup, the window shows no confirmation of its own; the one
+closing notice names the connected assistants and how to restart them.
+Setup assumes you use the ChatGPT and Claude subscriptions you sign in to.
 For a computer without one, IT passes `--openai-mode none` or
 `--claude-mode none`. Setup writes no global instructions file.
 If it does not appear, re-run with `--setup` to restart the current release
