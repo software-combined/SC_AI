@@ -650,11 +650,17 @@ is in [runtime files](runtime-files.md#codex-usage-limit-record).
 5. A client is not a provider and an OS is neither. New clients reuse a
    proven wire protocol; a new protocol lands only after its contract is
    verified against the installed client version.
-6. `packaging/` file-based imports (`spec_from_file_location`) avoid
-   depending on a third-party distribution named `packaging`. Installer
+6. `packaging/` file-based imports avoid depending on a third-party
+   distribution named `packaging`. Installer modules load siblings through
+   `packaging/loader.py`, a leaf imported by name from `sys.path`. It executes
+   each file once per process, keyed by resolved path, so callers share one
+   copy of each module's classes, globals and test seams. The stable
+   `*_launch.py` launchers and the checkout build tool `release.py` keep their
+   own loaders. Installer
    scripts stay Python 3.9-compatible; the runtime requires 3.14.
    Tests that load router files into the test process use `tests/loading.py`,
-   which returns a new module on every call; child-process probes and some
+   which returns a new module on every call and clears the packaging cache
+   first, so its siblings are new copies too; child-process probes and some
    plugin-script and tool tests keep their own loader.
 7. `tools/` holds checkout-run helpers (local probes, scans, key ceremonies)
    that are invoked by the developer or by CI, not by an installed router;

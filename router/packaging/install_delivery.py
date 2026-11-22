@@ -1,5 +1,4 @@
 """One post-install delivery step, including same-version and desktop attaches."""
-import importlib.util
 import json
 import os
 import shutil
@@ -11,14 +10,11 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from native_payload import Deferred  # noqa: E402,F401 (install.main converts it to exit code 0)
+import loader  # noqa: E402
 
 
 def _load(name):
-    spec = importlib.util.spec_from_file_location(
-        'router_delivery_' + name, Path(__file__).with_name(name + '.py'))
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+    return loader.load(Path(__file__).with_name(name + '.py'))
 
 
 def run_logged(home, origin, task, launch):

@@ -1,18 +1,17 @@
 """Verified native Windows dialogs; legacy script retained for installer callers."""
-import importlib.util
 import json
 import subprocess
+import sys
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import loader  # noqa: E402
 
 ICON = Path(__file__).parent / 'assets/router-icon.png'
 
 
 def _load(name):
-    spec = importlib.util.spec_from_file_location('router_windows_dialog_' + name,
-        Path(__file__).with_name(name + '.py'))
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+    return loader.load(Path(__file__).with_name(name + '.py'))
 
 
 def command(home, mode, text, labels):

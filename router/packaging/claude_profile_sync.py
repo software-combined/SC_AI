@@ -1,18 +1,17 @@
 """Two-way session sync with active-winner precedence and per-session recovery."""
 import contextlib
-import importlib.util
 import json
 import os
 import shutil
+import sys
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import loader  # noqa: E402
 
 
 def _load(name, filename):
-    spec = importlib.util.spec_from_file_location(
-        name, Path(__file__).resolve().parent / filename)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+    return loader.load(Path(__file__).resolve().parent / filename, name)
 
 
 _rules = _load('router_sync_rules', 'claude_profile_rules.py')

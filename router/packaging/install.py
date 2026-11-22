@@ -17,14 +17,9 @@ import tarfile
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-import importlib.util
-# Bootstrap loader (Plan 123 exception): service must be spec-loaded before
-# service.load() exists, so this single bootstrap copy stays.
-_spec = importlib.util.spec_from_file_location(
-    'packaging.service',
-    Path(__file__).resolve().parent / 'service.py')
-_svc = importlib.util.module_from_spec(_spec)
-_spec.loader.exec_module(_svc)
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import loader  # noqa: E402
+_svc = loader.load(Path(__file__).resolve().parent / 'service.py', 'packaging.service')
 _platforms = _svc.load(
     'router_platforms', Path(__file__).resolve().parent / 'platforms' / '__init__.py')
 _codex_config = _svc.load(

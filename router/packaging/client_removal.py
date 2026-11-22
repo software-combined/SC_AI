@@ -4,17 +4,16 @@ No cross-client rollback: completed restores remain complete. A later failure
 keeps the service running and leaves each remaining attachment's receipt.
 """
 import hashlib
-import importlib.util
 import os
+import sys
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import loader  # noqa: E402
 
 
 def _load(name):
-    spec = importlib.util.spec_from_file_location('router_remove_' + name,
-                                                Path(__file__).with_name(name + '.py'))
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+    return loader.load(Path(__file__).with_name(name + '.py'))
 
 
 _json = _load('owned_json')

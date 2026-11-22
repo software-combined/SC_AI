@@ -290,8 +290,13 @@ def main(argv=None):
         return 0
     except (Exception, SystemExit) as exc:
         if args.action:
-            safe = str(exc) if isinstance(exc, Notice) or type(exc).__name__ == 'SwitchError' else (
-                'SCG Router could not finish. Choose Update or repair, then try again.')
+            safe = 'SCG Router could not finish. Choose Update or repair, then try again.'
+            try:
+                shown = (Notice, load('codex_switch_transaction').SwitchError,
+                         load('claude_desktop_switch').SwitchError)
+                safe = str(exc) if isinstance(exc, shown) else safe
+            except Exception:
+                pass  # A damaged install keeps the generic text.
             try:
                 load('native_dialog').message(safe)
             except Exception:

@@ -14,11 +14,9 @@ import urllib.request
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-import importlib.util
-_spec = importlib.util.spec_from_file_location(
-    'packaging.service', Path(__file__).resolve().parent / 'service.py')
-_svc = importlib.util.module_from_spec(_spec)
-_spec.loader.exec_module(_svc)
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import loader  # noqa: E402
+_svc = loader.load(Path(__file__).resolve().parent / 'service.py', 'packaging.service')
 
 # The status contract stays in diagnostics.py: the doctor reports the same
 # facts, and the installer binds diagnostics' seams (find_python, health,

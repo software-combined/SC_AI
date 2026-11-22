@@ -10,18 +10,14 @@ import here.
 import json
 import os
 import subprocess
+import sys
 import time
-import importlib.util as _ilu
 from pathlib import Path
 
-_spec = _ilu.spec_from_file_location(
-    'router_runtime_atomic_write',
-    Path(__file__).resolve().parents[1] / 'ai_router' / 'atomic_write.py')
-atomic_write = _ilu.module_from_spec(_spec)
-_spec.loader.exec_module(atomic_write)
-_spec = _ilu.spec_from_file_location('router_claude_removal', Path(__file__).with_name('client_removal.py'))
-_removal = _ilu.module_from_spec(_spec)
-_spec.loader.exec_module(_removal)
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import loader  # noqa: E402
+atomic_write = loader.load(Path(__file__).resolve().parents[1] / 'ai_router' / 'atomic_write.py')
+_removal = loader.load(Path(__file__).with_name('client_removal.py'))
 
 BASE_URL_KEY = 'ANTHROPIC_BASE_URL'
 DISCOVERY_KEY = 'CLAUDE_CODE_ENABLE_GATEWAY_MODEL_DISCOVERY'

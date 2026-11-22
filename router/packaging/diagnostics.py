@@ -12,7 +12,6 @@ health=..., current_version=..., codex_config=...)`. Until bound,
 module-level defaults read the shared service module the same way
 install.py does.
 """
-import importlib.util
 import json
 import os
 import sys
@@ -22,19 +21,14 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import client_executable
+import loader
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-# Bootstrap loader (Plan 123 exception): service must be spec-loaded before
-# service.load() exists, so this single bootstrap copy stays.
-_spec = importlib.util.spec_from_file_location(
-    'packaging.service',
-    Path(__file__).resolve().parent / 'service.py')
-_svc = importlib.util.module_from_spec(_spec)
-_spec.loader.exec_module(_svc)
+_svc = loader.load(Path(__file__).resolve().parent / 'service.py', 'packaging.service')
 _codex_config = _svc.load(
     'router_codex_config', Path(__file__).resolve().parent / 'codex_config.py')
-# Same injection as install.py: this copy is read-only by contract today, but a
-# future write path must not hit the un-injected guard (Plan 094).
+# Same injection as install.py, so diagnostics loaded on its own never hits
+# the un-injected guard (Plan 094).
 _codex_config._atomic_write = _svc.load(
     'router_atomic_write', Path(__file__).resolve().parent / 'atomic_write.py')
 _claude_config = _svc.load(

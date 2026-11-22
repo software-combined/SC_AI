@@ -3,14 +3,12 @@
 Owns user units, timer, restart, and uninstall. Knows nothing about feeds,
 bundles, or config. Runs on Python 3.9+ like the installer.
 """
+import sys
 from pathlib import Path
 
-import importlib.util
-
-_spec = importlib.util.spec_from_file_location(
-    'router_systemd', Path(__file__).resolve().parent.parent / 'systemd.py')
-_systemd = importlib.util.module_from_spec(_spec)
-_spec.loader.exec_module(_systemd)
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+import loader  # noqa: E402
+_systemd = loader.load(Path(__file__).resolve().parent.parent / 'systemd.py')
 systemd = _systemd  # unit-name constants for tests; lifecycle goes through Backend
 
 

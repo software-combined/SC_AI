@@ -31,21 +31,17 @@ except ImportError:       # pragma: no cover - POSIX
 
 import sys
 
-import importlib.util  # noqa: E402
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import loader  # noqa: E402
 
 
 def load(name, filename):
-    """Load one sibling module from its file path (Plan 123).
+    """Return the shared module for `filename`, executing it on first use.
 
-    The single 3.9-safe loader for every packaging module: the
-    spec-from-file + module_from_spec + exec_module sequence.
     Callers resolve `filename` against their own __file__ so relocated
     (installed) trees keep working.
     """
-    spec = importlib.util.spec_from_file_location(name, filename)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+    return loader.load(filename, name)
 
 
 _launchd = load('router_launchd', Path(__file__).resolve().parent / 'launchd.py')

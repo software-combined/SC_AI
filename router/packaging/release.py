@@ -25,7 +25,7 @@ REPO = 'software-combined/SC_AI'
 # bundle_files() and keeps an explicit required-files assertion, so a member
 # dropped from this list still fails the gate.
 PACKAGING_FILES = (
-    'packaging/VERSION', 'packaging/install.py', 'packaging/bundle.py',
+    'packaging/VERSION', 'packaging/install.py', 'packaging/bundle.py', 'packaging/loader.py',
     'packaging/launchd.py',
     'packaging/router_launch.py', 'packaging/service.py',
     'packaging/feed.py', 'packaging/feed_verify.py',

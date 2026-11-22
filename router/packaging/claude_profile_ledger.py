@@ -7,20 +7,19 @@ it still matches; an edited copy is kept and shared again. Any doubt keeps the
 copy. Nothing is hard-deleted or logged. Callers stop Claude and hold both locks.
 """
 import hashlib
-import importlib.util
 import json
 import os
 import re
+import sys
 import uuid
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import loader  # noqa: E402
+
 
 def _load(name, filename):
-    spec = importlib.util.spec_from_file_location(
-        name, Path(__file__).resolve().parent / filename)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+    return loader.load(Path(__file__).resolve().parent / filename, name)
 
 
 _records = _load('router_ledger_records', 'claude_profile_records.py')

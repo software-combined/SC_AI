@@ -16,15 +16,12 @@ import time
 from datetime import datetime, timezone
 from pathlib import Path
 
-import importlib.util as _ilu
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import loader  # noqa: E402
 
 
 def _load(name):
-    spec = _ilu.spec_from_file_location('router_notice_' + name,
-        Path(__file__).resolve().with_name(name + '.py'))
-    module = _ilu.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+    return loader.load(Path(__file__).resolve().with_name(name + '.py'))
 
 
 _atomic_write, _text = (_load(name) for name in ('atomic_write', 'notice_text'))

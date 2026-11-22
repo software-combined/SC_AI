@@ -1,21 +1,20 @@
 """Project provider diagnostics without changing conversation or message IDs."""
 import hashlib
-import importlib.util
 import io
 import json
 import os
 import re
 import stat
+import sys
 import tempfile
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import loader  # noqa: E402
+
 
 def _load_publish():
-    spec = importlib.util.spec_from_file_location(
-        'router_history_publish', Path(__file__).resolve().parent / 'claude_profile_publish.py')
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+    return loader.load(Path(__file__).resolve().parent / 'claude_profile_publish.py')
 
 
 _publish = _load_publish()

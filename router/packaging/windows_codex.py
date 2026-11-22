@@ -1,15 +1,14 @@
 """Fresh Store identity and verified lifecycle policy for Windows Codex."""
 import contextlib
-import importlib.util
 import ntpath
+import sys
 import time
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
-_spec = importlib.util.spec_from_file_location('router_windows_native',
-    Path(__file__).with_name('windows_native.py'))
-_native = importlib.util.module_from_spec(_spec)
-_spec.loader.exec_module(_native)
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import loader  # noqa: E402
+_native = loader.load(Path(__file__).with_name('windows_native.py'))
 FAMILY = 'OpenAI.Codex_2p2nqsd0c76g0'
 _bindings = None
 

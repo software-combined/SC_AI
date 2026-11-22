@@ -7,17 +7,15 @@ Loaded via the installer's file-based import pattern, never
 `import packaging.platforms`, so installed bundles keep working without a
 `packaging` distribution.
 """
+import sys
 from pathlib import Path
 
-import importlib.util
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+import loader  # noqa: E402
 
 
 def _load(name, filename):
-    spec = importlib.util.spec_from_file_location(
-        name, Path(__file__).resolve().parent / filename)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+    return loader.load(Path(__file__).resolve().parent / filename, name)
 
 
 _darwin = None

@@ -156,25 +156,18 @@ class DesktopSetupTests(unittest.TestCase):
         class FakeSwitchError(Exception):
             pass
 
-        def exec_module(module):
-            module.SwitchError = FakeSwitchError
-            module.subprocess = SimpleNamespace(
-                SubprocessError=subprocess.SubprocessError)
+        def install(_home, _python, action):
+            calls.append(action)
+            if action == 'start':
+                raise FakeSwitchError('already exists')
 
-            def install(_home, _python, action):
-                calls.append(action)
-                if action == 'start':
-                    raise FakeSwitchError('already exists')
-            module.install_launcher = install
-            module._load = lambda _name: SimpleNamespace(install=lambda *args: None)
-
-        spec = SimpleNamespace(loader=SimpleNamespace(exec_module=exec_module))
+        switch = SimpleNamespace(
+            SwitchError=FakeSwitchError, install_launcher=install,
+            subprocess=SimpleNamespace(SubprocessError=subprocess.SubprocessError),
+            _load=lambda _name: SimpleNamespace(install=lambda *args: None))
         output = io.StringIO()
         with mock.patch.object(desktop.sys, 'platform', 'darwin'), \
-                mock.patch.object(desktop._ilu, 'spec_from_file_location',
-                                  return_value=spec), \
-                mock.patch.object(desktop._ilu, 'module_from_spec',
-                                  return_value=SimpleNamespace()), \
+                mock.patch.object(desktop.loader, 'load', return_value=switch), \
                 contextlib.redirect_stdout(output):
             self.real_install_launcher('/router', '/python')
         self.assertEqual(calls, ['switch', 'start'])

@@ -121,7 +121,7 @@ class ReleaseTests(unittest.TestCase):
                     'ai_router/routed_base_instructions.txt',
                     'ai_router/subscription_base_instructions.txt',
                     'packaging/router_launch.py',
-                    'packaging/service.py',
+                    'packaging/service.py', 'packaging/loader.py',
                     'packaging/feed.py',
                     'packaging/atomic_write.py',
                     'packaging/notice.py',

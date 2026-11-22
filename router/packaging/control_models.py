@@ -4,7 +4,6 @@ Only a checksum from an accepted signed feed can replace the local cache.
 The serving router reads that cache without acquiring Microsoft credentials.
 """
 import hashlib
-import importlib.util
 import json
 import re
 import subprocess
@@ -12,16 +11,15 @@ import sys
 import time
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import loader  # noqa: E402
+
 ORIGIN = 'https://dist.softwarecombined.com/'
 INTERVAL_S = 3600
 
 
 def _atomic():
-    spec = importlib.util.spec_from_file_location(
-        'router_control_models_atomic', Path(__file__).with_name('atomic_write.py'))
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+    return loader.load(Path(__file__).with_name('atomic_write.py'))
 
 
 def accept(home, document):
