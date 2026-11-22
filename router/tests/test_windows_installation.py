@@ -190,21 +190,21 @@ class InstallationRecoveryTests(unittest.TestCase):
 
     def test_same_version_finish_cannot_run_unjournaled_windows_maintenance(self):
         with tempfile.TemporaryDirectory() as temporary:
-            _, home, _, _, _, old, _ = self.fixture(Path(temporary))
+            _, home, backend, _, _, old, _ = self.fixture(Path(temporary))
             delivery, native = module('install_delivery'), SimpleNamespace(deliver=mock.Mock(return_value=True))
-            original = delivery._load
-            skills = SimpleNamespace(sync=mock.Mock(return_value='ready'))
-            with mock.patch.object(delivery, 'sys', SimpleNamespace(platform='win32'), create=True), \
+            installation = task_fixtures.backend._installation  # The module behind the backend's hooks.
+            loaded = installation.load
+            with mock.patch.object(installation, 'load', side_effect=lambda name: native if name == 'native_resources'
+                                   else loaded(name)), \
                     mock.patch.object(delivery, 'maintain', side_effect=AssertionError('outside transaction')) as maintain, \
-                    mock.patch.object(delivery, '_load', side_effect=lambda name: native if name == 'native_resources'
-                                      else skills if name == 'agent_skills' else original(name)):
-                delivery.finish(home, native=dict(latest=dict(version=old), feed='file:///latest.json'))
+                    mock.patch.object(delivery._load('agent_skills'), 'sync', return_value='ready'):
+                delivery.finish(home, native=dict(latest=dict(version=old), feed='feed'), backend=backend)
             maintain.assert_not_called()
             native.deliver.assert_called_once()
 
     def test_repair_keeps_a_newer_installed_release_when_the_channel_is_older(self):
         with tempfile.TemporaryDirectory() as temporary:
-            owner, home, _, _, _, current, newer = self.fixture(Path(temporary))
+            owner, home, backend, _, _, current, newer = self.fixture(Path(temporary))
             (home / 'control-version').write_text(newer)
             (home / 'setup-current').write_text(newer)
             resources = home / 'setup' / current
@@ -218,8 +218,8 @@ class InstallationRecoveryTests(unittest.TestCase):
                     target.write_bytes(path.read_bytes())
             blob, manifest, latest = payload('1.3.20.214')
             delivery = module('install_delivery')
-            record = dict(platform='win32', repair_version=current, feed='file:///latest.json')
-            delivery.prepare(home, blob, latest, manifest, {}, 'python', None, record)
+            record = dict(repair_version=current, feed='file:///latest.json')
+            delivery.prepare(home, blob, latest, manifest, {}, 'python', backend, record)
             self.assertEqual(record['cohort']['version'], current)
             self.assertEqual((home / 'current').read_text(), current)
             self.assertEqual((home / 'control-version').read_text(), newer)

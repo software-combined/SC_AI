@@ -10,7 +10,6 @@ import io
 import json
 import os
 import shlex
-import sys
 import tarfile
 from pathlib import Path
 from types import SimpleNamespace
@@ -48,9 +47,10 @@ def install_mod_factory():
     module = load(_ROOT / 'packaging' / 'install.py', 'router_install')
     # This existing rig exercises launchd on every host. Linux lifecycle
     # tests explicitly select linux and use the same installer seams.
+    # Shared modules ask platforms.host(); here it follows the same PLATFORM seam.
     module.PLATFORM = 'darwin'
-    module._updater.sys = SimpleNamespace(platform='darwin', executable=sys.executable, exc_info=sys.exc_info)
-    module._delivery.sys = SimpleNamespace(platform='darwin')
+    platforms = module._platforms
+    platforms.host = lambda svc: platforms.select(module.PLATFORM, svc, svc.run)
     module._completion.sys = SimpleNamespace(platform='darwin')
     # Installer tests must never open the real client chooser. Tests that
     # exercise the chooser replace these seams with their own fake dialog.

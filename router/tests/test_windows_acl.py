@@ -175,7 +175,7 @@ class WinBackendShapeTests(unittest.TestCase):
             home = Path(tmp) / 'home'
             blob, latest = _craft_bundle('1.0.0')
 
-            class FailingBackend:
+            class FailingBackend(install_mod._platforms.NoRepair):
                 def protect_secret(self, path):
                     if Path(path).name == 'mixed-router-state.json':
                         raise SystemExit('cannot protect state')
@@ -237,7 +237,7 @@ class WinBackendShapeTests(unittest.TestCase):
         blob, latest = _craft_bundle('1.0.0')
         events = []
 
-        class StubBackend:
+        class StubBackend(install_mod._platforms.NoRepair):
             def protect_secret(self, path):
                 events.append(('protect', Path(path).name,
                                (Path(path) / 'mixed-router-state.json').exists()

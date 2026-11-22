@@ -95,10 +95,11 @@ class DesktopDeliveryTests(unittest.TestCase):
                               if url.endswith('latest.json') else data)
             real = installer._delivery._load
             owner = self.resources
+            backend = mock.Mock()
+            backend.finish_maintenance.return_value = None  # The shared finish delivers the menu.
             with self.shortcuts(owner), mock.patch.object(installer._delivery, '_load',
                     side_effect=lambda name: owner if name == 'native_resources' else real(name)), \
-                    mock.patch.object(installer, 'platform_backend', return_value=mock.Mock()), \
-                    mock.patch.object(installer._delivery, 'sys', SimpleNamespace(platform='linux')), \
+                    mock.patch.object(installer, 'platform_backend', return_value=backend), \
                     contextlib.redirect_stdout(io.StringIO()):
                 self.assertEqual(installer.do_install(args, _fetch=fetch), 0)
             self.assertTrue(owner.ready(home))

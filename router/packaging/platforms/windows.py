@@ -1,4 +1,4 @@
-"""Windows backend (Plan 116 Stage 3). Task Scheduler lifecycle + ACL key protection.
+"""Windows backend: Task Scheduler lifecycle and ACL key protection.
 
 Per-user Scheduled Tasks at logon (no admin, no stored password), updater on
 a 4-hour repeat, pythonw.exe for both tasks through a home-root task
@@ -6,8 +6,7 @@ launcher that routes stdout/stderr to the router log directory, and icacls
 owner-only protection verified after writing. Offline-testable: every
 Windows command goes through the injected `run` seam, task XML is pure
 rendering over (python, home, user), and the shutdown request goes through
-the patchable `_post_shutdown` seam. Wired in select(); staff rollout stays
-gated on real-machine acceptance.
+the patchable `_post_shutdown` seam. Repair hooks come from `windows_installation`.
 """
 import os
 import json
@@ -24,6 +23,7 @@ import loader  # noqa: E402
 _winacl = loader.load(Path(__file__).resolve().parents[2] / 'ai_router' / 'winacl.py')
 _tasks = loader.load(Path(__file__).with_name('windows_tasks.py'))
 _shell = loader.load(Path(__file__).resolve().parents[1] / 'windows_shell.py')
+_installation = loader.load(Path(__file__).resolve().parents[1] / 'windows_installation.py')
 
 _XML_ENTITIES = {'"': '&quot;', "'": '&apos;'}
 
@@ -189,7 +189,7 @@ def _post_shutdown(state):
         return False
 
 
-class Backend:
+class Backend(_installation.Repair):
     name = 'windows'
     snapshot_cohort = _tasks.snapshot_cohort
     restore_cohort = _tasks.restore_cohort
@@ -288,7 +288,7 @@ class Backend:
             return  # Updater setup cannot override an explicit router stop.
         if not legacy and not any(task and task['pending'] for task in tasks):
             return
-        self.install(python, home, self._state(home), release_dir, None, expected_version=version)
+        self.install(python, home, self.state(home), release_dir, None, expected_version=version)
 
     def _wait_stopped(self, name, timeout, home, *, legacy=False):
         deadline = time.monotonic() + timeout
@@ -303,10 +303,17 @@ class Backend:
         # nothing is serving, so a misread task status can never suppress
         # the drain. Returns False when the instance is still running.
         try:
-            _post_shutdown(self._state(home))
+            _post_shutdown(self.state(home))
         except (OSError, ValueError, KeyError):
             pass
         return self._wait_stopped(ROUTER_TASK, timeout, home, legacy=legacy)
+
+    def drain_router(self, home):
+        """Disable and drain each owned router task, current scope first."""
+        for legacy in (False, True):
+            if self._task_state(ROUTER_TASK, home, legacy=legacy) is not None:
+                self._task_state(ROUTER_TASK, home, 'disable', legacy=legacy)
+                self._end_router(home, DRAIN_TIMEOUT_S, legacy=legacy)
 
     def _end_router(self, home, timeout, *, legacy=False):
         if not self._drain(home, timeout, legacy=legacy):
@@ -326,7 +333,7 @@ class Backend:
         self._task_state(ROUTER_TASK, home, 'complete', legacy=legacy)
 
     def restart(self, home):
-        state = self._state(home)
+        state = self.state(home)
         self._handover(home, state, self._svc.current_version(home), legacy=self._router(home)[0])
 
     def stop(self, home):
@@ -337,7 +344,7 @@ class Backend:
         for legacy in routers:
             self._stop_task(ROUTER_TASK, home, legacy=legacy)
 
-    def _state(self, home):
+    def state(self, home):
         return json.loads((Path(home) / 'mixed-router-state.json').read_text())
 
     def _run_task(self, name, home, *, legacy=False):

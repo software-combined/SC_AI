@@ -13,9 +13,10 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import loader  # noqa: E402
 _launchd = loader.load(Path(__file__).resolve().parent.parent / 'launchd.py')
+_platforms = loader.load(Path(__file__).with_name('__init__.py'), 'router_platforms')
 
 
-class Backend:
+class Backend(_platforms.NoRepair):
     name = 'darwin'
 
     def __init__(self, svc, run):
