@@ -6,7 +6,9 @@ A failed or cancelled prerequisite fails that gate. Development keeps static
 checks, with local verification still required before each commit.
 
 The unit command and installer opt-in are unchanged. Native installer scope,
-platform matrices, permissions, timeouts and tag publication rules are unchanged.
+platform matrices, permissions and timeouts are unchanged. Main acceptance runs
+only on pull requests into `main`; a stable tag reuses that run (see
+[operations](operations.md)).
 Title and body edits cannot create a successful required `Test` check.
 No push to a branch publishes a router release; publication requires a tag.
 
@@ -65,7 +67,7 @@ it does not claim lower aggregate runner use or faster individual tests.
 runs once with installer coverage enabled, and reaches the required gate.
 `tests/test_workflows.py` retains main/development, text-edit and release guards.
 
-Use the actual main pull-request or push workflow to measure the result.
+Use the actual main pull-request workflow to measure the result.
 Compare completed runs with equivalent source, coverage and runner classes.
 Record queue time, individual steps, aggregate runner time and failures separately.
 Historical timing alone does not prove a controlled improvement.

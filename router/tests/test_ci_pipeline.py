@@ -29,7 +29,7 @@ class AcceptancePipelineTests(unittest.TestCase):
                    '--run --workers 2 --report "$RUNNER_TEMP/unit-results.json"')
         self.assertIn(command, suite)
         self.assertIn('fetch-depth: 0', suite)
-        self.assertIn('github.event.pull_request.base.sha || github.event.before', suite)
+        self.assertIn('VERIFICATION_BASE: ${{ github.event.pull_request.base.sha }}', suite)
         self.assertIn("SCG_RUN_INSTALLER_TESTS: '1'", suite)
         self.assertEqual(sum(command in job for job in pipeline.values()), 1)
 
