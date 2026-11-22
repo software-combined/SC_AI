@@ -15,6 +15,7 @@ def _load(name):
 
 dialog = _load('client_dialog')
 platform = _load('claude_desktop_platform')
+_shell = _load('windows_shell')
 TITLE, ICON = dialog.TITLE, dialog.ICON
 
 
@@ -106,8 +107,7 @@ class Progress:
         if sys.platform == 'darwin':
             args = ['/usr/bin/osascript', '-e', platform.dialog_script(text, labels=labels)]
         elif sys.platform == 'win32':
-            args = ['powershell', '-NoProfile', '-WindowStyle', 'Hidden',
-                    '-Command', platform._windows_dialog(text, False, labels)]
+            args = _shell.argv(platform._windows_dialog(text, False, labels))
         else:
             args = [dialog.tool(), '--progress', '--pulsate', '--auto-close',
                     '--title=' + TITLE, '--window-icon=' + str(ICON),

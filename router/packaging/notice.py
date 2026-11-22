@@ -92,10 +92,9 @@ def _pid_alive(pid):
         if sys.platform == 'win32':
             query = ('(Get-CimInstance Win32_Process -Filter "ProcessId=%d")'
                      '.CommandLine' % pid)
-            out = subprocess.run(['powershell', '-NoProfile', '-Command',
-                                  query], stdout=subprocess.PIPE,
-                                 stderr=subprocess.DEVNULL, text=True,
-                                 timeout=PROBE_TIMEOUT, creationflags=0x08000000)
+            out = _load('windows_shell').run_script(query, stdout=subprocess.PIPE,
+                                                    stderr=subprocess.DEVNULL, text=True,
+                                                    timeout=PROBE_TIMEOUT)
         else:
             out = subprocess.run(['ps', '-p', str(pid), '-o', 'command='],
                                  stdout=subprocess.PIPE,
@@ -289,7 +288,7 @@ def _darwin_script(message, icon, restart=True):
     ])
 
 
-def _linux_command(message, icon=None, app=None, restart=True):
+def _linux_command(message, icon=None, app=None, restart=True, tool='zenity'):
     """argv for the Linux dialog, quitting and relaunching the app.
 
     zenity reports the choice through its exit status, so the restart runs
@@ -299,7 +298,7 @@ def _linux_command(message, icon=None, app=None, restart=True):
     Without the desktop app installed the dialog is informational, exactly
     as before.
     """
-    dialog = ['zenity', '--question' if app and restart else '--info',
+    dialog = [tool, '--question' if app and restart else '--info',
               '--title=' + TITLE]
     if icon:
         dialog.append('--window-icon=' + icon)
@@ -326,7 +325,8 @@ def dialog_command(version, platform_name=None, which=None, icon=None,
     to the bundled logo and is dropped when that asset is not installed.
     `clients` names the attached client(s): only a Codex install gets the
     app restart button, because that button relaunches the Codex app.
-    `names` are the added models the dialog may list.
+    `names` are the added models the dialog may list. Linux uses the
+    shared dialog tool, so `home` selects its retained setup wrapper.
     """
     if platform_name is None:
         platform_name = sys.platform
@@ -342,9 +342,11 @@ def dialog_command(version, platform_name=None, which=None, icon=None,
             return None
         return ['osascript', '-e', _darwin_script(message, icon, restart)]
     if platform_name.startswith('linux'):
-        if which('zenity') is not None:
+        shared = loader.load(Path(__file__).resolve().parents[1] / 'ai_router/dialog_tool.py')
+        tool = shared.tool(platform_name, which, home)
+        if tool is not None:
             app = LINUX_APP if restart and which(LINUX_APP) is not None else None
-            return _linux_command(message, icon, app, restart)
+            return _linux_command(message, icon, app, restart, tool)
         return None
     if platform_name == 'win32' and home is not None:
         return _load('notice_windows').command(home)
@@ -410,7 +412,8 @@ def show_pending(home, spawn=None, pid_alive=None, names=None):
         if not names and not attachment:
             return False
         cmd = dialog_command(version, icon=_home_icon(home) or '',
-                             clients=doc.get('clients', 'codex'), names=names, attachment=attachment)
+                             clients=doc.get('clients', 'codex'), names=names, attachment=attachment,
+                             home=home)
         if cmd is None:
             return False
         shown = {'version': version, 'shown': True, 'at': _utcnow()}

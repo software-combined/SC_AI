@@ -12,7 +12,6 @@ gated on real-machine acceptance.
 import os
 import json
 import ntpath
-import shutil
 import subprocess
 import sys
 import time
@@ -24,6 +23,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import loader  # noqa: E402
 _winacl = loader.load(Path(__file__).resolve().parents[2] / 'ai_router' / 'winacl.py')
 _tasks = loader.load(Path(__file__).with_name('windows_tasks.py'))
+_shell = loader.load(Path(__file__).resolve().parents[1] / 'windows_shell.py')
 
 _XML_ENTITIES = {'"': '&quot;', "'": '&apos;'}
 
@@ -212,7 +212,11 @@ class Backend:
 
     def check(self, home):
         del home
-        if shutil.which('powershell') is None:
+        try:
+            found = Path(_shell.executable()).is_file()
+        except OSError:
+            found = False
+        if not found:
             raise SystemExit('Windows PowerShell not found; '
                              'no files were changed')
 

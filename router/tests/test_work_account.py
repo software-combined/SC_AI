@@ -205,5 +205,18 @@ class SetupTests(unittest.TestCase):
                 issue.assert_not_called()
 
 
+class ChooserWindowTests(unittest.TestCase):
+    def test_access_chooser_starts_without_a_console_window(self):
+        dialog, seen = mock.Mock(), {}
+        dialog.argv.return_value = ['chooser']
+
+        def run(argv, **kwargs):
+            seen.update(kwargs)
+            return subprocess.CompletedProcess(argv, 1, stdout='', stderr='')
+        with self.assertRaises(OSError):
+            work_account._ask(dialog, None, 'win32', 'How do you want to connect?', ['a', 'b'], run)
+        self.assertEqual(seen['creationflags'], getattr(subprocess, 'CREATE_NO_WINDOW', 0))
+
+
 if __name__ == '__main__':
     unittest.main()

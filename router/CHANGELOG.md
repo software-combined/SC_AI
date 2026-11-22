@@ -11,6 +11,8 @@
 - Setup ends with one notice that names your assistants and how to restart them. During setup it no longer asks for a test message, an SC tool check, a Claude switch to OpenRouter or (on Windows) a Codex restart, and the access window shows no separate confirmation. **Check setup** and the Claude menu still offer those checks and the switch.
 - Opening the Mac installer again installs, updates or repairs, as on Windows, instead of showing a list of actions. With the same or an older installer it only says SCG Router is up to date.
 - **Update or repair** asks you to close your assistants only when a connection must change, or when Claude desktop uses OpenRouter.
+- On Windows, a folder or name that contains a curly apostrophe (’) no longer breaks setup shortcuts, startup or dialogs. Shortcuts, startup, notices and Windows maintenance start the Windows system copy of PowerShell.
+- On Linux, restart notices appear on computers that have only the dialog tool bundled with setup, as other SCG Router windows already do.
 
 ## 1.3.65
 

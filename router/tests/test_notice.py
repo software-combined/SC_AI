@@ -24,6 +24,8 @@ notice_mod = _notice_mod()
 
 MSG = ('SCG Router was updated to 1.0.1. '
        'Quit and reopen Codex to use the new models.')
+# A home with no retained setup, so Linux tests never find a real installed wrapper.
+NO_SETUP = Path('/synthetic/router-home')
 
 
 class RecordTests(unittest.TestCase):
@@ -273,16 +275,16 @@ class DialogCommandTests(unittest.TestCase):
 
     def test_linux_prefers_zenity(self):
         cmd = notice_mod.dialog_command(
-            '1.0.1', platform_name='linux',
+            '1.0.1', platform_name='linux', home=NO_SETUP,
             which=lambda name: '/usr/bin/' + name
             if name == 'zenity' else None)
-        self.assertEqual(cmd[0], 'zenity')
+        self.assertEqual(cmd[0], '/usr/bin/zenity')
         self.assertIn('--ok-label=Later', cmd)
         self.assertTrue(any(MSG in part for part in cmd))
 
     def test_linux_zenity_uses_the_icon_when_given(self):
         cmd = notice_mod.dialog_command(
-            '1.0.1', platform_name='linux',
+            '1.0.1', platform_name='linux', home=NO_SETUP,
             which=lambda name: '/usr/bin/' + name
             if name == 'zenity' else None,
             icon='/bundle/router-icon.png')
@@ -290,12 +292,12 @@ class DialogCommandTests(unittest.TestCase):
 
     def test_linux_offers_restart_when_the_app_is_installed(self):
         cmd = notice_mod.dialog_command(
-            '1.0.1', platform_name='linux',
+            '1.0.1', platform_name='linux', home=NO_SETUP,
             which=lambda name: '/usr/bin/' + name)
         self.assertEqual(cmd[:2], ['sh', '-c'])
         self.assertIn('pkill -x chatgpt', cmd[2])
         self.assertIn('setsid -f chatgpt', cmd[2])
-        dialog = cmd[cmd.index('zenity'):]
+        dialog = cmd[cmd.index('/usr/bin/zenity'):]
         self.assertEqual(dialog[1], '--question')
         self.assertIn('--ok-label=Quit and reopen', dialog)
         self.assertIn('--cancel-label=Later', dialog)
@@ -304,14 +306,14 @@ class DialogCommandTests(unittest.TestCase):
 
     def test_linux_without_zenity_keeps_the_notice_pending(self):
         cmd = notice_mod.dialog_command(
-            '1.0.1', platform_name='linux',
+            '1.0.1', platform_name='linux', home=NO_SETUP,
             which=lambda name: '/usr/bin/' + name
             if name == 'notify-send' else None)
         self.assertIsNone(cmd)
 
     def test_linux_without_tools_is_none(self):
         self.assertIsNone(notice_mod.dialog_command(
-            '1.0.1', platform_name='linux', which=lambda name: None))
+            '1.0.1', platform_name='linux', home=NO_SETUP, which=lambda name: None))
 
     def test_win32_uses_the_retained_notice_worker(self):
         worker = mock.Mock(command=mock.Mock(return_value=['retained-python', 'notice-worker']))

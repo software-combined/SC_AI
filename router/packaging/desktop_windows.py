@@ -1,11 +1,15 @@
 """Resolve exactly one installed desktop package in the current Windows account."""
 import json
 import ntpath
-import os
 from pathlib import Path
 import re
 import subprocess
+import sys
 import time
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import loader  # noqa: E402
+_shell = loader.load(Path(__file__).resolve().with_name('windows_shell.py'))
 
 
 class QueryError(OSError):
@@ -48,8 +52,8 @@ def json_command(script, run, *, timeout=5, operation='process_snapshot'):
         "$scg_stage='query';try{" + script + "}catch{"
         "@{scg_error=$scg_stage;hresult=[int]$_.Exception.HResult}|ConvertTo-Json -Compress;exit 1}")
     try:
-        answer = run(['powershell', '-NoProfile', '-Command', wrapped], capture_output=True,
-                     text=True, encoding='utf-8', timeout=timeout, creationflags=0x08000000)
+        answer = _shell.run_script(wrapped, run, capture_output=True, text=True,
+                                   encoding='utf-8', timeout=timeout)
     except (OSError, subprocess.SubprocessError, UnicodeError) as exc:
         facts = error_facts(exc, operation)
         raise QueryError(operation, facts.pop('reason'), elapsed_ms=round(
@@ -75,7 +79,7 @@ def snapshot_script(identity, tracked=(), names=()):
     """Select relevant process trees before querying their owners."""
     request = json.dumps(dict(root=identity['root'], user=identity['user'],
         names=list(names) + [ntpath.basename(identity['exe'])], tracked=list(tracked)))
-    return ("$scg_stage='process_snapshot';$request=ConvertFrom-Json '%s';" % request.replace("'", "''") + r'''
+    return ("$scg_stage='process_snapshot';$request=ConvertFrom-Json %s;" % _shell.ps_quote(request) + r'''
 $root=([string]$request.root).TrimEnd('\','/')+'\';
 $session=(Get-Process -Id $PID).SessionId;
 $all=@(Get-CimInstance Win32_Process -ErrorAction Stop | Where-Object {$_.SessionId -eq $session});
@@ -115,7 +119,7 @@ ConvertTo-Json -InputObject $rows -Compress
 
 def close_command(identity, seen):
     """Legacy Claude window-close request; Codex uses its native lifecycle."""
-    quote = lambda value: "'" + str(value).replace("'", "''") + "'"
+    quote = _shell.ps_quote
     norm = lambda value: value.replace('\\', '/').casefold()
     roots = [str(pid) for pid, row in seen.items() if norm(row['exe']) == norm(identity['exe'])]
     births = ';'.join('%s=%s' % (pid, quote(seen[int(pid)]['born'])) for pid in roots)
@@ -127,25 +131,18 @@ def close_command(identity, seen):
     script += "$p=Get-Process -Id $n -ErrorAction Stop;"
     script += "if($p.Path -ne %s){throw 'identity'};" % quote(identity['exe'])
     script += "$p.CloseMainWindow() | Out-Null}"
-    return ['powershell', '-NoProfile', '-Command', script]
+    return _shell.argv(script)
 
 
 def claude_roaming_root(roaming, local, run=None):
     """Store builds virtualize the subscription profile under their package."""
     if not local or not (Path(local) / 'Packages').is_dir():
         return roaming
-    system_root = os.environ.get('SystemRoot')
-    if not system_root or not Path(system_root).is_absolute():
-        raise OSError('Windows system directory could not be checked')
-    powershell = Path(system_root) / 'System32/WindowsPowerShell/v1.0/powershell.exe'
-    run = subprocess.run if run is None else run
     script = ("$ErrorActionPreference='Stop';"
               "$families=@(Get-AppxPackage -Name Claude | ForEach-Object {$_.PackageFamilyName});"
               "ConvertTo-Json -InputObject $families -Compress")
     try:
-        answer = run([str(powershell), '-NoProfile', '-NonInteractive', '-Command', script],
-                     capture_output=True, text=True, timeout=10,
-                     creationflags=getattr(subprocess, 'CREATE_NO_WINDOW', 0))
+        answer = _shell.run_script(script, run, capture_output=True, text=True, timeout=10)
         families = json.loads(answer.stdout)
         if (answer.returncode or not isinstance(families, list) or len(families) > 1
                 or any(not isinstance(family, str) or not re.fullmatch(

@@ -67,7 +67,7 @@ PACKAGING_FILES = (
     'packaging/desktop_windows.py',
     'packaging/windows_native.py',
     'packaging/windows_codex.py',
-    'packaging/windows_dialog.py',
+    'packaging/windows_dialog.py', 'packaging/windows_shell.py',
     'packaging/codex_switch_transaction.py',
     'packaging/claude_desktop_switch.py',
     'packaging/claude_profile_rotation.py',

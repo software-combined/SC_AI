@@ -88,8 +88,8 @@ def provision(config=None, authorize=None, post=None, *, cancelled=None):
 
 def _ask(dialog, tool_path, platform_name, question, items, run):
     result = run(dialog.argv(tool_path, platform_name, question, items),
-                 stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                 text=True, timeout=key_dialog.TIMEOUT_S)
+                 stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=key_dialog.TIMEOUT_S,
+                 creationflags=getattr(subprocess, 'CREATE_NO_WINDOW', 0))
     if (platform_name.startswith('linux') and result.returncode == 1
             and 'cannot open display' in (result.stderr or '').lower()):
         raise OSError('The setup window has no display.')

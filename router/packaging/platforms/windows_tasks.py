@@ -4,7 +4,10 @@ import ntpath
 import re
 import subprocess
 import xml.etree.ElementTree as ET
+from pathlib import Path
 
+import loader  # Every caller puts packaging/ on sys.path before loading this file.
+_shell = loader.load(Path(__file__).resolve().parents[1] / 'windows_shell.py')
 NAMES = ('CodexMixedModelRouter', 'CodexMixedModelRouterUpdate', 'CodexMixedModelRouterUpdateExpress')
 
 
@@ -200,9 +203,7 @@ def invoke(run, sid, name, arguments, operation='query', xml=None, *, pending=Tr
                    xml=xml, pending=pending, executable=executable)
     detail = ''
     try:
-        result = run(['powershell', '-NoLogo', '-NoProfile', '-NonInteractive',
-                      '-Command', _SCRIPT], input=json.dumps(request),
-                     capture_output=True, text=True, encoding='utf-8', timeout=60)  # first run is slow
+        result = _shell.run_json(_SCRIPT, request, run, timeout=60)  # first run is slow
         if result.returncode != 0:
             detail = _failure(result.stdout)
             raise ValueError('Task Scheduler query or operation failed')
