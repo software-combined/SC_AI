@@ -28,7 +28,9 @@ def _headers(source, router_token):
     bearer = 'Bearer ' + router_token if router_token else None
     for key, value in source.items():
         name = key.lower()
-        if (name in HOP_HEADERS or name in ('content-length', 'content-encoding', 'content-type')
+        # The catalogue is read as plain JSON, so never ask for a compressed reply.
+        if (name in HOP_HEADERS or name in ('content-length', 'content-encoding', 'content-type',
+                                             'accept-encoding')
                 or (name == 'authorization' and value == bearer)):
             continue
         forwarded[key] = value
