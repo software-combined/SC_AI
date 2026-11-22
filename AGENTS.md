@@ -39,7 +39,13 @@ tools use 400/700; tests use 300/500. Check these with
 `python3.14 tools/check_source_limits.py`. A file above
 the soft cap needs a baseline entry, which is a ceiling: the file may shrink
 freely and may not grow past the recorded count. Remove the entry once the
-file is back under the cap. Keep router and provider modules small.
+file is back under the cap. The same check ratchets three counts per file in
+`config/source-ratchets-baseline.json`: lines with more than one statement,
+lines over 120 characters, and platform comparisons in `packaging/` outside
+`packaging/platforms/` and the seven self-contained `*_launch.py` launchers it
+names. New
+files start at zero; counts may only fall. Split
+by responsibility, never by packing lines. Keep router and provider modules small.
 An upstream is one entry in
 `ai_router/provider_defs.py` (host, endpoint prefixes, key location,
 catalogue, failure dialect) consumed by adapter classes parameterized with
