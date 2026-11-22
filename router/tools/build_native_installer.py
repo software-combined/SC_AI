@@ -25,8 +25,6 @@ def _parser():
     parser.add_argument('--target', required=True, choices=native_stage.TARGETS)
     parser.add_argument('--out', required=True, type=Path)
     parser.add_argument('--channel', required=True, choices=('stable', 'beta'))
-    parser.add_argument('--download-config', type=Path,
-                        help='public tenant and download exchange settings JSON')
     parser.add_argument('--stage-only', action='store_true',
                         help='validate and stage Resources without platform tools')
     parser.add_argument('--linux-zenity', type=Path,
@@ -37,9 +35,6 @@ def _parser():
     parser.add_argument('--linux-uruntime-sha256')
     parser.add_argument('--windows-iscc', default='ISCC.exe',
                         help='path to the Inno Setup compiler')
-    # Accepted for old local scripts; unsigned builds are now the normal path.
-    parser.add_argument('--allow-unsigned', action='store_true',
-                        help=argparse.SUPPRESS)
     return parser
 
 
@@ -58,8 +53,7 @@ def _build_requirements(parser, args):
 
 def _stage(args, resources):
     metadata = native_stage.stage(args.bundle, args.runtime, args.target,
-                                  args.channel, resources,
-                                  download_config=args.download_config)
+                                  args.channel, resources)
     if args.target.startswith('linux/') and args.linux_zenity:
         native_linux_gui.bundle(args.linux_zenity, resources, args.target)
         metadata['gui_bundle'] = 'zenity'

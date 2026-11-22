@@ -6,7 +6,7 @@ import unittest
 from contextlib import redirect_stderr, redirect_stdout
 from http.cookies import SimpleCookie
 from unittest import mock
-from tests.test_download_auth import CONFIG, load
+from tests.test_download_oauth import CONFIG, load
 
 exchange = load('download_exchange_under_test', 'infra/downloads/handler.py')
 NOW = 1800000000

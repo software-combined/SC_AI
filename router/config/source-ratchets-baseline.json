@@ -156,7 +156,6 @@
     "packaging/desktop_linux.py": 1,
     "packaging/desktop_menu.py": 10,
     "packaging/desktop_startup.py": 2,
-    "packaging/download_session.py": 2,
     "packaging/install.py": 1,
     "packaging/install_delivery.py": 4,
     "packaging/native/native_build.py": 3,

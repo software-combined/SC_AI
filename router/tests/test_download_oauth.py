@@ -2,6 +2,7 @@
 import base64
 import hashlib
 import http.client
+import importlib.util
 import io
 import re
 import threading
@@ -9,10 +10,30 @@ import unittest
 import urllib.error
 import urllib.parse
 import urllib.request
+from pathlib import Path
 from unittest import mock
-from tests.test_download_auth import CONFIG, auth, token_response
 
-oauth = auth._oauth
+ROOT = Path(__file__).resolve().parents[1]
+
+
+def load(name, relative):
+    spec = importlib.util.spec_from_file_location(name, ROOT / relative)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+oauth = load('download_oauth_under_test', 'packaging/download_oauth.py')
+CONFIG = {'version': 1, 'distribution_origin': 'https://dist.softwarecombined.com',
+          'tenant_id': '11111111-1111-4111-8111-111111111111',
+          'client_id': '22222222-2222-4222-8222-222222222222',
+          'scope': 'api://33333333-3333-4333-8333-333333333333/Download.Read',
+          'exchange_url': 'https://abc123.execute-api.ap-southeast-2.amazonaws.com/download-access'}
+
+
+def token_response(**changes):
+    return {'access_token': 'synthetic-access', 'refresh_token': 'synthetic-rotated-refresh',
+            'expires_in': 3600, 'token_type': 'Bearer', **changes}
 
 
 class OAuthTests(unittest.TestCase):
@@ -124,7 +145,7 @@ class OAuthTests(unittest.TestCase):
         for response in (token_response(expires_in=0), token_response(expires_in='3600'),
                          token_response(token_type=1), token_response(access_token='secret\r\nInjected: yes')):
             with mock.patch.object(oauth, 'post', return_value=response), self.assertRaises(oauth.SignInRequired):
-                oauth.refresh(CONFIG, 'synthetic-refresh')
+                oauth._token(CONFIG, {'grant_type': 'authorization_code'})
 
     def test_transport_refuses_every_redirect_and_redacts_upstream_errors(self):
         request = urllib.request.Request(CONFIG['exchange_url'], data=b'{}',

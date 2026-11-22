@@ -1,6 +1,4 @@
-"""Private downloads must pause updates without disturbing a working router."""
-import json
-import tarfile
+"""Public downloads carry no credentials and keep the last good model cache."""
 import tempfile
 import unittest
 from pathlib import Path
@@ -14,49 +12,33 @@ models = install_mod._svc.load('private_control_models', ROOT / 'packaging/contr
 
 
 class PrivateTransportTests(unittest.TestCase):
-    def test_shipped_renewal_notice_stays_pending_without_a_dialog_tool(self):
-        release = install_mod._svc.load('private_release', ROOT / 'packaging/release.py')
-        with tempfile.TemporaryDirectory() as temporary:
-            root = Path(temporary)
-            release.main(['--out', str(root / 'dist')])
-            source = root / 'shipped'
-            with tarfile.open(next((root / 'dist').glob('*.tar.gz'))) as archive:
-                archive.extractall(source, filter='data')
-            notice = install_mod._svc.load('shipped_download_notice',
-                                          source / 'packaging/download_notice.py')
-            with mock.patch('shutil.which', return_value=None):
-                self.assertFalse(notice.show(root / 'home', now=100000))
-            self.assertFalse((root / 'home/download-notice.json').exists())
+    def test_update_pass_removes_a_leftover_sign_in_session_without_following_links(self):
+        updater = install_mod._updater
+        with tempfile.TemporaryDirectory() as tmp:
+            home, outside = Path(tmp, 'home'), Path(tmp, 'outside.json')
+            home.mkdir()
+            (home / 'download-session.json').write_text('{"refresh_token": "synthetic"}')
+            updater._remove_retired_session(home)
+            self.assertFalse((home / 'download-session.json').exists())
+            updater._remove_retired_session(home)
+            outside.write_text('{}')
+            try:
+                (home / 'download-session.json').symlink_to(outside)
+            except OSError:
+                self.skipTest('symlinks need extra rights on this Windows account')
+            updater._remove_retired_session(home)
+            self.assertTrue(outside.exists())
 
     def test_public_downloads_send_no_staff_credentials(self):
-        with tempfile.TemporaryDirectory() as temporary, mock.patch.object(feed, '_home', Path(temporary)):
-            (Path(temporary) / 'download-auth.json').write_text('{}')
-            with mock.patch.object(feed._auth, 'ensure_access', return_value='CloudFront-Policy=private'):
-                req = feed._request(feed.FEED_ORIGIN + '/stable/latest.json')
-                self.assertIsNone(req.get_header('Cookie'))
-                for url in ('https://other.example/file', 'http://dist.softwarecombined.com/file',
-                            'https://dist.softwarecombined.com.attacker.invalid/file'):
-                    with self.subTest(url=url), self.assertRaises(SystemExit):
-                        feed.fetch(url)
-                with self.assertRaises(SystemExit):
-                    feed._PinnedRedirects().redirect_request(
-                        req, None, 302, 'redirect', {}, 'https://other.example/file')
-
-    def test_expired_signin_does_not_count_as_a_bad_router_release(self):
-        with tempfile.TemporaryDirectory() as temporary:
-            home = Path(temporary)
-            (home / 'mixed-router-state.json').write_text(json.dumps(
-                {'port': 1, 'token': 'synthetic', 'update_failures': {'2.0.0': 1}}))
-            args = install_mod.build_parser().parse_args(['--home', str(home)])
-            def denied(*args):
-                raise feed.SignInRequired()
-            with mock.patch.object(install_mod._updater, '_offer_notices'), \
-                    mock.patch.object(install_mod._updater._svc, 'load'), \
-                    self.assertRaisesRegex(SystemExit, 'Sign in'):
-                install_mod.do_update(args, _read_feed=denied, _sleep=lambda *_: None)
-            state = json.loads((home / 'mixed-router-state.json').read_text())
-            self.assertEqual(state['last_error'], 'download_signin_required')
-            self.assertEqual(state['update_failures'], {'2.0.0': 1})
+        req = feed._request(feed.FEED_ORIGIN + '/stable/latest.json')
+        self.assertIsNone(req.get_header('Cookie'))
+        for url in ('https://other.example/file', 'http://dist.softwarecombined.com/file',
+                    'https://dist.softwarecombined.com.attacker.invalid/file'):
+            with self.subTest(url=url), self.assertRaises(SystemExit):
+                feed.fetch(url)
+        with self.assertRaises(SystemExit):
+            feed._PinnedRedirects().redirect_request(
+                req, None, 302, 'redirect', {}, 'https://other.example/file')
 
 
 class ControlledModelTests(unittest.TestCase):

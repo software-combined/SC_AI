@@ -10,7 +10,7 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-from tests.test_download_auth import CONFIG, load
+from tests.test_download_oauth import CONFIG, load
 from tests.test_workflows import ROOT, run_block
 
 
@@ -42,7 +42,6 @@ class DownloadRolloutTests(unittest.TestCase):
         return result, self.work / 'dist'
 
     def test_native_config_does_not_enrol_stable_beta_or_express_clients(self):
-        enrolment = load('rollout_enrolment', 'packaging/download_enrolment.py')
         for suffix in ('', '-beta', '-express', '-beta-express'):
             with self.subTest(suffix=suffix):
                 result, dist = self.build(suffix)
@@ -50,25 +49,6 @@ class DownloadRolloutTests(unittest.TestCase):
                 latest = json.loads((dist / 'latest.json').read_text())
                 self.assertNotIn('download_auth', latest)
                 self.assertFalse((dist / 'download-auth.json').exists())
-                home = self.work / 'legacy-home'
-                self.assertFalse(enrolment.accept(home, latest.get('download_auth')))
-                self.assertFalse((home / 'download-auth.json').exists())
-
-    def test_existing_auth_state_does_not_require_credentials_for_downloads(self):
-        home = self.work / 'existing-home'
-        home.mkdir()
-        saved = '{old or corrupt authentication settings'
-        (home / 'download-auth.json').write_text(saved)
-        feed = load('public_rollout_feed', 'packaging/feed.py')
-        feed.configure_home(home)
-        with mock.patch.object(feed._auth, 'ensure_access') as signin:
-            for suffix in ('stable/latest.json', 'stable/latest.json.sig',
-                           'bundles/release.tar.gz', 'stable/models.json'):
-                request = feed._request(feed.FEED_ORIGIN + '/' + suffix)
-                self.assertIsNone(request.get_header('Cookie'))
-                self.assertIsNone(request.get_header('Authorization'))
-        signin.assert_not_called()
-        self.assertEqual((home / 'download-auth.json').read_text(), saved)
 
     def test_native_builder_ignores_legacy_auth_metadata_and_sidecar(self):
         result, dist = self.build('-beta')
@@ -126,10 +106,7 @@ class DownloadRolloutTests(unittest.TestCase):
         installer = controller.install(home, source)
         self.assertEqual(controller.installer(home), installer)
         recovered_feed = load('recovered_public_feed', installer.with_name('feed.py'))
-        recovered_feed.configure_home(home)
-        with mock.patch.object(recovered_feed._auth, 'ensure_access') as signin:
-            self.assertIsNone(recovered_feed._request(recovered_feed.FEED_URL).get_header('Cookie'))
-        signin.assert_not_called()
+        self.assertIsNone(recovered_feed._request(recovered_feed.FEED_URL).get_header('Cookie'))
         for name, body in preserved.items():
             self.assertEqual((home / name).read_text(), body)
 

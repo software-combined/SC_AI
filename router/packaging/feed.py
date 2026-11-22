@@ -15,21 +15,9 @@ _spec = _ilu.spec_from_file_location(
     Path(__file__).resolve().parent / 'feed_verify.py')
 _feed_verify = _ilu.module_from_spec(_spec)
 _spec.loader.exec_module(_feed_verify)
-_auth_spec = _ilu.spec_from_file_location(
-    'router_feed_download_auth', Path(__file__).with_name('download_auth.py'))
-_auth = _ilu.module_from_spec(_auth_spec)
-_auth_spec.loader.exec_module(_auth)
-SignInRequired = _auth.SignInRequired
-_home = None
 
 FEED_ORIGIN = 'https://dist.softwarecombined.com'
 FEED_URL = FEED_ORIGIN + '/stable/latest.json'
-
-
-def configure_home(home):
-    """Retain the older installer call contract; downloads use no credentials."""
-    global _home
-    _home = Path(home)
 
 
 def _request(url, headers=None):

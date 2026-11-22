@@ -46,10 +46,11 @@ The S3 origin remains private behind CloudFront origin access control, and the
 `native-builds/` prefix remains unavailable through CloudFront. Package checksums,
 signed feeds, runtime pins and replay protection remain enforced.
 
-Release builds no longer consume `DOWNLOAD_AUTH_CONFIG` or
-`DOWNLOAD_AUTH_ENROLMENT`. Legacy release CLI sign-in options fail explicitly.
-Stale generated `dist/download-auth.json` is removed when building a release;
-installed users' authentication files are preserved and ignored by public transport.
+Release builds take no download sign-in configuration, and the sign-in release
+options fail explicitly. Building a release removes any stale generated
+`dist/download-auth.json`. Public transport ignores an existing
+`download-auth.json` in a user's home; while that file exists, the router leaves
+its hourly model refresh to the updater.
 
 With the repository variable `NATIVE_INSTALLERS_ACCEPTED` set to `true`, every stable
 release publishes all five installers and switches the download page to them, so

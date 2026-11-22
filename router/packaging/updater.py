@@ -5,6 +5,7 @@ file-based import pattern, never `import packaging.updater`. The installer
 injects its own seams after load (`bind(newer=..., verify_sha256=...,
 sync_seams=...)`); until bound, the module defaults behave the same.
 """
+import contextlib
 import hashlib
 import json
 import os
@@ -95,8 +96,12 @@ def _default_verify(data, want):
     return True
 
 
-def _noop_sync():
-    return None
+def _remove_retired_session(home):
+    """Best effort: delete the refresh token an earlier download sign-in kept."""
+    path = home / 'download-session.json'
+    with contextlib.suppress(OSError):
+        if path.is_file() and not path.is_symlink():
+            path.unlink()
 
 
 def _pending_reply(state, _urlopen=None):
@@ -159,7 +164,7 @@ def _offer_notices(home):
 # Installer-owned seams; rebound via bind() after file-based load.
 newer = _default_newer
 verify_sha256 = _default_verify
-sync_seams = _noop_sync
+sync_seams = lambda: None
 
 
 def bind(**overrides):
@@ -496,7 +501,6 @@ def do_update(args, _fetch=None, _read_feed=None, _sleep=None, _announce=None):
     """Apply updates, reconcile attachments, and record closed-set outcomes."""
     import random
     home = Path(args.home).expanduser()
-    _svc._feed.configure_home(home)
     sleep = _sleep or time.sleep
     sleep(random.uniform(0, 10 if getattr(args, 'express_only', False) else 120))
     task, result = ('express' if getattr(args, 'express_only', False) else 'regular'), 0
@@ -506,16 +510,13 @@ def do_update(args, _fetch=None, _read_feed=None, _sleep=None, _announce=None):
             _reconcile.log(home, task, 'completed', outcome='deferred')
             print('deferred: another update check is in progress')
             return 0
+        _remove_retired_session(home)
         try:
             result = _apply_update(args, home, sleep, _fetch, _read_feed, _announce)
             return result
         except UpdateError as exc:
             _record_pass(home, error=exc.error_code)
             raise
-        except _svc._feed.SignInRequired:
-            _record_pass(home, error='download_signin_required')
-            _svc.load('router_download_notice', Path(__file__).with_name('download_notice.py')).show(home)
-            raise SystemExit('Sign in through SCG Router to download updates.') from None
         except OSError:
             _record_pass(home, error='feed_unreachable')
             raise
@@ -538,7 +539,6 @@ def do_check_update(args, _fetch=None, _read_feed=None, _sleep=None):
     document; the applying verb is `do_update`.
     """
     home = Path(args.home).expanduser()
-    _svc._feed.configure_home(home)
     feed = args.feed or _svc.channel_feed(home)
     injected = _fetch
     read_feed = _read_feed or (lambda url, etag: _svc.fetch_feed(url, etag, injected))
