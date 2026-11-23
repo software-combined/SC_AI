@@ -33,7 +33,7 @@ router and a shared set of team plugins that stay up to date on your computer.
 | One-click desktop controls | Install with a native macOS, Windows, or Linux package that bundles Python. Switch connections, check status, update, or export a redacted support bundle from the SCG Router menu. |
 | Shared team skills, kept current | SCG Router delivers and refreshes the [agent plugins](plugins/README.md) across Codex and Claude Code, covering code review, documentation, finance, sales, operations, support, and agent workflows without Git or manual installs. |
 | Controlled model routing | Pick a named model inside your assistant, or use OpenRouter's optional Auto Code and Auto Router. On managed installs, automatic choices stay within the company-approved model pool. |
-| Local-first operation | The router runs only on your machine's loopback address with a per-install token, uses the Python standard library alone, and keeps prompts and keys out of its logs. |
+| Local-first operation | The router accepts connections only from your own computer. Each install has its own token. It uses the Python standard library alone and keeps prompts and keys out of its logs. |
 
 Two limits apply up front. External models bill their own key, and Claude Code
 and AWS Bedrock support remain in preview. See [tested setups](docs/compatibility.md)
@@ -45,8 +45,8 @@ Have Codex or Claude installed. You need your own subscription for subscription
 models. External providers require a separate key and charge for usage.
 
 1. Open [Install SCG Router](https://hub.softwarecombined.com/install) and choose your computer.
-2. Open the installer. It connects Codex, Claude Code and the Claude app when it finds them, then asks how to set up model access. Use the work-account route only when your organisation has enabled it.
-3. Reopen your assistant, select an available model, and send a short greeting.
+2. Open the installer. It asks no questions about your assistants: it connects Codex, Claude Code and the Claude desktop app when it finds them. If it needs a key, it asks how to set up model access. Use the work-account route only when your organisation has enabled it.
+3. Restart the assistants that the closing notice names, select an available model, and send a short greeting.
 
 You should receive a reply. Installation alone does not prove the connection works.
 See [setup options](docs/setup.md) and [desktop controls](docs/desktop-menu.md)

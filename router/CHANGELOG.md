@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- The download page and setup guide describe the automatic setup.
 - Setup from a source checkout (`install.sh`, `install.ps1` or `packaging/install.py`) needs Python 3.14 and says so clearly on an older Python.
 - Remove retired download sign-in code. Downloads were already public, so updates work as before.
 - `tools/build_native_installer.py` no longer accepts `--download-config` or the no-op `--allow-unsigned`.
