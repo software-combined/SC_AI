@@ -89,9 +89,9 @@ class DesktopProfileTransitionTests(fixtures.SyncFixture):
         self.owner._desktop.attach(self.home, state, self.owner._receipts, data_dir_override=self.third)
         self.assertEqual(json.loads(self.config.read_bytes()), {'keep': 'setting'})
         control = module('desktop_control')
-        installer = mock.Mock()
-        installer._diag._status_document.return_value = dict(clients={'claude-desktop': {}})
-        owners = dict(install=installer, claude_desktop_switch=self.owner, update_status=module('update_status'),
+        diagnostics = mock.Mock()
+        diagnostics._status_document.return_value = dict(clients={'claude-desktop': {}})
+        owners = dict(diagnostics=diagnostics, claude_desktop_switch=self.owner, update_status=module('update_status'),
                       desktop_startup=SimpleNamespace(enabled=lambda home: False))
         with mock.patch.object(control, 'load', side_effect=owners.__getitem__):
             self.assertEqual(control.snapshot(self.home)['clients'][0]['selected'], 'subscription')

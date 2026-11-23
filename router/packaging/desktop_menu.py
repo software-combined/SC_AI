@@ -14,6 +14,10 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from native_payload import load
 
+# Private exit codes from run_menu to main.
+HELPER_LOST = 74  # The helper exited unexpectedly; main retries it once.
+RELOAD = 75  # Newer resources are current; main relaunches from them.
+
 
 def _log(home, event, **facts):
     try:
@@ -111,6 +115,89 @@ def mac_reopen_available(resources):
         return False
 
 
+def _settle(home, resources, worker, state):
+    """Fold a finished job into the menu, then start a due refresh or control window."""
+    job = state['job']
+    if job and job.done():
+        try:
+            answer = job.result()
+            if state['busy']:
+                state['checked_update'] = answer.get('checked_update', state['checked_update'])
+            elif answer.get('outcome') == 'failed':
+                # Keep the last known rows so connections stay reachable.
+                state['facts']['status'] = 'Needs attention'
+            else:
+                state['facts'] = answer
+        except (Exception, SystemExit) as exc:
+            _log(home, 'controller_failed', error=type(exc).__name__)
+            state['facts']['status'] = 'Needs attention'
+        state['next_check'] = 0 if state['busy'] else time.monotonic() + 30
+        state['job'] = state['busy'] = None
+    if state['job'] is None and time.monotonic() >= state['next_check']:
+        state['job'] = worker.submit(_control, home, resources)
+    if state['needs_fallback'] and not state['busy']:
+        state['needs_fallback'], state['fallback_allowed'] = False, False
+        state['job'] = worker.submit(fallback, home, resources)
+        state['busy'] = 'Control window open…'
+
+
+def _push(shell, model, state, request, mac_reopen):
+    """Send the menu document when it changed or when macOS asked to open the menu."""
+    document = model.menu(state['facts'], busy=state['busy'], checked_update=state['checked_update'])
+    if mac_reopen:
+        try:
+            request.unlink()
+        except FileNotFoundError:
+            pass
+        else:
+            state['open_menu'] = True
+        if state['open_menu']:
+            document['open_menu'] = True
+            state['open_menu'] = False
+            state['last_doc'] = None  # A second reopen request must be delivered too.
+    doc = json.dumps(document)
+    if doc != state['last_doc']:
+        shell.stdin.write(doc + '\n')
+        shell.stdin.flush()
+        state['last_doc'] = doc
+
+
+def _handoff(home, resources, helper, idle):
+    """True when an idle menu should reload from newer current resources."""
+    try:
+        name = (home / 'setup-current').read_text().strip()
+        replacement = home / 'setup' / name
+        if (name and Path(name).name == name and replacement != resources
+                and idle and (replacement / 'control' / helper.name).is_file()):
+            load('native_payload').metadata(replacement)
+            _log(home, 'resource_handoff', reason='resources_advanced')
+            return True
+    except (OSError, ValueError):
+        pass
+    return False
+
+
+def _on_event(event, home, resources, worker, state, actions):
+    """Apply one helper event; True ends the menu loop."""
+    if event.get('closed'):
+        return True
+    if event.get('host') is False and state['fallback_allowed']:
+        state['needs_fallback'] = True
+    action = event.get('action')
+    if action == 'refresh':
+        state['next_check'] = 0
+    elif action == 'menu.quit' and not state['busy']:
+        state['quit'] = True
+        return True
+    elif action in actions and not state['busy']:
+        state['busy'] = ('Opening…' if action.endswith('.open') else
+                         'Switching…' if action.startswith(('codex.', 'claude.')) else
+                         'Connecting…' if action == 'setup.key' else
+                         'Updating…' if action == 'updates.install' else 'Working…')
+        state['job'] = worker.submit(_control, home, resources, action)
+    return False
+
+
 def run_menu(home, resources, *, autostart=False, after_update=False, offer_warning=False):
     quiet = autostart or after_update
     control, model = load('desktop_control'), load('desktop_model')
@@ -151,7 +238,6 @@ def run_menu(home, resources, *, autostart=False, after_update=False, offer_warn
                 request.unlink(missing_ok=True)
         except FileNotFoundError:
             pass
-        open_menu = mac_reopen and not quiet
         events = queue.Queue(maxsize=32)
         icon = resources / 'router/packaging/assets/router-icon.png'
         try:
@@ -166,84 +252,28 @@ def run_menu(home, resources, *, autostart=False, after_update=False, offer_warn
             return 1
         _log(home, 'helper_launched')
         threading.Thread(target=_events, args=(shell.stdout, events), daemon=True).start()
-        facts = dict(status='Checking setup…', version='Unknown', clients=[])
-        checked_update, busy, job, next_check, fallback_shown = None, None, None, 0, False
-        last_doc, reload_menu, needs_fallback, quit_requested = None, False, False, False
+        state = dict(facts=dict(status='Checking setup…', version='Unknown', clients=[]),
+                     checked_update=None, busy=None, job=None, next_check=0, last_doc=None,
+                     open_menu=mac_reopen and not quiet, fallback_allowed=not quiet,
+                     needs_fallback=False, reload=False, quit=False)
         with ThreadPoolExecutor(max_workers=1) as worker:
             try:
                 # A successful removal closes the menu, even mid-action or with a submenu open.
                 while shell.poll() is None and not removed.exists():
-                    if job and job.done():
-                        try:
-                            answer = job.result()
-                            if busy:
-                                checked_update = answer.get('checked_update', checked_update)
-                            elif answer.get('outcome') == 'failed':
-                                # Keep the last known rows so connections stay reachable.
-                                facts['status'] = 'Needs attention'
-                            else:
-                                facts = answer
-                        except (Exception, SystemExit) as exc:
-                            _log(home, 'controller_failed', error=type(exc).__name__)
-                            facts['status'] = 'Needs attention'
-                        job, busy, next_check = None, None, 0 if busy else time.monotonic() + 30
-                    if job is None and time.monotonic() >= next_check:
-                        job = worker.submit(_control, home, resources)
-                    if needs_fallback and not busy:
-                        needs_fallback, fallback_shown = False, True
-                        job = worker.submit(fallback, home, resources)
-                        busy = 'Control window open…'
-                    document = model.menu(facts, busy=busy, checked_update=checked_update)
-                    if mac_reopen:
-                        try:
-                            request.unlink()
-                        except FileNotFoundError:
-                            pass
-                        else:
-                            open_menu = True
-                        if open_menu:
-                            document['open_menu'] = True
-                            open_menu = False
-                            last_doc = None  # A second reopen request must be delivered too.
-                    doc = json.dumps(document)
-                    if doc != last_doc:
-                        shell.stdin.write(doc + '\n')
-                        shell.stdin.flush()
-                        last_doc = doc
-                    try:
-                        name = (home / 'setup-current').read_text().strip()
-                        replacement = home / 'setup' / name
-                        if (name and Path(name).name == name and replacement != resources
-                                and job is None and (replacement / 'control' / helper.name).is_file()):
-                            load('native_payload').metadata(replacement)
-                            _log(home, 'resource_handoff', reason='resources_advanced')
-                            reload_menu = True
-                            break
-                    except (OSError, ValueError):
-                        pass
-                    if offer_warning and job is None and not busy:
-                        offer_warning, busy = False, 'Checking setup…'
-                        job = worker.submit(_offer_warning, home)
+                    _settle(home, resources, worker, state)
+                    _push(shell, model, state, request, mac_reopen)
+                    if _handoff(home, resources, helper, state['job'] is None):
+                        state['reload'] = True
+                        break
+                    if offer_warning and state['job'] is None and not state['busy']:
+                        offer_warning, state['busy'] = False, 'Checking setup…'
+                        state['job'] = worker.submit(_offer_warning, home)
                     try:
                         event = events.get(timeout=0.5)
                     except queue.Empty:
                         continue
-                    if event.get('closed'):
+                    if _on_event(event, home, resources, worker, state, control.ACTIONS):
                         break
-                    if event.get('host') is False and not quiet and not fallback_shown:
-                        needs_fallback = True
-                    action = event.get('action')
-                    if action == 'refresh':
-                        next_check = 0
-                    elif action == 'menu.quit' and not busy:
-                        quit_requested = True
-                        break
-                    elif action in control.ACTIONS and not busy:
-                        busy = ('Opening…' if action.endswith('.open') else
-                                'Switching…' if action.startswith(('codex.', 'claude.')) else
-                                'Connecting…' if action == 'setup.key' else
-                                'Updating…' if action == 'updates.install' else 'Working…')
-                        job = worker.submit(_control, home, resources, action)
             except (BrokenPipeError, ConnectionResetError):
                 pass  # The helper exited between poll and pipe write.
             finally:
@@ -257,10 +287,10 @@ def run_menu(home, resources, *, autostart=False, after_update=False, offer_warn
                     shell.terminate()
                     exit_code = shell.wait(timeout=5)
                 shell.stdout.close()
-                reason = ('reload' if reload_menu else 'removed' if removed.exists()
-                          else 'quit' if quit_requested else 'unexpected')
+                reason = ('reload' if state['reload'] else 'removed' if removed.exists()
+                          else 'quit' if state['quit'] else 'unexpected')
                 _log(home, 'helper_exited', exit_code=exit_code, reason=reason)
-    return 75 if reload_menu else 0 if quit_requested or removed.exists() else 74
+    return RELOAD if state['reload'] else 0 if state['quit'] or removed.exists() else HELPER_LOST
 
 
 def start(home, resources, *, autostart=False, after_update=False):
@@ -297,7 +327,7 @@ def main(argv=None):
             rc = run_menu(args.home, args.resources, autostart=args.autostart,
                           after_update=args.after_update,
                           offer_warning=not args.after_update and attempt == 0)
-            if rc != 74 or attempt:
+            if rc != HELPER_LOST or attempt:
                 break
             time.sleep(1)
             if (args.home / load('native_shortcuts').REMOVED).exists():
@@ -307,13 +337,13 @@ def main(argv=None):
             except (OSError, ValueError):
                 replacement = args.resources
             if replacement != args.resources:
-                rc = 75
+                rc = RELOAD
                 break
             _log(args.home, 'helper_retry')
     except (Exception, SystemExit) as exc:
         _log(args.home, 'controller_failed', error=type(exc).__name__)
         return 1
-    if rc == 75:
+    if rc == RELOAD:
         command = [sys.executable, str(args.home / 'desktop_launch.py'), '--after-update']
         os.execv(sys.executable, command)
     return rc

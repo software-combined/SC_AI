@@ -82,13 +82,13 @@ class MenuTests(unittest.TestCase):
 
     def test_menu_greys_out_claude_subscription_without_one(self):
         control = module('desktop_control')
-        installer = mock.Mock()
-        installer._diag._status_document.return_value = dict(
+        diagnostics = mock.Mock()
+        diagnostics._status_document.return_value = dict(
             routing_healthy=True, clients={'claude-desktop': {}})
         owner = mock.Mock()
         owner.subscription_chosen.return_value = False
         owner.attached_profile.return_value = (None, {'deploymentMode': '3p'})
-        modules = dict(install=installer, claude_desktop_switch=owner,
+        modules = dict(diagnostics=diagnostics, claude_desktop_switch=owner,
                        update_status=module('update_status'),
                        desktop_startup=SimpleNamespace(enabled=lambda home: False))
         with mock.patch.object(control, 'load', side_effect=modules.__getitem__):

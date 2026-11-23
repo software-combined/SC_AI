@@ -35,9 +35,7 @@ class ModelAccessTests(unittest.TestCase):
 
     def test_unreadable_key_reports_attention_without_provisioning_or_network(self):
         control, diagnostics = module('desktop_control'), module('diagnostics')
-        installer = mock.Mock()
-        installer._diag._status_document.side_effect = diagnostics._status_document
-        modules = dict(install=installer, update_status=module('update_status'),
+        modules = dict(diagnostics=diagnostics, update_status=module('update_status'),
                        desktop_startup=SimpleNamespace(enabled=lambda _: False))
         with tempfile.TemporaryDirectory() as temporary:
             home = Path(temporary)
@@ -124,9 +122,7 @@ class ModelAccessTests(unittest.TestCase):
 
     def test_menu_reads_service_access_without_using_a_shell_key_or_contacting_provider(self):
         control, diagnostics = module('desktop_control'), module('diagnostics')
-        installer = mock.Mock()
-        installer._diag._status_document.side_effect = diagnostics._status_document
-        modules = dict(install=installer, update_status=module('update_status'),
+        modules = dict(diagnostics=diagnostics, update_status=module('update_status'),
                        desktop_startup=SimpleNamespace(enabled=lambda _: False))
         for stored, expected in ((None, 'needed'), ('', 'needed'), ('synthetic-saved', 'saved')):
             with self.subTest(stored=stored), tempfile.TemporaryDirectory() as temporary:

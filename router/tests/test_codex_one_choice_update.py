@@ -20,18 +20,17 @@ class PlatformSwitchTests(unittest.TestCase):
         self.addCleanup(self.case.doCleanups)
         self.case.attach(variant='switched')
         self.case.record()
-        self.offers, self.control = offer_fixtures.offers, module('desktop_control')
+        self.offers = offer_fixtures.offers
         self.dialog, self.owner = mock.Mock(), mock.Mock()
-        self.modules = {'service': module('service'), 'codex_switch_offer': self.offers,
-                        'codex_desktop_switch': self.owner}
+        self.modules = {'service': module('service'), 'codex_desktop_switch': self.owner}
         self.dialog.confirm_result.return_value = True
         self.owner.SwitchError = switcher.SwitchError
 
-    def offer(self, platform='linux', **kwargs):
-        with mock.patch.object(self.control.sys, 'platform', platform), \
+    def offer(self, platform='linux'):
+        with mock.patch.object(self.offers.sys, 'platform', platform), \
                 mock.patch.object(self.offers.time, 'time', return_value=offer_fixtures.T0 + offer_fixtures.HOUR), \
-                mock.patch.object(self.control, 'load', side_effect=self.modules.__getitem__):
-            result = self.control._limit_offer(self.case.home, self.dialog, **kwargs)
+                mock.patch.object(self.offers, '_owner', side_effect=self.modules.__getitem__):
+            result = self.offers.offer_and_switch(self.case.home, self.dialog)
             due = self.offers.due(self.case.home, now=offer_fixtures.T0 + offer_fixtures.HOUR)
         return result, due
 
@@ -90,10 +89,10 @@ class PlatformSwitchTests(unittest.TestCase):
             return None
         self.dialog.confirm_result.side_effect = fail
         try:
-            with mock.patch.object(self.control.sys, 'platform', 'darwin'), \
+            with mock.patch.object(self.offers.sys, 'platform', 'darwin'), \
                     mock.patch.object(self.offers.time, 'time', return_value=offer_fixtures.T0 + offer_fixtures.HOUR), \
-                    mock.patch.object(self.control, 'load', side_effect=self.modules.__getitem__):
-                self.assertEqual(self.control._limit_offer(self.case.home, self.dialog), {'outcome': 'cancelled'})
+                    mock.patch.object(self.offers, '_owner', side_effect=self.modules.__getitem__):
+                self.assertEqual(self.offers.offer_and_switch(self.case.home, self.dialog), {'outcome': 'cancelled'})
         finally:
             receipt.write_bytes(original)
         self.assertEqual(self.offers.due(self.case.home, now=offer_fixtures.T0 + offer_fixtures.HOUR)[0],
@@ -121,7 +120,7 @@ class PlatformSwitchTests(unittest.TestCase):
         def confirm(*_args, **_kwargs):
             self.owner.switch.return_value = 'switched_back'
             self.owner.switch.side_effect = None
-            self.assertEqual(self.control._limit_offer(self.case.home, self.dialog), {'outcome': 'cancelled'})
+            self.assertEqual(self.offers.offer_and_switch(self.case.home, self.dialog), {'outcome': 'cancelled'})
             return 'switched_back'
         self.owner.switch.side_effect = confirm
         self.assertEqual(self.offer()[0], {'outcome': 'done'})
