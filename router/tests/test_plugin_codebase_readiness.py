@@ -229,15 +229,19 @@ class CodebaseReadinessTests(unittest.TestCase):
         answers[-1]['answer'] = {'kind': 'unanswered'}
         work = self.repo.parent
         results = work / 'results.json'
+        check = {'checkedBy': 'subagent', 'held': 20, 'rejected': [],
+                 'changed': [{'itemCode': '3.3', 'from': 4, 'to': 3, 'why': '<i>w</i>'}]}
         results.write_text(json.dumps({'repository': 'example/repo', 'commit': 'abc1234',
                                        'assessedAt': '2026-11-23T10:00:00+11:00', 'summary': 's',
-                                       'answers': answers}), encoding='utf-8')
+                                       'answers': answers, 'verification': check}), encoding='utf-8')
         done = run('build_report.py', results, work / 'report.html')
         self.assertEqual(done.returncode, 0, done.stderr)
         page = (work / 'report.html').read_text(encoding='utf-8')
         self.assertIn('&lt;b&gt;r&lt;/b&gt;', page)
         self.assertIn('Not checked', page)
         self.assertIn('Unit: repository', page)
+        self.assertIn('A second agent checked the scores against the evidence: 20 held, 1 changed', page)
+        self.assertIn('3.3: level 4 to 3. &lt;i&gt;w&lt;/i&gt;', page)
         results.write_text(json.dumps({'repository': 'x', 'commit': 'a', 'assessedAt': 'b', 'summary': 's',
                                        'answers': answers + answers[:1]}), encoding='utf-8')
         self.assertEqual(run('build_report.py', results, work / 'dup.html').returncode, 1)

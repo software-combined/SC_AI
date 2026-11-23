@@ -21,6 +21,9 @@
   its keep, not layers for their own sake.
 - A fresh subagent checks the draft scores against the evidence before the
   report is built. The main agent decides each change and records it.
+  A second fresh subagent looks again at questioned, red and top-action
+  scores. Each role names a model for Claude Code (Opus, Sonnet, Haiku) and
+  Codex (Sol, Terra); other clients ask the user.
 - Git runs only in the user's own working copy or a fresh clone, because a
   copied repository folder can carry settings that make Git run programs.
 - Recon maps the repository in three lanes (code, documentation, verification
@@ -32,7 +35,8 @@
   example settings files and API schema files. Settings signals are scoped
   to the audited unit plus files that serve every unit.
 - `build_report.py` writes one self-contained HTML report with the Software
-  Combined colours, light and dark modes, and a phone layout.
+  Combined colours, light and dark modes, and a phone layout. The report
+  shows the score check: who checked, how many scores held, and each change.
 
 ## scg-review 0.7.6 (2026-11-23)
 

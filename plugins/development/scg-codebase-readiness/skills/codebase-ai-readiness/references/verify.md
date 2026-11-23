@@ -13,7 +13,7 @@ A fresh checker reads the draft scores and the evidence, and looks for scores th
 1. **The evidence exists.** Each cited path, number and map ID is real. Numbers match `measure.json`.
 2. **The evidence supports the level.** The chosen descriptor matches the evidence, and the next level up does not. If the evidence sits between two levels, the lower one is chosen.
 3. **Absent and unreadable are not mixed up.** A setting that could not be read is `unanswered` with `Not checked:`, never level 1. A thing that was looked for and not found is scored.
-4. **"Blocks" is real.** A level that needs blocking cites a required check on every branch that leads to production.
+4. **"Blocks" is real.** A level that needs blocking cites a required check, from branch protection or a ruleset, on every branch that leads to production.
 5. **Same evidence, same weight.** The same fact does not lift or sink several questions beyond what each descriptor asks.
 6. **The reason is plain and true.** The one-line reason matches the evidence and a non-engineer can follow it.
 7. **Nothing private.** No secrets, credentials, customer data or local user paths appear in any output.
@@ -39,4 +39,12 @@ Only this JSON, one entry per question:
 1. Decide each `adjust` and `unsupported` item against the evidence. Accept, or reject with a one-line reason.
 2. Apply accepted changes to `results.json`.
 3. Record the outcome in `results.json` under `verification`: who checked (`subagent` or `self`), how many items held, which changed and why, and which suggestions you rejected and why.
-4. Do not run a second round unless an accepted change touched more than three questions.
+4. Apart from the second check below, do not run another round unless an accepted change touched more than three questions.
+
+## Second check
+
+A second fresh subagent, on the model the [model table](../SKILL.md#models) gives, checks only the questions that step 6 of [the skill](../SKILL.md#steps) selects.
+
+- It gets the same checklist and inputs as the first checker. Its copy of `results.json` holds the current scores but no `verification` block, so it never sees the first checker's verdicts.
+- It returns the same JSON, one entry per question it checked.
+- The main agent decides its items the same way, and adds them to `verification` with `"by": "second check"` on each changed or rejected entry. Where the two checkers disagree, the evidence decides, not either checker.
