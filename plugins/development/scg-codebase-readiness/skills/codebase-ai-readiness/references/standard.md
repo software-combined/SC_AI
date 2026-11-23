@@ -6,6 +6,8 @@ That needs two things. The agent must find the right files fast, read little, an
 
 The numbers are defaults. A repository may set different limits, but it must write them down and check them automatically.
 
+**Proportionate, not strict.** The standard rewards structure where it earns its keep. Put an abstraction at a real boundary, such as an external service, storage or a framework, not around every function. A wrapper, factory or interface with one use and no test need is a cost, not a benefit. Level 5 means good practice that a team keeps up without effort, not perfection.
+
 ## 1. Structure
 
 **Split by domain, then subdomain, then file.** Code lives under the business area that owns it, for example `packages/payables/src/extraction/`. A task in one area opens those files, not the whole repository.
@@ -46,6 +48,8 @@ An old large file may stay on a baseline, but it cannot grow. A script in the re
 
 **Checks run before the change leaves the laptop.** A pre-commit review and a secret scan run on every commit. The same check command runs locally and in CI.
 
+**Anyone can run and see a change.** One documented command starts the app locally with sample data and no real credentials. Each pull request gets a preview or staging link, so the person who asked for the change can see it working before it merges.
+
 ## 5. Safe delivery
 
 **The main branch is protected.** Nobody pushes to the production branch directly. A change arrives through a pull request, the CI gate must pass, and at least one approval is required. Force pushes and deletion are off, and the rules apply to administrators too. If work merges into a shared integration branch first (for example `development`), that branch is protected in the same way. High-risk areas, such as access, money, data migrations and infrastructure, need a named owner's review, for example through a CODEOWNERS file.
@@ -53,3 +57,19 @@ An old large file may stay on a baseline, but it cannot grow. A script in the re
 **Branches are clean and named the same way.** A written rule gives the naming convention, for example `feat/…`, `fix/…`, `docs/…`. A branch is short-lived and is deleted when it merges. Few branches are open at one time and none is stale.
 
 **Deployment is automatic.** A merge deploys to a staging environment with no manual step. Production is one approved action, not a set of commands that one person knows. Each deployment is recorded and checked after release, and the way to roll back is written down.
+
+## 6. Contracts and API
+
+**One shared source for contracts.** Request and response shapes live in one shared place, for example a contracts package with Zod or OpenAPI schemas. Screens, the API and tools import them instead of copying them. The API checks all input against them where it enters.
+
+**Written API conventions, checked automatically.** One guide covers naming, error shape, paging, retries that do not repeat an action (idempotency) and versioning. The API reference is generated from the code or checked against it. A check catches a change that would break existing callers.
+
+**Abstraction where it is needed.** Each external service and store sits behind one adapter at a clear boundary. Business rules do not import framework or vendor code. Nothing is wrapped without a reason.
+
+## 7. Hygiene
+
+This dimension checks that the code stays tidy and current. Security is not scored here; use the dedicated security review for that.
+
+**Clean code and configuration.** Strict typing and lint run with zero warnings. Dead code and copied blocks are found by a tool and removed. Settings live in one config module with an example file, not hard-coded across the code.
+
+**Dependency hygiene.** A lockfile is committed. An update tool such as Dependabot or Renovate opens updates, and the team merges them regularly. Third-party CI actions are pinned to exact versions.

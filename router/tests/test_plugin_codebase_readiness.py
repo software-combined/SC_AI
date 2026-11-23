@@ -208,7 +208,7 @@ class CodebaseReadinessTests(unittest.TestCase):
     def test_framework_allows_not_applicable_only_where_intended(self):
         framework = json.loads((SKILL / 'references/framework.json').read_text(encoding='utf-8'))
         allowed = [item['code'] for dim in framework['dimensions'] for item in dim['items'] if item['naAllowed']]
-        self.assertEqual(allowed, ['5.3'])
+        self.assertEqual(allowed, ['4.4', '5.3', '6.1', '6.2', '7.2'])
 
 
 if __name__ == '__main__':

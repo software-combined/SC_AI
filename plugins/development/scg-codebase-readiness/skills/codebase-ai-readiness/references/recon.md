@@ -27,6 +27,8 @@ Each lane is defined by paths and rules, so two runs split the work the same way
 - For each domain, record: its subdomains, its entry points (web, API, worker, command line), the number of files, its largest file, any catch-all folder (`utils`, `helpers`, `common`, `misc`) and the imports that cross into another domain.
 - Read imports from three files per domain only: the largest, the most recently changed (newest commit date), and the first entry point in path order. Break any tie by path order.
 - Sample for pattern consistency: the largest production file, plus the largest file in each of the three biggest domains.
+- In the same sampled files, record where database, HTTP, cloud and vendor SDK calls happen: in adapter folders or inside business rules. Note interfaces, factories or wrappers with only one implementation or caller.
+- Record the contracts package or schema folder, which apps import it, and whether API entry points check input against it.
 
 **Lane 2: documentation map.**
 - Every `AGENTS.md` and `CLAUDE.md` at any level, the documentation folder tree and its index.
@@ -36,6 +38,8 @@ Each lane is defined by paths and rules, so two runs split the work the same way
 **Lane 3: verification and delivery map.**
 - CI files, the single check command (if any), hooks, secret-scan and coverage config, deploy triggers, environments and the release and rollback guide.
 - The read-only settings from the code host: branch protection for each shared branch, CODEOWNERS, the delete-on-merge setting, deployments, and the median time of recent pull request runs.
+- Hygiene: strict typing, lint warnings, dead-code and duplication tools, the config module and example file, lockfiles, the update tool and its open updates, and pinned CI actions.
+- Run and preview: the local start command, sample data, whether real credentials are needed, and preview links on recent pull requests.
 
 ## 3. What each lane returns
 

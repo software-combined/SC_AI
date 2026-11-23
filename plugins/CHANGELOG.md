@@ -3,8 +3,15 @@
 ## scg-codebase-readiness 0.1.0 (2026-11-23)
 
 - New plugin. The `codebase-ai-readiness` skill audits one repository against
-  the standard for an AI-optimised codebase: 15 questions in five dimensions
-  (structure, consistency, documentation, verification and safe delivery).
+  the standard for an AI-optimised codebase: 21 questions in seven dimensions
+  (structure, consistency, documentation, verification, safe delivery,
+  contracts and API, and hygiene). Security is left to the dedicated security
+  review. The standard is proportionate: it rewards structure where it earns
+  its keep, not layers for their own sake.
+- A fresh subagent checks the draft scores against the evidence before the
+  report is built. The main agent decides each change and records it.
+- Git runs only in the user's own working copy or a fresh clone, because a
+  copied repository folder can carry settings that make Git run programs.
 - Recon maps the repository in three lanes (code, documentation, verification
   and delivery) with a fixed return schema, so two runs split and merge the
   same way. Small repositories need no subagents.

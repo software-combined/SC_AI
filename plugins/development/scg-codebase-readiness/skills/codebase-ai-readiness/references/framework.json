@@ -215,6 +215,21 @@
           ],
           "evidenceToLookFor": "Pre-commit or hook config, a secret-scan config, the rule that requires a review before commit, whether the rules name shared hook tooling. You cannot see whether each contributor installed a hook kept outside the repository: say so in notChecked.",
           "naAllowed": false
+        },
+        {
+          "code": "4.4",
+          "subCapability": "Run and preview",
+          "shortLabel": "Run and preview",
+          "scale": "maturity-1-5",
+          "descriptors": [
+            {"level": 1, "text": "Nobody can run the app locally without help from one person, and there is no shared test environment."},
+            {"level": 2, "text": "Running locally takes many manual steps or real credentials, and a change can only be seen after release."},
+            {"level": 3, "text": "A documented set of steps runs the app locally, but it needs real data or credentials, or there is no preview of a change before it merges."},
+            {"level": 4, "text": "One documented command runs the app locally with sample data, and a shared staging site shows merged changes."},
+            {"level": 5, "text": "One documented command runs the app locally with sample data, and each pull request gets its own preview or staging link before it merges."}
+          ],
+          "evidenceToLookFor": "The local start command and its guide, sample or seed data, whether real credentials are needed, a staging site, and preview links on recent pull requests.",
+          "naAllowed": true
         }
       ]
     },
@@ -268,6 +283,99 @@
             {"level": 5, "text": "A merge deploys to staging automatically, production is one approved action, each deployment is recorded and checked after release, and the rollback steps are written down."}
           ],
           "evidenceToLookFor": "CI workflows that deploy and what triggers them, deployment environments and recent deployment records on the code host, the release guide, rollback steps, whether a deploy needs a person's own machine or credentials.",
+          "naAllowed": true
+        }
+      ]
+    },
+    {
+      "number": 6,
+      "name": "Contracts and API",
+      "shortName": "Contracts and API",
+      "summary": "Do the parts agree on what they send each other?",
+      "contributesToOverall": true,
+      "items": [
+        {
+          "code": "6.1",
+          "subCapability": "Shared contracts",
+          "shortLabel": "Shared contracts",
+          "scale": "maturity-1-5",
+          "descriptors": [
+            {"level": 1, "text": "No shared definitions. Each part writes its own version of the same data shapes."},
+            {"level": 2, "text": "Some shapes are shared, but screens, API and tools often copy or redefine them."},
+            {"level": 3, "text": "Most shapes live in one shared place, but some parts still copy them, or input is not checked against them."},
+            {"level": 4, "text": "One shared place defines the request and response shapes. Screens, API and tools import them, and the API checks input against them, with a few gaps."},
+            {"level": 5, "text": "One shared place defines every request and response shape, every caller imports it, and the API checks all input against it at the edge."}
+          ],
+          "evidenceToLookFor": "A contracts package or schema folder (Zod, OpenAPI, JSON Schema, protobuf), imports of it from each app, input validation at API entry points, copied type definitions.",
+          "naAllowed": true
+        },
+        {
+          "code": "6.2",
+          "subCapability": "API conventions and breaking changes",
+          "shortLabel": "API conventions",
+          "scale": "maturity-1-5",
+          "descriptors": [
+            {"level": 1, "text": "No conventions. Each endpoint names things, reports errors and pages results its own way."},
+            {"level": 2, "text": "Some habits exist, but they are not written down and endpoints differ."},
+            {"level": 3, "text": "Conventions for naming, errors and paging are written down, but endpoints often break them."},
+            {"level": 4, "text": "Written conventions are followed by most endpoints, and the API reference matches the code, but nothing catches a breaking change automatically."},
+            {"level": 5, "text": "Written conventions are followed, the API reference is generated from or checked against the code, and a check catches breaking changes to contracts before they merge."}
+          ],
+          "evidenceToLookFor": "The API conventions guide (naming, errors, paging, idempotency, versioning), a sample of three endpoints against it, a generated or checked API reference, a contract diff or breaking-change check in CI.",
+          "naAllowed": true
+        },
+        {
+          "code": "6.3",
+          "subCapability": "Abstraction where needed",
+          "shortLabel": "Right abstraction",
+          "scale": "maturity-1-5",
+          "descriptors": [
+            {"level": 1, "text": "Business rules call databases, external services and the framework directly from everywhere."},
+            {"level": 2, "text": "Some wrappers exist, but external services are called directly from many places, or layers are added with no clear reason."},
+            {"level": 3, "text": "External services and storage sit behind adapters in most places, but some business rules still call them directly, or several wrappers have only one caller and no reason."},
+            {"level": 4, "text": "External services and storage sit behind adapters, business rules do not depend on frameworks, and few needless layers remain."},
+            {"level": 5, "text": "Each external service and store has one adapter at a clear boundary, business rules are free of framework and vendor code, and there are no wrappers, factories or interfaces without a real second use or test need."}
+          ],
+          "evidenceToLookFor": "Where database, HTTP, cloud and vendor SDK calls happen (adapter folders versus business rule folders), interfaces or factories with one implementation, sampled files from three domains.",
+          "naAllowed": false
+        }
+      ]
+    },
+    {
+      "number": 7,
+      "name": "Hygiene",
+      "shortName": "Hygiene",
+      "summary": "Is the code tidy, clean and up to date?",
+      "contributesToOverall": true,
+      "items": [
+        {
+          "code": "7.1",
+          "subCapability": "Clean code and configuration",
+          "shortLabel": "Clean code",
+          "scale": "maturity-1-5",
+          "descriptors": [
+            {"level": 1, "text": "Large amounts of dead or commented-out code, copied blocks, loose typing and settings hard-coded across the code."},
+            {"level": 2, "text": "Dead code and copied blocks are common. Typing is loose. Settings and environment names are hard-coded in many places."},
+            {"level": 3, "text": "Typing is mostly strict and settings mostly sit in one place, but dead code, copied blocks or hard-coded environment values remain common."},
+            {"level": 4, "text": "Strict typing and lint run with few warnings, settings live in one config module with a documented example file, and dead code and copies are rare."},
+            {"level": 5, "text": "Strict typing and lint run with zero warnings, a dead-code or duplication check runs, settings live in one config module with an example file, and a new warning fails a required check on every branch that leads to production."}
+          ],
+          "evidenceToLookFor": "Type-check strictness (tsconfig strict, mypy strict), lint warning count, dead-code and duplication tools (knip, vulture, jscpd), a .env.example or config guide, hard-coded URLs or environment names, TODO and commented-out code counts.",
+          "naAllowed": false
+        },
+        {
+          "code": "7.2",
+          "subCapability": "Dependency hygiene",
+          "shortLabel": "Dependencies",
+          "scale": "maturity-1-5",
+          "descriptors": [
+            {"level": 1, "text": "No lockfile, versions float, and nobody updates dependencies."},
+            {"level": 2, "text": "A lockfile exists, but dependencies are updated by hand and rarely."},
+            {"level": 3, "text": "A lockfile is committed and updates happen, but there is no automatic update tool, or its updates sit unmerged for months."},
+            {"level": 4, "text": "A lockfile is committed and an update tool (Dependabot or Renovate) opens updates that the team merges regularly, but third-party CI actions are not pinned."},
+            {"level": 5, "text": "A lockfile is committed, an update tool opens updates that the team merges regularly so few pile up, and third-party CI actions are pinned to exact versions."}
+          ],
+          "evidenceToLookFor": "Lockfiles, Dependabot or Renovate config, the number and age of open update pull requests, CI actions pinned to a commit hash.",
           "naAllowed": true
         }
       ]
@@ -340,9 +448,10 @@
           {"itemCode": "2.3", "target": 4},
           {"itemCode": "4.1", "target": 4},
           {"itemCode": "4.2", "target": 4},
-          {"itemCode": "4.3", "target": 4}
+          {"itemCode": "4.3", "target": 4},
+          {"itemCode": "4.4", "target": 4}
         ],
-        "activities": ["Create one check command and run it in CI.", "Measure coverage and set a target.", "Add the pre-commit review and secret scan."],
+        "activities": ["Create one check command and run it in CI.", "Measure coverage and set a target.", "Add the pre-commit review and secret scan.", "Add one start command with sample data, and a preview link on each pull request."],
         "goalRequired": false
       }
     },
@@ -358,6 +467,35 @@
           {"itemCode": "5.3", "target": 4}
         ],
         "activities": ["Protect the production and integration branches.", "Write the branch naming rule and turn on delete-on-merge.", "Add a pipeline that deploys to staging on merge."],
+        "goalRequired": false
+      }
+    },
+    {
+      "id": "contracts-uplift",
+      "name": "Shared contracts and API conventions",
+      "description": "Move shared data shapes into one contracts package, check input against it at the API edge, write the API conventions, add a breaking-change check, and put each external service behind one adapter.",
+      "prerequisites": [],
+      "need": {
+        "questions": [
+          {"itemCode": "6.1", "target": 4},
+          {"itemCode": "6.2", "target": 4},
+          {"itemCode": "6.3", "target": 4}
+        ],
+        "activities": ["Create one contracts package and import it everywhere.", "Write the API conventions guide.", "Add a contract diff check to CI.", "Put each external service behind one adapter when that area is next changed."],
+        "goalRequired": false
+      }
+    },
+    {
+      "id": "hygiene-uplift",
+      "name": "Code hygiene",
+      "description": "Turn on strict typing, remove dead code, keep settings in one place, and add automatic dependency updates.",
+      "prerequisites": [],
+      "need": {
+        "questions": [
+          {"itemCode": "7.1", "target": 4},
+          {"itemCode": "7.2", "target": 4}
+        ],
+        "activities": ["Turn on strict typing and fix warnings area by area.", "Add Dependabot or Renovate and merge its updates every week.", "Pin third-party CI actions to exact versions."],
         "goalRequired": false
       }
     }
