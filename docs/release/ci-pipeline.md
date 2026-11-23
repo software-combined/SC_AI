@@ -6,7 +6,7 @@ A failed or cancelled prerequisite fails that gate. Development keeps static
 checks, with local verification still required before each commit.
 
 Main acceptance runs only on pull requests into `main`; a stable tag reuses
-that run (see [operations](operations.md)).
+that run (see [releasing](releasing.md)).
 Title and body edits cannot create a successful required `Test` check.
 No push to a branch publishes a router release; publication requires a tag.
 

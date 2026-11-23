@@ -1,4 +1,4 @@
-"""Offline decisions-client contracts; verified envelopes: docs/compatibility.md."""
+"""Offline decisions-client contracts; verified envelopes: docs/release/compatibility.md."""
 import http.client
 import io
 import json

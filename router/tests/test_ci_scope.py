@@ -48,7 +48,7 @@ class InstallerScopeTests(unittest.TestCase):
     def test_router_only_paths_keep_the_ubuntu_check(self):
         for path in ('ai_router/router.py', 'ai_router/catalogue.py',
                      'tests/test_ingress_guards.py', 'tests/test_handler.py',
-                     'docs/compatibility.md', 'README.md'):
+                     'docs/release/compatibility.md', 'README.md'):
             with self.subTest(path=path):
                 self.assertEqual(self.scope(path), 'installer=false')
 
@@ -57,7 +57,7 @@ class InstallerScopeTests(unittest.TestCase):
 
     def test_one_matching_path_selects_the_scope(self):
         self.assertEqual(
-            self.scope('README.md', 'packaging/service.py', 'docs/compatibility.md'),
+            self.scope('README.md', 'packaging/service.py', 'docs/release/compatibility.md'),
             'installer=true')
 
     def test_every_singleton_installer_test_file_runs_on_the_native_jobs(self):

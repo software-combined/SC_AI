@@ -1,6 +1,6 @@
 # Router setup
 
-Start with the [README](../README.md#get-started) for the ordinary staff path.
+Start with the [README](../../README.md#get-started) for the ordinary staff path.
 This guide covers prerequisites, the first-run steps and alternatives. Setup
 changes this computer's assistant settings and adds a background service and
 automatic update jobs.
@@ -22,7 +22,7 @@ automatic update jobs.
   SHA-256 tool.
 - Linux needs a running systemd user manager in the signed-in desktop session;
   setup refuses a bare remote SSH session without one.
-- Check [compatibility](compatibility.md) for the tested client versions and
+- Check [compatibility](../release/compatibility.md) for the tested client versions and
   unfinished acceptance checks.
 
 ## Set up SCG Router
@@ -122,11 +122,11 @@ command for your intended setup:
 
 The install script needs no checkout. Run the current install script again
 to connect a newly installed assistant, or use the
-[installed interpreter and installer](claude-code.md#setup).
+[installed interpreter and installer](../clients/claude-code.md#setup).
 For Claude desktop, choose **Claude**, then **OpenRouter**, in the SCG Router menu.
 Claude restarts on OpenRouter. The first switch sets up the OpenRouter profile; switch back and forth once to bring your saved Code tasks.
 Then choose Code, a folder and a
-model. All gateway rows bill OpenRouter. [Claude setup](claude-code.md) explains
+model. All gateway rows bill OpenRouter. [Claude setup](../clients/claude-code.md) explains
 its separate profile and unfinished task-sharing checks.
 
 Claude Code in the terminal keeps its subscription sign-in. Never set
@@ -161,9 +161,9 @@ The install script and scheduled updates pass their retained interpreter to the
 installer. An explicit eligible `--python` wins; otherwise an eligible running
 interpreter comes before Python found through `PATH`.
 
-<p><img src="assets/key-window-macos.png" alt="The first-run key window on macOS" width="400"></p>
+<p><img src="../assets/key-window-macos.png" alt="The first-run key window on macOS" width="400"></p>
 The key window checks your key before saving it on this computer.
-<p><img src="assets/update-dialog-macos.png" alt="The update notice on macOS" width="400"></p>
+<p><img src="../assets/update-dialog-macos.png" alt="The update notice on macOS" width="400"></p>
 Updates install themselves. This notice asks for an assistant restart when new
 models need to appear in its picker.
 
@@ -191,6 +191,6 @@ py -3.14 packaging/install.py --feed "$RouterDistUrl/latest.json"
 ```
 
 Use Python 3.14 for these commands; the installer refuses an older Python.
-See [contributing](../CONTRIBUTING.md) for development checks and
-[operations](operations.md) for update, rollback, uninstall and diagnostic
+See [contributing](../../CONTRIBUTING.md) for development checks and
+[operations](../README.md#operations) for update, rollback, uninstall and diagnostic
 commands.

@@ -4,7 +4,7 @@ The managed-deny contract: when the resolved allowlist is empty - a managed
 install with no readable policy - routing, the picker catalogue, the model
 listing and the announcement surfaces all refuse the same external rows,
 while subscription routing keeps working. Plan 176's live proof is recorded
-in `docs/compatibility.md`; this pins it offline.
+in `docs/release/compatibility.md`; this pins it offline.
 """
 import json
 import tempfile

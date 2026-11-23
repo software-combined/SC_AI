@@ -34,7 +34,7 @@ Automatic checks keep their existing schedule and never force an assistant close
 If Router reports an assistant connection conflict, retain the installation.
 Setup still delivers verified maintenance tools where possible. It preserves
 settings whose ownership it cannot prove. A maintainer can request the
-[redacted ownership report](operations.md#uninstall).
+[redacted ownership report](../operations/service.md#uninstall).
 Never send raw assistant configuration, keys or subscription credentials.
 
 ## Maintainer notice

@@ -168,7 +168,7 @@ class SwitchProbe(Probe):
 
 def serve(probe):
     """Loopback upstream for the client. Codex retries a refusal's 409
-    (docs/compatibility.md); a stopped probe refuses the retry locally too."""
+    (docs/release/compatibility.md); a stopped probe refuses the retry locally too."""
     class Handler(BaseHTTPRequestHandler):
         protocol_version = 'HTTP/1.1'
 

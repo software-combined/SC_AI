@@ -151,7 +151,7 @@ def _request(items, pairs, last_user, defn):
     # Shrink items first, then the count of retained entries: a real window
     # could not fit 32 KiB otherwise and refused. Thinning keeps the newest
     # evidence; it is not one-way safe, so both instructions name the omitted
-    # count and forbid inferring coverage from absence (see docs/architecture).
+    # count and forbid inferring coverage from absence (see docs/architecture/compaction.md).
     for cap, keep in ((2000, None), (500, None), (120, None),
                       (500, 64), (120, 32), (60, 16)):
         rest = [text for i, text in enumerate(texts) if i not in selected]

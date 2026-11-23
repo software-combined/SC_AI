@@ -18,7 +18,7 @@ how to complete work within the team's rules.
 |---|---|
 | Who it is for | Software Combined staff and contributors using AI assistants |
 | Maintained by | Software Combined Technology |
-| Status | Router and plugins have separate build, release, and acceptance gates; see [tested setups](docs/compatibility.md) |
+| Status | Router and plugins have separate build, release, and acceptance gates; see [tested setups](docs/release/compatibility.md) |
 
 ## Why use SC_AI
 
@@ -36,8 +36,8 @@ router and a shared set of team plugins that stay up to date on your computer.
 | Local-first operation | The router accepts connections only from your own computer. Each install has its own token. It uses the Python standard library alone and keeps prompts and keys out of its logs. |
 
 Two limits apply up front. External models bill their own key, and Claude Code
-and AWS Bedrock support remain in preview. See [tested setups](docs/compatibility.md)
-and [integration scope and data flows](docs/publication.md) for current boundaries.
+and AWS Bedrock support remain in preview. See [tested setups](docs/release/compatibility.md)
+and [integration scope and data flows](docs/legal/publication.md) for current boundaries.
 
 ## Get started
 
@@ -49,7 +49,7 @@ models. External providers require a separate key and charge for usage.
 3. Restart the assistants that the closing notice names, select an available model, and send a short greeting.
 
 You should receive a reply. Installation alone does not prove the connection works.
-See [setup options](docs/setup.md) and [desktop controls](docs/desktop-menu.md)
+See [setup options](docs/start/setup.md) and [desktop controls](docs/start/desktop-menu.md)
 for platform requirements, connections, and recovery.
 
 Read each [agent plugin's](plugins/README.md) guide before use. A skill does
@@ -68,14 +68,14 @@ specific model and effort. On managed installations, an empty approved pool
 refuses the request.
 
 Third-party models in Claude Code sit outside Anthropic's supported model
-scope. See [integration scope and data flows](docs/publication.md) before
+scope. See [integration scope and data flows](docs/legal/publication.md) before
 deciding to deploy.
 
 ## For maintainers
 
 Router source, installers, tools, tests, and infrastructure live in `router/`.
 Plugins remain under `plugins/`. The root setup plugin keeps its
-`scg-openrouter` identity. See [architecture](docs/architecture.md) for
+`scg-openrouter` identity. See [architecture](docs/ARCHITECTURE.md) for
 boundaries and compatibility.
 
 Use Python 3.14 or later. Run Router checks and builds from `router/`:
@@ -112,7 +112,7 @@ commit history is not included in this repository.
 
 ## Help and licence
 
-Start with [operations](docs/operations.md) or [recovery](docs/recovery.md).
+Start with [troubleshooting](docs/troubleshooting/README.md) or [repair](docs/start/repair.md).
 Report vulnerabilities through [the security policy](SECURITY.md).
 Include the error and what you tried; leave out keys and personal data.
 

@@ -56,4 +56,4 @@ needs to be copied or extracted for these tests.
 
 Offline tests verify routing and migration behavior. Real-client compatibility
 requires separately approved evidence before a production release; see
-[compatibility](compatibility.md) and [publication](publication.md).
+[compatibility](../release/compatibility.md) and [publication](../legal/publication.md).

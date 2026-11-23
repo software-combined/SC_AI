@@ -14,15 +14,15 @@ compared with the corresponding full upstream archive; all bytes matched.
 | Linux arm64 | 95,970,257 | 3,521 |
 | Windows x86_64 | 49,587,410 | 2,132 |
 
-[The install-only inventory](../router/packaging/runtime-notices.json) records the
+[The install-only inventory](../../router/packaging/runtime-notices.json) records the
 42 licence/notice files retained by each archive. Those files mainly cover
 Python and pip's bundled libraries. They do not include the native dependency
 notice directory from the full build. Preserve all original notices.
 
-[The native inventory](../router/packaging/runtime-components.json) records full
+[The native inventory](../../router/packaging/runtime-components.json) records full
 archive hashes, platform linking metadata, SPDX identifiers, exact upstream
 source locations and notice sections. The application bundle now includes
-[21 native notice sections](../router/packaging/RUNTIME-NOTICES.txt). Their source
+[21 native notice sections](../../router/packaging/RUNTIME-NOTICES.txt). Their source
 texts are unchanged apart from normalized line endings. Windows and Unix
 variants contain identical text after that normalization.
 
@@ -75,7 +75,7 @@ components, use Microsoft's trademarks in an application's name, or bring the
 files under a licence that requires source disclosure.
 
 Both Windows install paths ask for that agreement before the files arrive. The
-installer shows [windows-runtime-terms.txt](../router/packaging/native/windows-runtime-terms.txt)
+installer shows [windows-runtime-terms.txt](../../router/packaging/native/windows-runtime-terms.txt)
 as a page that must be accepted. `bootstrap.ps1` prints the same terms and
 downloads the runtime only after the user types ACCEPT, or when IT runs it with
 `-AcceptMicrosoftRuntimeTerms`. A silent installer run (`/SILENT` or
@@ -92,7 +92,7 @@ Keep these conditions while relying on it: ship the DLLs unmodified, exactly as
 in the checksum-pinned upstream archive; ship them only inside the router's
 runtime; keep the end-user terms on both install paths; keep the router under
 an OSI-approved licence; and keep the notice in
-[RUNTIME-NOTICES.txt](../router/packaging/RUNTIME-NOTICES.txt) that they remain
+[RUNTIME-NOTICES.txt](../../router/packaging/RUNTIME-NOTICES.txt) that they remain
 Microsoft's software under Microsoft's terms.
 
 This is the owner's acceptance, not legal review. If the router stops being

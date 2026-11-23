@@ -66,7 +66,7 @@ optional preview features and have no new stable support claim.
 The application is Apache-2.0, with the attributed opencodex material under
 MIT. Replacement router prompts are independently authored. Replay fixtures
 use synthetic instruction prose; future captures hash native instruction
-text. Read [provenance](PROVENANCE.md) and [third-party notices](../THIRD_PARTY_NOTICES.md).
+text. Read [provenance](provenance.md) and [third-party notices](../../THIRD_PARTY_NOTICES.md).
 The application declares no third-party Python dependencies. Bootstrap
 CPython archives are separate distributions whose hashes and component
 notices must be verified and retained for every platform.
@@ -119,7 +119,7 @@ decision needs evidence that an actual secret was exposed.
 Approval also covers provider scope, runtime component licences, SC brand
 use and public security/support ownership. External users have no support
 service level. Local tests cannot establish provider approval, model quality
-or live provider acceptance. [Compatibility](compatibility.md) records the
+or live provider acceptance. [Compatibility](../release/compatibility.md) records the
 current client versions and release checks. Native OAuth and paid provider
 acceptance require separately authorised live checks before a production
 support claim. Windows runtime

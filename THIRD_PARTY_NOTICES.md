@@ -63,14 +63,14 @@ The router speaks the wire formats of Codex, Claude Code and OpenRouter.
 Protocol facts, identifiers and request shapes in this repository were
 established by reading those clients and their public documentation; no
 client source code is copied into this repository. See
-`docs/PROVENANCE.md` and `docs/compatibility.md` for the versions those
+`docs/legal/provenance.md` and `docs/release/compatibility.md` for the versions those
 observations were made against.
 
 ## Router instruction assets
 
 The current router instruction assets are independently authored
 Software Combined material under the repository licence. They replace the
-previous desktop-derived prompt. See [provenance](docs/PROVENANCE.md) for the
+previous desktop-derived prompt. See [provenance](docs/legal/provenance.md) for the
 scope of that replacement and the separate decision on older distributions.
 
 ## CPython bootstrap runtimes
@@ -85,6 +85,6 @@ licence files when mirroring or installing those archives. The candidate
 verifies all five exact archives and includes additional native notices in
 [RUNTIME-NOTICES.txt](packaging/RUNTIME-NOTICES.txt), with component licences,
 source locations and hashes in [the native inventory](packaging/runtime-components.json).
-See [runtime licences](docs/runtime-licenses.md) for the Linux source-companion
+See [runtime licences](docs/legal/runtime-licenses.md) for the Linux source-companion
 requirement and the Windows Visual C++ runtime basis.
 The application bundle does not contain runtime binaries.

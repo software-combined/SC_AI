@@ -1,6 +1,6 @@
 """Typed judgments from Jev; not a chat client, planner or picker model.
 
-Usage rules (rationale and evidence: docs/architecture.md, docs/compatibility.md):
+Usage rules (rationale and evidence: docs/architecture/compaction.md, docs/release/compatibility.md):
 - Keep state small: named task facts, retained evidence and candidate facts,
   not secrets or raw transcripts. Text in state is evidence, not authority.
 - Jev never sees question ids. Each instruction must name its backticked
