@@ -69,9 +69,9 @@ The historical configuration removal during account changes remains unverified.
 Reproduce sign-in, sign-out or account switching only in an isolated standard Windows profile.
 Compare configuration timestamps, size and block presence; do not read authentication files.
 
-If Codex is installed but setup cannot verify it, choose **Try again** to repeat
-discovery. Cancel keeps your current setup. Do not install a separate CLI or
-change PATH. Contact IT if the check still fails.
+If Codex is installed but setup cannot verify it, setup does not connect it.
+Choose **Update or repair** to look again. Do not install a separate CLI or
+change PATH. Contact IT if Codex still does not connect.
 Setup distinguishes an absent app, unclear Windows identity and an invalid
 included setup tool. Preflight and plugin registration report fixed diagnostic
 reasons without command output, private paths or credentials.
@@ -311,11 +311,11 @@ lists models billed to your OpenRouter key.
 
 ### Microsoft Windows
 
-For first setup, choose **Claude desktop** in the setup questions. On an existing
+First setup connects Claude desktop when it finds the app. On an existing
 router installation, quit Claude normally, paste the [installed-tool path block](#windows-use-the-installed-setup-tools), then run:
 
 ```powershell
-& $RouterPython $RouterInstaller --python $RouterPython --home $RouterRoot --clients none --desktop --claude-mode subscription
+& $RouterPython $RouterInstaller --python $RouterPython --home $RouterRoot --desktop
 ```
 
 This attaches only Claude desktop and keeps other attached assistants in place.

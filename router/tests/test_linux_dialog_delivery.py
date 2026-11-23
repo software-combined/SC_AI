@@ -1,11 +1,9 @@
 """Retained dialogs work after the download leaves; a dialog that cannot show gives no answer."""
-import io
 import os
 import shutil
 import subprocess
 import tempfile
 import unittest
-from contextlib import redirect_stdout
 from pathlib import Path
 from types import SimpleNamespace
 from unittest import mock
@@ -37,16 +35,10 @@ class DialogDeliveryTests(unittest.TestCase):
         shutil.rmtree(download)
         return kept / 'gui/bin/zenity'
 
-    def test_chooser_and_key_dialog_find_retained_copy_without_download_or_path(self):
+    def test_question_and_key_dialog_find_retained_copy_without_download_or_path(self):
         wrapper = self.retained()
-        args = SimpleNamespace(dry_run=False, clients=None, client=None,
-                               desktop=False, choose_clients=True)
-        run = mock.Mock(side_effect=[SimpleNamespace(returncode=0, stdout=value)
-                                    for value in ('Claude', 'Terminal')])
-        with mock.patch('shutil.which', return_value=None), redirect_stdout(io.StringIO()):
-            self.assertTrue(self.client.maybe_ask(args, self.home, 'linux', run=run))
-            self.assertEqual(args.clients, 'claude')
-            self.assertEqual(run.call_args.args[0][0], str(wrapper.resolve()))
+        with mock.patch('shutil.which', return_value=None):
+            self.assertEqual(self.client.tool('linux', home=self.home), str(wrapper.resolve()))
             with mock.patch.dict(os.environ, {'ROUTER_HOME': str(self.home)}):
                 self.assertEqual(key_dialog.tool('linux'), str(wrapper.resolve()))
 

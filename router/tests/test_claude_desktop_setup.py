@@ -147,7 +147,7 @@ class DesktopSetupTests(unittest.TestCase):
                     mock.patch.object(desktop, '_install_switch_launcher', side_effect=installed), \
                     contextlib.redirect_stdout(io.StringIO()):
                 install_mod.do_install(args, _fetch=lambda _: b'{"version":"1.0.0"}')
-            self.assertEqual(calls, [(home, '/python3.14')])
+            self.assertEqual(calls, [(home.resolve(), '/python3.14')])
 
     def test_launcher_failures_name_the_action_and_keep_installing(self):
         desktop = install_mod._desktop_config
@@ -200,8 +200,7 @@ class DesktopSetupTests(unittest.TestCase):
             desktop = install_mod._desktop_config
             with mock.patch.object(desktop, '_install_switch_launcher') as launcher, \
                     contextlib.redirect_stdout(io.StringIO()):
-                desktop.attach_current(args, install_mod._codex_config,
-                                       install_mod._write_state, python='/python3.14')
+                install_mod._attach_current(args, home, '/python3.14')
             launcher.assert_not_called()
             self.assertFalse(home.exists())
 

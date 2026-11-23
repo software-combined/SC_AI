@@ -188,11 +188,11 @@ def record(home, previous, version, clients=None, names=None):
             _remember_picker(home, picker)
             return False
         if not clients:
-            # A scheduled update passes no --clients; the install recorded
-            # the attachment set in the router state.
+            # A scheduled update passes no --clients; the saved choice, else
+            # the receipts, name the attachment set. A missing choice is not Codex.
             try:
                 state = json.loads((Path(home) / 'mixed-router-state.json').read_text())
-                clients = state.get('clients')
+                clients = _load('client_choice').saved_clients(home, state, _load('codex_config'))
             except (OSError, ValueError, AttributeError):
                 clients = None
         doc = {'version': version, 'at': _utcnow(),

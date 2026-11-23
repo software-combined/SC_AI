@@ -5,7 +5,7 @@
 # SHA-256, then runs the verified bundle installer. The feed is public: no
 # token is needed.
 # Usage:
-#   sh bootstrap.sh [--channel=beta] [--choose-clients]
+#   sh bootstrap.sh [--channel=beta]
 set -eu
 FEED_ORIGIN="${FEED_ORIGIN:-https://dist.softwarecombined.com}"
 CHANNEL="stable"
@@ -14,12 +14,10 @@ if [ -f "$HOME_DIR/channel" ]; then
   saved_channel="$(cat "$HOME_DIR/channel")"
   case "$saved_channel" in stable|beta) CHANNEL="$saved_channel" ;; esac
 fi
-CHOOSE=""
 for arg in "$@"; do
   case "$arg" in
     --channel=*) CHANNEL="${arg#--channel=}" ;;
-    --choose-clients) CHOOSE="--choose-clients" ;;
-    *) echo "usage: sh bootstrap.sh [--channel=beta] [--choose-clients]" >&2; exit 2 ;;
+    *) echo "usage: sh bootstrap.sh [--channel=beta]" >&2; exit 2 ;;
   esac
 done
 case "$CHANNEL" in
@@ -90,7 +88,7 @@ tar -xzf "$HOME_DIR/bundle.tar.gz" -C "$HOME_DIR/bootstrap"
 # bootstrap cannot move a stable host onto pre-releases. A host already
 # ahead of the requested channel is current, not deferred.
 if "$PY" "$HOME_DIR/bootstrap/packaging/install.py" --home "$HOME_DIR" --python "$PY" \
-     --feed "$FEED_ORIGIN/$CHANNEL/latest.json" ${REPAIR:+"$REPAIR"} ${CHOOSE:+"$CHOOSE"}; then
+     --feed "$FEED_ORIGIN/$CHANNEL/latest.json" ${REPAIR:+"$REPAIR"}; then
   CURRENT="$("$PY" -c 'import pathlib,sys;p=pathlib.Path(sys.argv[1]);print(p.resolve().name if p.is_symlink() and p.is_dir() else p.read_text().strip() if p.exists() else str())' "$HOME_DIR/current")"
 else
   exit $?

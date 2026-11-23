@@ -24,8 +24,11 @@ def _notice():
 
 
 def _dialog():
-    """The client chooser, which is not importable as part of a package."""
+    """The single-select question, which is not importable as part of a package."""
     return load(_ROOT / 'packaging' / 'client_dialog.py', 'router_client_dialog')
+
+
+QUESTION = ('What would you like to do?', (('resume', 'Update or repair'), ('status', 'Check setup')))
 
 
 def _offer():
@@ -42,14 +45,11 @@ def _popup_text():
     notice = _notice()
     dialog = _dialog()
     offer = _offer()
+    completion = load(_ROOT / 'packaging' / 'setup_completion.py', 'router_setup_completion_style')
     text = [notice._message('0.6.25'),
-            notice._message('0.6.25', names=['Z.ai: GLM 5.3 Flash', '+2 more']),
-            dialog.ASSISTANT_QUESTION, dialog.SURFACE_QUESTION,
-            dialog.NO_TOOL_NOTE, dialog.NO_ANSWER_NOTE]
-    text += list(dialog.CONFIRM.values())
+            notice._message('0.6.25', names=['Z.ai: GLM 5.3 Flash', '+2 more'])]
+    text += [completion.finish_message(clients) for clients in ({}, {'codex': {}}, {'claude-desktop': {}})]
     text += list(offer.MESSAGES.values()) + [offer.BACK_OPENROUTER]
-    text += [label for _key, label in dialog.ASSISTANTS]
-    text += [label for _key, label in dialog.SURFACES]
     warning = _warning()
     text.append(warning.message(dict(clients={'codex': {}, 'claude': {}}, update={})))
     for platform_name, tool_path in (('darwin', '/usr/bin/osascript'),
@@ -58,11 +58,7 @@ def _popup_text():
         text.append(' '.join(key_dialog.argv(tool_path, platform_name)))
         text.append(' '.join(key_dialog.message_argv(tool_path, 'message',
                                                      platform_name)))
-        text.append(' '.join(dialog.argv(tool_path, platform_name,
-                                         dialog.ASSISTANT_QUESTION,
-                                         dialog.ASSISTANTS)))
-        text.append(' '.join(dialog.argv(tool_path, platform_name,
-                                         dialog.SURFACE_QUESTION, dialog.SURFACES)))
+        text.append(' '.join(dialog.argv(tool_path, platform_name, *QUESTION)))
     return ' '.join(text).lower()
 
 
@@ -129,47 +125,40 @@ class PopupStyleTests(unittest.TestCase):
             with self.subTest(control):
                 self.assertIn(control, script)
 
-    def test_the_chooser_shares_the_title_and_icon(self):
+    def test_the_question_shares_the_title_and_icon(self):
         dialog = _dialog()
         self.assertEqual(dialog.TITLE, key_dialog.TITLE, 'SCG Router')
         self.assertEqual(dialog.ICON, key_dialog.ICON)
         self.assertTrue(dialog.ICON.is_file())
 
-    def test_every_platform_chooser_question_carries_the_icon(self):
+    def test_every_platform_question_carries_the_icon(self):
         dialog = _dialog()
         for platform_name, tool_path in (('darwin', '/usr/bin/osascript'),
                                          ('linux', '/usr/bin/zenity'),
                                          ('win32', 'C:/powershell.exe')):
-            for question, items in ((dialog.ASSISTANT_QUESTION, dialog.ASSISTANTS),
-                                    (dialog.SURFACE_QUESTION, dialog.SURFACES)):
-                with self.subTest(platform=platform_name, question=question):
-                    blob = ' '.join(dialog.argv(tool_path, platform_name,
-                                                question, items))
-                    self.assertIn(dialog.ICON.name, blob)
-                    self.assertIn(dialog.TITLE, blob)
+            with self.subTest(platform=platform_name):
+                blob = ' '.join(dialog.argv(tool_path, platform_name, *QUESTION))
+                self.assertIn(dialog.ICON.name, blob)
+                self.assertIn(dialog.TITLE, blob)
 
-    def test_the_chooser_uses_selection_controls_and_two_actions(self):
+    def test_the_question_uses_selection_controls_and_two_actions(self):
         dialog = _dialog()
-        for question, items in ((dialog.ASSISTANT_QUESTION, dialog.ASSISTANTS),
-                                (dialog.SURFACE_QUESTION, dialog.SURFACES)):
-            with self.subTest(question=question):
-                macos = dialog.argv('/usr/bin/osascript', 'darwin',
-                                    question, items)[-1]
-                self.assertIn('NSPopUpButton', macos)
-                self.assertEqual(macos.count('addButtonWithTitle('), 2)
-                self.assertIn('addButtonWithTitle("Continue")', macos)
-                self.assertIn('addButtonWithTitle("Cancel")', macos)
-                windows = dialog.argv('C:/powershell.exe', 'win32',
-                                      question, items)[-1]
-                self.assertIn('System.Windows.Forms.ListBox', windows)
-                self.assertEqual(windows.count('System.Windows.Forms.Button'), 2)
-                self.assertIn("'Continue'", windows)
-                self.assertIn("'Cancel'", windows)
-                self.assertIn('$f.CancelButton = $c', windows)
-                linux = dialog.argv('/usr/bin/zenity', 'linux', question, items)
-                self.assertIn('--radiolist', linux)
-                self.assertIn('--ok-label=Continue', linux)
-                self.assertIn('--cancel-label=Cancel', linux)
+        question, items = QUESTION
+        macos = dialog.argv('/usr/bin/osascript', 'darwin', question, items)[-1]
+        self.assertIn('NSPopUpButton', macos)
+        self.assertEqual(macos.count('addButtonWithTitle('), 2)
+        self.assertIn('addButtonWithTitle("Continue")', macos)
+        self.assertIn('addButtonWithTitle("Cancel")', macos)
+        windows = dialog.argv('C:/powershell.exe', 'win32', question, items)[-1]
+        self.assertIn('System.Windows.Forms.ListBox', windows)
+        self.assertEqual(windows.count('System.Windows.Forms.Button'), 2)
+        self.assertIn("'Continue'", windows)
+        self.assertIn("'Cancel'", windows)
+        self.assertIn('$f.CancelButton = $c', windows)
+        linux = dialog.argv('/usr/bin/zenity', 'linux', question, items)
+        self.assertIn('--radiolist', linux)
+        self.assertIn('--ok-label=Continue', linux)
+        self.assertIn('--cancel-label=Cancel', linux)
 
     def test_the_codex_offer_shares_the_style(self):
         offer = _offer()
@@ -201,10 +190,8 @@ class PopupStyleTests(unittest.TestCase):
         self.assertEqual(calls[2][calls[2].index('--ok-label') + 1], 'OK')
         self.assertNotIn('Cancel', ' '.join(calls[0] + calls[2]))
 
-    def test_windows_chooser_lays_every_control_out(self):
-        dialog = _dialog()
-        script = dialog.argv('C:/powershell.exe', 'win32', dialog.SURFACE_QUESTION,
-                             dialog.SURFACES)[-1]
+    def test_windows_question_lays_every_control_out(self):
+        script = _dialog().argv('C:/powershell.exe', 'win32', *QUESTION)[-1]
         self.assertEqual(script.count('$f.Controls.Add('), 1,
                          'only the layout panel belongs to the form itself')
         for control in ('$p.Controls.Add($l)', '$p.Controls.Add($b)',

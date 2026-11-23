@@ -33,9 +33,7 @@ class NativeFinishTests(unittest.TestCase):
                 mock.patch.object(setup, 'sys', SimpleNamespace(platform=platform)), \
                 mock.patch.object(setup, 'retained', return_value=self.source), \
                 mock.patch.object(setup, 'run_installer',
-                                  return_value=SimpleNamespace(returncode=0, stdout=stdout)), \
-                mock.patch.object(setup, '_select', return_value=['--clients', 'codex']) as select, \
-                mock.patch.object(setup, '_missing_assistant', return_value=False), \
+                                  return_value=SimpleNamespace(returncode=0, stdout=stdout)) as installer, \
                 mock.patch.object(setup, 'record_channel') as channel, \
                 mock.patch.object(setup, 'status', return_value={'serving': serving}), \
                 mock.patch.object(setup, '_key', return_value=0) as key:
@@ -44,7 +42,7 @@ class NativeFinishTests(unittest.TestCase):
         dialog.choose.assert_not_called()
         dialog.confirm.assert_not_called()
         dialog.confirm_result.assert_not_called()
-        return dialog, owners['notice'], select, channel
+        return dialog, owners['notice'], installer.call_args.args[2], channel
 
     def test_fresh_install_shows_one_client_aware_notice_after_the_access_step(self):
         cases = (({'codex': {}}, 'SCG Router is ready. Quit and reopen Codex to use it.'),
@@ -55,13 +53,14 @@ class NativeFinishTests(unittest.TestCase):
                   'SCG Router is ready for Codex, Claude Code and Claude desktop. Quit and reopen Codex. '
                   'Restart Claude Code. Quit and reopen Claude. To use OpenRouter models in Claude, '
                   'choose Claude, then OpenRouter, in the SCG Router menu.'),
-                 ({}, 'No assistant was found. Install Codex or Claude, then open SCG Router again.'))
+                 ({}, 'No assistant was connected. Install Codex or Claude if needed, '
+                  'then open SCG Router and choose Update or repair.'))
         for platform in ('darwin', 'win32'):
             for clients, expected in cases:
                 with self.subTest(platform=platform, clients=sorted(clients)):
-                    dialog, notice, select, channel = self.onboard(
+                    dialog, notice, flags, channel = self.onboard(
                         clients, 'router 1.2.0; health ok\n', platform)
-                    select.assert_called_once()
+                    self.assertEqual(flags, [])  # A fresh install names no clients.
                     channel.assert_called_once()
                     dialog.message.assert_called_once_with(expected, home=self.home)
                     notice.suppress_closed_client_restart.assert_called_once_with(self.home)
@@ -79,9 +78,8 @@ class NativeFinishTests(unittest.TestCase):
     def test_rerun_when_already_set_up_shows_only_up_to_date(self):
         (self.home / 'current').write_text('1.2.0\n')
         (self.home / 'mixed-router-state.json').write_text(json.dumps({'clients': 'codex'}))
-        dialog, notice, select, channel = self.onboard({'codex': {}}, 'up to date 1.2.0\n')
-        select.assert_not_called()
-        dialog.dialog.ask.assert_not_called()
+        dialog, notice, flags, channel = self.onboard({'codex': {}}, 'up to date 1.2.0\n')
+        self.assertEqual(flags, ['--install-package'])
         channel.assert_not_called()  # An older package must not fail or adopt its channel.
         dialog.message.assert_called_once_with('SCG Router is up to date.', home=self.home)
         notice.suppress_closed_client_restart.assert_not_called()

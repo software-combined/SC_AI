@@ -62,7 +62,7 @@ class NativePackageUpgradeTests(unittest.TestCase):
                 commands.append(command)
                 self.assertEqual(command[command.index('--feed') + 1],
                                  (source / 'payload/latest.json').as_uri())
-                self.assertFalse(set(command) & {'--repair', '--setup', '--choose-clients', '--clients'})
+                self.assertFalse(set(command) & {'--repair', '--setup', '--clients'})
                 args = install_mod.build_parser().parse_args(command[2:])
                 def fetch(url):
                     self.assertTrue(url.startswith('file:'), 'package attempted a remote feed')
@@ -115,7 +115,6 @@ class NativePackageUpgradeTests(unittest.TestCase):
                 self.assertEqual(progress.read_bytes(), saved_progress)
                 close.assert_not_called()
                 dialog.choose.assert_not_called()
-                dialog.dialog.ask.assert_not_called()
                 dialog.Progress.assert_called_with(home=home)
                 dialog.confirm.assert_not_called()
                 dialog.confirm_result.assert_not_called()

@@ -46,8 +46,9 @@ downloads. `native_setup` owns the graphical flow and uses the existing client,
 service and key-window owners. Repair uses the canonical `--repair` path;
 explicit assistant additions use the existing client-selection path.
 `repair_ui` owns explicit maintenance's graceful assistant-close prompt.
-Repair asks it only when a connection needs rewriting or Claude desktop uses
-OpenRouter. Scheduled updates never call it. Public bootstrap scripts retain the saved
+A repair that owns every connection asks only when Claude desktop uses
+OpenRouter; any other repair asks when a connection needs rewriting.
+Scheduled updates never call it. Public bootstrap scripts retain the saved
 channel and working runtime; repair never starts key setup.
 `dialog_tool` is a Python 3.9 leaf shared by installer and runtime dialogs.
 It validates retained setup paths before selecting the Linux wrapper.
@@ -59,14 +60,32 @@ or Linux scheduler repair. Plugin and native controls delivery remain separate
 from routing health, on both full and same-version installs.
 The health-verified completion also owns installation evidence. Attachment failures
 have separate events. `assistant_status` shares attachment classification with outer reconciliation.
-`client_choice` resolves explicit additions, receipt-owned attachments and saved
-choices. It persists Claude choices in `anthropic_mode`; the runtime keeps its
-existing policy reader. Same-version mode changes use the service repair
+`client_choice` resolves explicit flags, receipt-owned attachments and saved
+choices. On a manual run without client flags it adds the assistants it
+finds through `client_executable` and `claude_desktop_platform.app_identity`.
+Scheduled and Express updates, dry runs, a saved `client: none` and mode flags
+on an install with an attached client add none. A
+saved `clients: none` adds none unless `--connect-found` (the menu's **Connect
+another assistant**) asks. It attaches
+each client on its own: a client that is neither named by a flag nor already
+attached is skipped when it refuses; any other refusal is raised after the rest
+have attached. Receipts record what
+attached. The saved choice comes from `--clients` or `--client` (a bare
+`--desktop` keeps it), receipts or the saved choice; a found assistant joins
+it only after it attaches, and finding nothing never saves `none`. A saved
+`clients: none` changes only through client flags or `--connect-found`.
+`client_choice.saved_clients` is the one reader of the choice for the restart
+notice, the scheduled model offer and `assistant_status`: without a saved
+value it names the terminal clients the receipts hold, never Codex by default.
+It persists Claude choices in `anthropic_mode`; the runtime keeps its existing
+policy reader. Same-version mode changes use the service repair
 lifecycle before client attachment, with prior state restored on reload failure.
 Its pure mode comparison also drives native readiness. `setup_completion` owns
 the installer's bounded key-window wait after attachment and applies late answers
 through the same current-install lifecycle. It also owns native saved-key completion,
 native setup's one client-aware closing notice and the **Check setup** copy.
+**Check setup** verifies replies from Codex and Claude Code only: Claude desktop
+keeps its own sign-in, so setup never switches it to OpenRouter.
 The runtime only saves answers.
 Completion and readiness share `state.setup_pending`: an active access window stays
 pending, while expired preparation cannot block usable access with matching receipts.
@@ -111,10 +130,10 @@ Only a required repair repeats verification and changes tasks under that lock.
 It retries an unexpected helper exit once after one second within the controller.
 Quit and removal stop it. Resource replacement uses the existing reload path.
 Resource advancement launches with `--after-update`, bypassing only sign-in preferences.
-That path never opens a chooser or warning. A held session lock leaves reload to its owner.
+That path opens no question or warning dialog. A held session lock leaves reload to its owner.
 `work_account` owns native Microsoft sign-in and calls the Hub's dedicated
 provisioning endpoint. Public sign-in settings ship with the release. It reuses
-the PKCE transport in `download_oauth` and the shared client-choice dialog;
+the PKCE transport in `download_oauth` and the shared single-question dialog;
 the Hub owns company entitlement, workspace selection and personal-key budgets.
 The shared progress dialog stays open during sign-in and key preparation.
 Cancellation stops callback polling, prevents a later provisioning request and
@@ -771,7 +790,7 @@ parent metadata before selection. The verified root exits first, allowing its
 job to close workers before remaining verified survivors are ended.
 `windows_dialog.py` verifies the retained compiled helper for switch confirmation
 and progress. The helper owns presentation; Python owns consent and configuration.
-`windows_shell.py` is the PowerShell launcher for shipped installer code (the setup chooser's shared dialog tool and
+`windows_shell.py` is the PowerShell launcher for shipped installer code (the shared single-select question's dialog tool and
 the checkout build tools still find PowerShell themselves). It starts the
 system copy by absolute path with one flag set and no console window. Values reach a
 script as JSON on stdin or through `ps_quote`, which doubles every single-quote variant.
@@ -1133,7 +1152,8 @@ The adapter returns numeric HRESULT and identifier-only exception type without m
   (its Switch Codex variants in `codex_switch_config.py`), picker
   preservation, the seeded startup model, the managed `[desktop]`
   preferences, guidance, and receipts. `--client none` runs the router
-  lifecycle without touching client settings; absence of a client
+  service only and removes every client attachment when it installs a
+  release; setup never disconnects an assistant otherwise. Absence of a client
   selection in legacy state means Codex. Subscription policy is per client:
   Responses follows `openai_mode`, Messages follows `anthropic_mode` when
   set, else the legacy `openai_mode` fallback.
