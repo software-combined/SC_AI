@@ -65,6 +65,7 @@ class CodebaseReadinessTests(unittest.TestCase):
         (self.repo / 'docs').symlink_to(outside, target_is_directory=True)
         self.assertNotIn('LEAK-MARKER', json.dumps(self.measure()))
 
+    @unittest.skipIf(os.name == 'nt', 'Git for Windows refuses these index names')
     def test_windows_style_names_are_never_read(self):
         sha = subprocess.run(['git', '-C', str(self.repo), 'hash-object', '-w', '--stdin'], input=b'x\n',
                              capture_output=True, check=True).stdout.decode().strip()
