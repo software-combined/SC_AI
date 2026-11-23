@@ -266,7 +266,14 @@ def finish(home, run=subprocess.run, native=None, fetch=None, *,
 
 
 def run_install(args, install, *, run, fetch):
-    """A refused attachment cannot suppress independent maintenance delivery."""
+    """A refused attachment cannot suppress independent maintenance delivery.
+
+    `delivery` is the one record shared by this run's steps. Created here:
+    `fetch`, `dry_run`, `automatic`. The installer adds `python`, `backend`,
+    `latest`, `feed`, `repair_version`, `controller_source`, `maintenance_done`
+    and, once health is verified, `installed_version`. A backend that stages
+    maintenance adds `cohort`; `_finalize` completes or restores it.
+    """
     automatic = os.environ.pop('ROUTER_AUTOMATIC_UPDATE', None) == '1'
     delivery, rc = dict(fetch=fetch, dry_run=args.dry_run, automatic=automatic), None
     try:
