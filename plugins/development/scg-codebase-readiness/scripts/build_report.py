@@ -28,6 +28,10 @@ def fail(message):
 def load(results_path):
     framework = json.loads((SKILL / "references" / "framework.json").read_text(encoding="utf-8"))
     results = json.loads(pathlib.Path(results_path).read_text(encoding="utf-8"))
+    listed = [a.get("itemCode") for a in results.get("answers", [])]
+    repeated = sorted({c for c in listed if listed.count(c) > 1}, key=str)
+    if repeated:
+        fail(f"each question needs one answer. Repeated: {repeated}.")
     answers = {a.get("itemCode"): a for a in results.get("answers", [])}
     items = {i["code"]: i for d in framework["dimensions"] for i in d["items"]}
     codes = list(items)
@@ -99,7 +103,7 @@ def render(framework, results, answers):
 <body><a class="skip" href="#results">Skip to results</a><div class="shell">
 <header><div class="mast"><span>Software Combined</span><button type="button" onclick="var r=document.documentElement;r.dataset.theme=r.dataset.theme==='dark'?'light':'dark'">Light or dark</button></div>
 <h1>AI readiness: {e(results["repository"])}</h1><p class="lead">{e(results["summary"])}</p>
-<p class="context"><span>Commit {e(results["commit"])}</span><span>Assessed {e(when(results["assessedAt"]))}</span><span>{e(framework["name"])}, {len(answers)} questions</span></p></header>
+<p class="context"><span>Unit: {e(results.get("unit", "repository"))}</span><span>Commit {e(results["commit"])}</span><span>Assessed {e(when(results["assessedAt"]))}</span><span>{e(framework["name"])}, {len(answers)} questions</span></p></header>
 <main id="results"><div class="tiles">{tiles}</div>
 {f'<div class="panel actions-panel"><h3>Top actions</h3><ol class="actions">{actions}</ol></div>' if actions else ''}
 {dimensions}

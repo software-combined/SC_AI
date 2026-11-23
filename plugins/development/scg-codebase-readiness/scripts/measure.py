@@ -31,10 +31,10 @@ TEST_FILE = re.compile(r"(\.test\.|\.spec\.|_test\.|_spec\.|_integration\.|\.int
                        r"|(^|/)(tests?|__tests__|e2e|spec)/|\.tests?/)", re.I)
 CONFIG_FILE = re.compile(r"(^|/)[^/]*\.config\.[cm]?[jt]s$|(^|/)(setup|conftest)\.py$", re.I)
 CATCH_ALL = {"utils", "util", "helpers", "common", "misc", "lib", "shared"}
-CODE_FENCE = re.compile(r"^(```|~~~).*?^\1", re.S | re.M)
+CODE_FENCE = re.compile(r"^[ \t]*(```|~~~).*?^[ \t]*\1", re.S | re.M)
 INLINE_CODE = re.compile(r"`[^`\n]*`")
-INLINE_LINK = re.compile(r"\]\(\s*(<[^>]*>|[^)\s]+)")
-REF_LINK = re.compile(r"^[ \t]*\[[^\]\n]+\]:[ \t]*(<[^>\n]*>|\S+)", re.M)
+INLINE_LINK = re.compile(r"\]\(\s*(<[^<>\n]*>|[^)\s]+)")
+REF_LINK = re.compile(r"^[ \t]*\[(?!\^)[^\]\n]+\]:[ \t]*(<[^>\n]*>|\S+)", re.M)
 # No transport at all: a repository setting must never make git fetch or run a remote command.
 # GIT_ALLOW_PROTOCOL overrides every protocol.<name>.allow in the repository config.
 ENV = dict(os.environ, GIT_OPTIONAL_LOCKS="0", GIT_NO_LAZY_FETCH="1", GIT_ALLOW_PROTOCOL="none")
@@ -116,7 +116,7 @@ def link_targets(text):
 
 
 def doc_stats(root, docs, all_files):
-    known = set(all_files) | {f.rsplit("/", i)[0] for f in all_files for i in range(1, f.count("/") + 1)}
+    known = {"."} | set(all_files) | {f.rsplit("/", i)[0] for f in all_files for i in range(1, f.count("/") + 1)}
     rows, broken, blocks, unreadable = [], [], collections.defaultdict(set), 0
     for doc in docs:
         text = read(os.path.join(root, doc))
@@ -203,6 +203,9 @@ def main(argv):
     if GIT is None:
         print("measure.py: git was not found in an absolute PATH folder.", file=sys.stderr)
         return 2
+    if any(a.startswith("--") and a != "--path" for a in args):
+        print(__doc__, file=sys.stderr)
+        return 2
     flag = args.index("--path") if "--path" in args else None
     raw = args[flag + 1] if flag is not None and flag + 1 < len(args) else None
     unit = posixpath.normpath(raw.replace("\\", "/")).strip("/") if raw else ""
@@ -217,7 +220,10 @@ def main(argv):
     if unit and not in_unit:
         print(f"measure.py: no tracked files under '{unit}'.", file=sys.stderr)
         return 2
-    kept = [f for f in in_unit if not ({p.lower() for p in f.split("/")[:-1]} & SKIP_DIRS) and not SKIP_FILE.search(f)]
+    in_scope = [f for f in in_unit if not ({p.lower() for p in f.split("/")[:-1]} & SKIP_DIRS)]
+    kept = [f for f in in_scope if not SKIP_FILE.search(f)]
+    # Checks count only inside the unit, plus root files and CI or hook folders that serve every unit.
+    shared = {f for f in files if "/" not in f or f.startswith((".github/", ".husky/", ".githooks/")) or f == "docs/CODEOWNERS"}
     source = [f for f in kept if os.path.splitext(f)[1].lower() in SOURCE_EXT]
     tests = [f for f in source if TEST_FILE.search(f)]
     config = [f for f in source if not TEST_FILE.search(f) and CONFIG_FILE.search(f)]
@@ -233,10 +239,10 @@ def main(argv):
                         "top_folders": dict(collections.Counter(f.split("/")[0] for f in tests).most_common(10))},
         "structure": {"production_files_by_folder": dict(folders.most_common(60)),
                       "catch_all_folder_names": dict(collections.Counter(p for f in production for p in f.split("/")[:-1] if p.lower() in CATCH_ALL))},
-        "documents": doc_stats(root, [f for f in kept if f.lower().endswith(".md")], files),
+        "documents": doc_stats(root, [f for f in kept if f.lower().endswith(".md")], files + symlinks),
         "agent_files": agent_files(root, kept, symlinks),
         "ci": ci_stats(root, files, read),
-        "signals": signals(root, files, read, git),
+        "signals": signals(root, sorted(set(in_scope) | shared), read, git),
         "branches": branch_stats(root, remote, state["shallow_clone"]),
     }, indent=2))
     return 0

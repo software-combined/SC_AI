@@ -32,8 +32,9 @@ class CodebaseReadinessTests(unittest.TestCase):
         (self.repo / 'my docs/real.md').write_text('# Real\n')
         (self.repo / 'README.md').write_text('# Readme\n')
         (self.repo / 'docs/a.md').write_text(
-            '[ok](../README.md)\n[space](../my%20docs/real.md)\n[case](../readme.md)\n'
-            '[ref]: ./missing.md\n```\n[code](./not-real.md)\n```\n')
+            '[ok](../README.md)\n[^1]: A footnote\n[home](/)\n[space](../my%20docs/real.md)\n[case](../readme.md)\n'
+            '[ref]: ./missing.md\n```\n[code](./not-real.md)\n```\n'
+            '1. Step\n   ```\n   [x](./also-not-real.md)\n   ```\n')
         (self.repo / 'big.ts').write_text('x\n' * 450)
         marker = self.repo / 'FSMONITOR_RAN'
         hook = self.repo / 'fsm.sh'
@@ -157,6 +158,7 @@ class CodebaseReadinessTests(unittest.TestCase):
 
     def test_bare_path_flag_prints_usage(self):
         self.assertEqual(run('measure.py', self.repo, '--path').returncode, 2)
+        self.assertEqual(run('measure.py', self.repo, '--path=src').returncode, 2)
 
     def test_jobs_are_counted_at_any_indent(self):
         (self.repo / '.github/workflows').mkdir(parents=True)
@@ -169,6 +171,37 @@ class CodebaseReadinessTests(unittest.TestCase):
         git(self.repo, 'remote', 'add', 'origin', 'https://example.invalid/owner/project.git')
         git(self.repo, 'symbolic-ref', 'refs/remotes/origin/HEAD', 'refs/remotes/origin/master')
         self.assertEqual(self.measure()['branches'], {'measured': False, 'reason': 'origin/master could not be read'})
+
+    def test_hygiene_signals_are_measured(self):
+        (self.repo / '.github/workflows').mkdir(parents=True)
+        (self.repo / '.github/workflows/ci.yml').write_text(
+            'on: [pull_request]\npermissions:\n  contents: read\njobs:\n  test:\n    steps:\n'
+            '      - uses: actions/checkout@v4\n      - uses: actions/setup-node@' + 'a' * 40 + '\n'
+            '      - uses: ./local-action\n')
+        for name in ('pnpm-lock.yaml', '.env.example', '.github/dependabot.yml', 'api/openapi.yaml'):
+            (self.repo / name).parent.mkdir(parents=True, exist_ok=True)
+            (self.repo / name).write_text('x\n')
+        (self.repo / 'linked.md').symlink_to('README.md')
+        (self.repo / 'docs/b.md').write_text('[l](../linked.md)\n')
+        git(self.repo, 'add', '-A')
+        result = self.measure()
+        flow, found = result['ci']['github_workflows'][0], result['signals']
+        self.assertEqual(flow['unpinned_actions'], 1)
+        self.assertEqual((found['lockfiles'], found['update_tool'], found['env_example_files'],
+                          found['api_schema_files']),
+                         (['pnpm-lock.yaml'], '.github/dependabot.yml', ['.env.example'], ['api/openapi.yaml']))
+        self.assertNotIn('../linked.md', {item['link'] for item in result['documents']['broken_local_links']})
+
+    def test_signals_follow_the_unit(self):
+        for name, text in (('src/a.ts', 'x\n'), ('docs/CODEOWNERS', '* @owner\n'),
+                           ('other/package.json', '{"scripts": {"lint": "eslint ."}}\n'),
+                           ('.github/workflows/scan.yml',
+                            'on: [push]\njobs:\n  scan:\n    steps:\n      - run: trufflehog git\n')):
+            (self.repo / name).parent.mkdir(parents=True, exist_ok=True)
+            (self.repo / name).write_text(text)
+        git(self.repo, 'add', '-A')
+        found = json.loads(run('measure.py', self.repo, '--path', 'src').stdout)['signals']
+        self.assertEqual((found['lint'], found['secret_scan'], found['codeowners']), (False, True, 'docs/CODEOWNERS'))
 
     def test_links_resolve_like_a_reader_sees_them(self):
         broken = {item['link'] for item in self.measure()['documents']['broken_local_links']}
@@ -197,6 +230,10 @@ class CodebaseReadinessTests(unittest.TestCase):
         page = (work / 'report.html').read_text(encoding='utf-8')
         self.assertIn('&lt;b&gt;r&lt;/b&gt;', page)
         self.assertIn('Not checked', page)
+        self.assertIn('Unit: repository', page)
+        results.write_text(json.dumps({'repository': 'x', 'commit': 'a', 'assessedAt': 'b', 'summary': 's',
+                                       'answers': answers + answers[:1]}), encoding='utf-8')
+        self.assertEqual(run('build_report.py', results, work / 'dup.html').returncode, 1)
         results.write_text(json.dumps({'repository': 'x', 'commit': 'a', 'assessedAt': 'b',
                                        'summary': 's', 'answers': answers[:-1]}), encoding='utf-8')
         self.assertEqual(run('build_report.py', results, work / 'bad.html').returncode, 1)

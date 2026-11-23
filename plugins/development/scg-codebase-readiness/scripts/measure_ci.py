@@ -6,16 +6,24 @@ CONFIG_NAMES = re.compile(
     r"(^|/)(package\.json|pyproject\.toml|setup\.cfg|tox\.ini|ruff\.toml|\.coveragerc|biome\.json|Makefile|justfile|"
     r"\.pre-commit-config\.ya?ml|lefthook\.ya?ml|\.golangci\.ya?ml|Directory\.Build\.props|[^/]*\.csproj|"
     r"\.dependency-cruiser\.[cm]?js|eslint\.config\.[cm]?js|\.eslintrc[^/]*|\.gitleaks\.toml|[^/]*\.config\.[cm]?[jt]s|"
-    r"CODEOWNERS)$|^\.github/workflows/|^\.husky/|^(azure-pipelines|bitbucket-pipelines|\.gitlab-ci)\.ya?ml$")
+    r"CODEOWNERS|tsconfig[^/]*\.json|mypy\.ini|\.?knip\.jsonc?|\.jscpd\.json)$|^\.github/workflows/|^\.husky/|^(azure-pipelines|bitbucket-pipelines|\.gitlab-ci)\.ya?ml$")
 SIGNALS = {
     "architecture_test": r"dependency-cruiser|depcruise|arch-test|archunit|import-linter|eslint-plugin-boundaries",
     "size_check": r"source-limits|max-lines|check:size|file-size-limit|check_source_limits",
-    "lint": r"eslint|ruff|flake8|pylint|rubocop|golangci|stylecop|biome",
+    "lint": r"eslint|\bruff\b|flake8|pylint|rubocop|golangci|stylecop|biome",
     "type_check": r"tsc --noEmit|\"typecheck\"|mypy|pyright",
     "coverage": r"--coverage|\bc8\b|\bnyc\b|pytest-cov|coverlet|jacoco|codecov|coverageThreshold|thresholds\s*:|fail[_-]under|--experimental-test-coverage",
     "secret_scan": r"gitleaks|trufflehog|detect-secrets|ggshield|secretlint|git-secrets",
     "doc_link_check": r"check-doc-links|check-docs|markdown-link-check|lychee",
+    "strict_types": r"\"strict\"\s*:\s*true|\bstrict\s*=\s*true|mypy --strict",
+    "dead_code_check": r"\bknip\b|ts-prune|unimported|vulture|jscpd|deadcode",
+    "contract_check": r"oasdiff|openapi-diff|buf breaking|@pact-foundation",
 }
+LOCKFILE = re.compile(r"(^|/)(package-lock\.json|npm-shrinkwrap\.json|pnpm-lock\.yaml|yarn\.lock|bun\.lockb?|poetry\.lock|uv\.lock|"
+                      r"Pipfile\.lock|Cargo\.lock|go\.sum|Gemfile\.lock|composer\.lock|packages\.lock\.json|pubspec\.lock|Package\.resolved)$")
+UPDATE_TOOL = re.compile(r"^(\.github/dependabot\.ya?ml|(\.github/)?renovate\.json5?|\.renovaterc(\.json)?)$")
+# An action pinned to a full commit hash, or a local or Docker action, cannot change under the workflow.
+UNPINNED = re.compile(r"^[ \t]+(?:-[ \t]*)?uses:[ \t]*[\"']?(?!\./|docker://)[^@\s\"']+@(?![0-9a-f]{40}\b)", re.M)
 
 
 def top_sections(text):
@@ -57,7 +65,8 @@ def ci_stats(root, files, read):
             "cache": bool(re.search(r"actions/cache|^[ \t]+cache:", jobs, re.M)),
             "cancels_superseded_runs": bool(re.search(r"cancel-in-progress:\s*(true|\$\{\{)", text)),
             "time_limits": "timeout-minutes" in jobs,
-            "deploys": bool(re.search(r"^[ \t]+environment:|^  [\w-]*deploy[\w-]*:|^[ \t]+-?[ \t]*(run|uses):(?!.*test).*deploy", jobs, re.I | re.M)),
+            "unpinned_actions": len(UNPINNED.findall(jobs)),
+            "deploys": bool(re.search(r"^[ \t]+environment:|^  [\w-]*deploy[\w-]*:|^[ \t]+(?:-[ \t]*)?(run|uses):(?!.*test).*deploy", jobs, re.I | re.M)),
         })
     other = [f for f in files if re.match(r"(^|/)(azure-pipelines[^/]*|bitbucket-pipelines|\.gitlab-ci)\.ya?ml$|(^|/)Jenkinsfile$", f)]
     return {"github_workflows": workflows, "other_ci_files": other}
@@ -73,6 +82,10 @@ def signals(root, files, read, git):
     hooks_path = git(root, "config", "--get", "core.hooksPath")
     found.update({
         "codeowners": next((f for f in files if re.match(r"^(\.github/|docs/)?CODEOWNERS$", f)), None),
+        "lockfiles": [f for f in files if LOCKFILE.search(f)][:20],
+        "update_tool": next((f for f in files if UPDATE_TOOL.match(f)), None),
+        "env_example_files": [f for f in files if re.search(r"(^|/)\.env\.(example|sample|template)$", f)][:20],
+        "api_schema_files": [f for f in files if re.search(r"(^|/)(openapi|swagger)[^/]*\.(ya?ml|json)$|\.proto$", f, re.I)][:20],
         "hook_files_in_repo": [f for f in files if re.match(r"^(\.husky/|\.pre-commit-config\.ya?ml|\.githooks/|lefthook\.ya?ml)", f)],
         # Machine-local: shows a hook is set on this computer, not that every contributor has it.
         "hooks_path_set_on_this_machine": bool(hooks_path),

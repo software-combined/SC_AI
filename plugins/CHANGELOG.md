@@ -17,6 +17,9 @@
   same way. Small repositories need no subagents.
 - `measure.py` reads tracked files only, disables fsmonitor and optional locks,
   and reports values it cannot measure as null, never zero.
+  It also lists lockfiles, the dependency update tool, unpinned CI actions,
+  example settings files and API schema files. Settings signals are scoped
+  to the audited unit plus files that serve every unit.
 - `build_report.py` writes one self-contained HTML report with the Software
   Combined colours, light and dark modes, and a phone layout.
 
