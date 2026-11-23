@@ -128,7 +128,7 @@ The router writes `codex-usage-limit.json` in its home when ChatGPT refuses a
 Codex desktop request because the allowance has run out. It is machine state
 like the catalogues: never bundled, never copied, and it holds nothing from
 the request. It is the contract for the Switch Codex offer, so a reader may
-parse the JSON directly, including packaging code on Python 3.9.
+parse the JSON directly, including packaging code.
 
 ```json
 {
@@ -138,9 +138,8 @@ parse the JSON directly, including packaging code on Python 3.9.
 }
 ```
 
-`seen_at` is when the episode started, in UTC with a `+00:00` offset, which
-Python 3.9's `datetime.fromisoformat` reads. `resets_at` is when ChatGPT said
-the allowance returns, in the same form, or `null` when it named no reset or
+`seen_at` is when the episode started, in UTC with a `+00:00` offset.
+`resets_at` is when ChatGPT said the allowance returns, in the same form, or `null` when it named no reset or
 named one in the past or more than 31 days out. `client_version` is the Codex
 desktop version from the request's User-Agent, digits and dots only, or
 `null`.

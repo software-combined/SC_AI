@@ -139,8 +139,7 @@ when the computer has no Python 3.14. Source installs can run `--preflight`
 to check prerequisites or `--dry-run` to see planned changes without writing.
 Bootstrap and scheduled updates pass their retained interpreter to the installer.
 An explicit eligible `--python` wins; otherwise an eligible running interpreter
-precedes Python found through `PATH`. Older installer interpreters still discover
-Python 3.14 before starting the router.
+precedes Python found through `PATH`.
 
 <p><img src="assets/key-window-macos.png" alt="The first-run key window on macOS" width="400"></p>
 The setup window checks your key before saving it on this computer.
@@ -171,7 +170,7 @@ py -3.14 packaging/release.py --out $RouterDist --url-base $RouterDistUrl
 py -3.14 packaging/install.py --feed "$RouterDistUrl/latest.json"
 ```
 
-Use Python 3.14 for these commands. The installer still supports Python 3.9
-for an existing pinned-runtime setup. See [contributing](../CONTRIBUTING.md)
-for development checks and [operations](operations.md) for update, rollback,
-uninstall and diagnostic commands.
+Use Python 3.14 for these commands; the installer refuses an older Python.
+See [contributing](../CONTRIBUTING.md) for development checks and
+[operations](operations.md) for update, rollback, uninstall and diagnostic
+commands.

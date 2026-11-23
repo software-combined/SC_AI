@@ -56,7 +56,7 @@ through `windows_shell` and Linux through the tool `dialog_tool` finds. Other
 dialog modules keep their own wording and answers and ask it to draw. The
 runtime key window loads it only when a window opens. `tests/test_popup_style.py`
 fails when another module restates the title or icon or starts a dialog tool.
-`dialog_tool` is a Python 3.9 leaf shared by installer and runtime dialogs.
+`dialog_tool` is a standard-library leaf shared by installer and runtime dialogs.
 It validates retained setup paths before selecting the Linux wrapper.
 `native_dialog` distinguishes cancellation from failed presentation so renewal
 notices remain pending until a window appears.
@@ -106,8 +106,8 @@ Discovery never switches, closes or opens an assistant.
 `codex_owned` compares the live marked region with the saved attachment using
 standard-library TOML. It preserves added single-line root settings and comments
 outside the replacement block. Unknown structures and changed connection values
-refuse before a write. Its bounded managed-Python verifier keeps Python 3.9
-entrypoints importable without another TOML dependency. Removal uses the same
+refuse before a write. A bounded managed-Python verifier covers an interpreter
+without standard-library TOML. Removal uses the same
 proof and atomic writer, preserving dotfile links and detecting concurrent edits.
 Preference and reviewer edits use the same lossless line helpers, including
 client-written line endings and inline comments.
@@ -601,7 +601,7 @@ is in [runtime files](runtime-files.md#codex-usage-limit-record).
 
 1. `provider_defs.py` owns every upstream fact (host, endpoint prefixes, key
    location, model catalogue, key-info endpoint, failure dialect) and imports
-   nothing, so `packaging/` can spec-load it on Python 3.9. `registry.py`
+   nothing, so `packaging/` can spec-load it without the router package. `registry.py`
    imports only stdlib plus that leaf. Nothing in `ai_router/` may make the
    registry import a client, CLI, installer, or HTTP module. Client listing
    and config modules consume it; never the reverse.
@@ -698,8 +698,7 @@ is in [runtime files](runtime-files.md#codex-usage-limit-record).
    each file once per process, keyed by resolved path, so callers share one
    copy of each module's classes, globals and test seams. The stable
    `*_launch.py` launchers and the checkout build tool `release.py` keep their
-   own loaders. Installer
-   scripts stay Python 3.9-compatible; the runtime requires 3.14.
+   own loaders. The installer and the runtime both require Python 3.14.
    Tests that load router files into the test process use `tests/loading.py`,
    which returns a new module on every call and clears the packaging cache
    first, so its siblings are new copies too; child-process probes and some
