@@ -20,6 +20,25 @@ how to complete work within the team's rules.
 | Maintained by | Software Combined Technology |
 | Status | Router and plugins have separate build, release, and acceptance gates; see [tested setups](docs/compatibility.md) |
 
+## Why use SC_AI
+
+Teams often juggle separate AI assistants, API keys, model lists, and
+hand-copied instructions. SC_AI replaces that manual setup with one local
+router and a shared set of team plugins that stay up to date on your computer.
+
+| Area | What it gives you |
+| --- | --- |
+| Multiple models in one assistant | Use your ChatGPT or Claude subscription alongside approved external models from OpenRouter (and optional AWS Bedrock preview) without patching your assistant. |
+| Clear credential boundaries | Subscription traffic stays on OpenAI or Anthropic. External models use separate keys, so subscription logins never go to third-party providers. |
+| One-click desktop controls | Install with a native macOS, Windows, or Linux package that bundles Python. Switch connections, check status, update, or export a redacted support bundle from the SCG Router menu. |
+| Shared team skills, kept current | SCG Router delivers and refreshes the [agent plugins](plugins/README.md) across Codex and Claude Code, covering code review, documentation, finance, sales, operations, support, and agent workflows without Git or manual installs. |
+| Controlled model routing | Pick a named model inside your assistant, or use OpenRouter's optional Auto Code and Auto Router. On managed installs, automatic choices stay within the company-approved model pool. |
+| Local-first operation | The router runs only on your machine's loopback address with a per-install token, uses the Python standard library alone, and keeps prompts and keys out of its logs. |
+
+Two limits apply up front. External models bill their own key, and Claude Code
+and AWS Bedrock support remain in preview. See [tested setups](docs/compatibility.md)
+and [integration scope and data flows](docs/publication.md) for current boundaries.
+
 ## Get started
 
 Have Codex or Claude installed. You need your own subscription for subscription
@@ -33,28 +52,24 @@ You should receive a reply. Installation alone does not prove the connection wor
 See [setup options](docs/setup.md) and [desktop controls](docs/desktop-menu.md)
 for platform requirements, connections, and recovery.
 
-The Router also delivers the [agent plugins](plugins/README.md) to attached
-Codex and Claude Code installations. Each plugin contains skills for a defined
-area, such as documentation, review, or persistent agent teams. Read its guide
-before use. A skill does not grant permission to change production systems.
+Read each [agent plugin's](plugins/README.md) guide before use. A skill does
+not grant permission to change production systems.
 
 ## Use and limits
 
-Keep subscription traffic on its subscription provider. External models use
-separate credentials. External calls cost money; a personal key has no local
-spend cap. Never paste keys into chats or support tickets.
+External calls cost money; a personal key has no local spend cap. Never paste
+keys into chats or support tickets.
 
-OpenRouter's **Auto Code** and **Auto Router** are optional external choices.
-Auto Code focuses on coding; Auto Router handles general tasks. Each chooses
-the underlying model and reasoning effort automatically, and charges that
-model's OpenRouter rate. Subscription defaults stay unchanged. Use a named
-model when a task or review requires a specific model and effort.
-On managed installations, automatic choices select only the named OpenRouter
-models approved by company policy. An empty approved pool refuses the request.
+OpenRouter's **Auto Code** and **Auto Router** choose the underlying model and
+reasoning effort automatically, and charge that model's OpenRouter rate. Auto
+Code focuses on coding; Auto Router handles general tasks. Subscription
+defaults stay unchanged. Use a named model when a task or review requires a
+specific model and effort. On managed installations, an empty approved pool
+refuses the request.
 
-Claude Code support remains in preview. Third-party models in Claude Code
-sit outside Anthropic's supported model scope. See [integration scope and
-data flows](docs/publication.md) before deciding to deploy.
+Third-party models in Claude Code sit outside Anthropic's supported model
+scope. See [integration scope and data flows](docs/publication.md) before
+deciding to deploy.
 
 ## For maintainers
 
