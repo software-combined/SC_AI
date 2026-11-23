@@ -36,7 +36,7 @@ Contact IT when that happens. Never disable a device control to finish setup.
 
 ## Diagnostics
 
-Use the installed release's `docs/troubleshooting.md` and the canonical installer
+Use the installed release's `docs/troubleshooting/README.md` and the canonical installer
 for authorised technical checks. Native installations keep their own Python.
 The source entry point is `router/packaging/install.py`. Installed releases
 retain `packaging/install.py`; use that installed copy for maintenance.

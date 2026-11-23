@@ -67,7 +67,7 @@ Work-account setup checks a saved key before opening sign-in or requesting anoth
 It preserves the saved key when the provider accepts it or its validity is unknown.
 Restart lets running replies finish before checking that the service has restarted.
 Removal restores owned assistant settings, then closes the menu and removes its
-sign-in entry. See [uninstall](operations.md#uninstall) for what stays open and
+sign-in entry. See [uninstall](../operations/service.md#uninstall) for what stays open and
 what stays on the computer. After removal, opening SCG Router shows setup again.
 
 Use **Updates** to check the available version and install it.
@@ -105,6 +105,6 @@ SCG Router does not install a desktop extension.
 ## Acceptance
 
 Build checks and offline tests do not establish desktop acceptance.
-See [compatibility](compatibility.md) for the current client versions.
-The [native acceptance matrix](native-installers.md#acceptance-matrix) is required
+See [compatibility](../release/compatibility.md) for the current client versions.
+The [native acceptance matrix](../release/native-installers.md#acceptance-matrix) is required
 for each intended platform and connection.

@@ -28,4 +28,4 @@ Register each plugin's source path in
 both domain folders and older flat bundles, then writes the existing flat
 client paths. Domain pages are repository navigation, not extra plugins.
 
-See [installation and release rules](../docs/agent-plugins.md).
+See [installation and release rules](../docs/plugins/agent-plugins.md).

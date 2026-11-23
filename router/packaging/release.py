@@ -242,7 +242,7 @@ def main(argv=None):
     # Shared guides link to source components; installed bundles keep flat paths.
     for name in payloads:
         if name.startswith('docs/') and name.endswith('.md'):
-            payloads[name] = payloads[name].replace(b'](../router/', b'](../')
+            payloads[name] = re.sub(rb'\]\(((?:\.\./)+)router/', rb'](\1', payloads[name])
     manifest_files = {name: hashlib.sha256(data).hexdigest() for name, data in payloads.items()}
     manifest = {'version': version, 'files': manifest_files,
                 'codex_tested': 'unknown', 'min_python': MIN_PYTHON,

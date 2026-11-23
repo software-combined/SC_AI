@@ -17,6 +17,7 @@
 - On Windows, a folder or name that contains a curly apostrophe (’) no longer breaks setup shortcuts, startup or dialogs. Shortcuts, startup, notices and Windows maintenance start the Windows system copy of PowerShell.
 - The installer and `bootstrap.sh` option `--choose-clients`, the `bootstrap.ps1` option `-ChooseClients` and the `ROUTER_NO_CLIENT_CHOOSER` setting are removed. Scripts that pass them should drop them.
 - On Linux, restart notices appear on computers that have only the dialog tool bundled with setup, as other SCG Router windows already do.
+- **Help → Troubleshooting…** opens the troubleshooting overview, which links to separate pages for Codex, Claude, and install and service problems.
 
 ## 1.3.65
 

@@ -2,7 +2,7 @@
 
 Codex desktop 26.917.51856 and later disables Send for every model once the
 ChatGPT allowance runs out. The router records each such episode in
-`codex-usage-limit.json` (docs/runtime-files.md). Every updater pass, the
+`codex-usage-limit.json` (docs/DATA.md). Every updater pass, the
 minute Express job included, reads it here and offers each of these at most
 once per episode:
 

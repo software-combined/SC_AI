@@ -11,7 +11,7 @@ the existing public update path.
 macOS, Windows and Ubuntu runners. Each build verifies its pinned Python archive.
 Linux bundles Zenity and GTK dependencies from Ubuntu 24.04, plus a pinned
 AppImage runtime with automatic extraction when FUSE is unavailable.
-See [builder details](../router/packaging/native/README.md).
+See [builder details](../../router/packaging/native/README.md).
 
 Each build also exports its existing staged `Resources` directory for installed hosts.
 The signed update document includes an optional `native_resources` map.
@@ -64,7 +64,7 @@ This platform-specific publication does not assert acceptance of the other
 platforms or the complete matrix. Beta update feeds remain separate from the
 stable-only download page. Full native publication requires the
 existing five-platform checks. The Windows runtime's Visual C++ files follow
-the basis recorded in [runtime licences](runtime-licenses.md).
+the basis recorded in [runtime licences](../legal/runtime-licenses.md).
 Use a new release version when adding native platforms to a published version.
 Its signed checksum inventory is immutable.
 

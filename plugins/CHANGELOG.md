@@ -1,5 +1,10 @@
 # Changelog
 
+## scg-subagents 0.9.2 (2026-11-24)
+
+- Point the router operations link in the tool guide at the Router diagnostics
+  page, which holds request identity and failure evidence.
+
 ## scg-optimise-ci 0.1.15 (2026-11-24)
 
 - Link the complete source and layout comparison and the Windows suite split

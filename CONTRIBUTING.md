@@ -1,7 +1,7 @@
 # Contributing
 
 Thanks for taking the time. This page covers the mechanics; `AGENTS.md` holds
-the same rules in the form coding agents read, and `docs/architecture.md`
+the same rules in the form coding agents read, and `docs/ARCHITECTURE.md`
 says where new code belongs.
 
 ## Before you start

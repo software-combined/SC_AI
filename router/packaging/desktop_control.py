@@ -152,7 +152,9 @@ def execute(home, resources, action, run=subprocess.run):
             startup.configure(home, resources, not startup.enabled(home))
         return dict(outcome='done')
     if action == 'help.guide':
-        guide = resources / 'router/docs/troubleshooting.md'
+        guide = resources / 'router/docs/troubleshooting/README.md'
+        if not guide.exists():  # an older bundle keeps the flat page
+            guide = resources / 'router/docs/troubleshooting.md'
         if sys.platform == 'darwin':
             command = ['open', str(guide)]
         elif sys.platform == 'win32':

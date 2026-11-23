@@ -120,8 +120,8 @@ class MalformedInputTests(unittest.TestCase):
 class RepositoryLedgerTests(unittest.TestCase):
     def test_the_repository_ledger_is_well_formed_and_c1_passed(self):
         root = Path(__file__).resolve().parents[1]
-        entries = checker.load((root.parent / 'docs' / 'acceptance-ledger.json').read_text())
-        clients = checker.newest((root.parent / 'docs' / 'compatibility.md').read_text())
+        entries = checker.load((root.parent / 'docs' / 'release' / 'acceptance-ledger.json').read_text())
+        clients = checker.newest((root.parent / 'docs' / 'release' / 'compatibility.md').read_text())
         self.assertTrue(any(e['cell'] == 'C1' and e['result'] == 'pass' for e in entries))
         self.assertEqual(set(clients), set(checker.CLIENTS))
 

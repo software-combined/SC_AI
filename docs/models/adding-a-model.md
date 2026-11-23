@@ -44,7 +44,7 @@ visible assistant text after the last tool result instead.
 Each route uses the row's default effort, including `none`.
 Only a complete pass writes `tier: verified` with `listed: true`.
 Anything else leaves the row unlisted and prints why. Structured evidence,
-including failed routes, is appended to `docs/acceptance-ledger.json`.
+including failed routes, is appended to `docs/release/acceptance-ledger.json`.
 An explicit `--tier` skips promotion; it cannot bypass the probe. A
 hand-edited `listed: true` on a non-verified row is refused at
 load. Rows shipped before the flag keep working without it and stay
@@ -163,7 +163,7 @@ would not stick. `live_refresh` and `models add` leave the limit alone, and
 the router's hourly model feed cannot replace the value a release ships.
 
 A new row on the external Responses protocol inherits the shared stream
-lifecycle (`docs/architecture.md`, Plan 187) with no per-model code: large
+lifecycle (`docs/architecture/streams-and-evidence.md`, Plan 187) with no per-model code: large
 setup frames and reasoning wait until the attempt commits, and a transient provider
 failure before anything reaches the client is retried once when the
 request's tools are all client-run. Whether a row keeps `web_search` decides replay safety through
