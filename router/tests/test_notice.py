@@ -190,7 +190,7 @@ class DialogCommandTests(unittest.TestCase):
         cmd = notice_mod.dialog_command(
             '1.0.1', platform_name='darwin',
             which=lambda name: '/usr/bin/' + name)
-        self.assertEqual(cmd[0], 'osascript')
+        self.assertEqual(cmd[0], '/usr/bin/osascript')
         script = cmd[cmd.index('-e') + 1]
         self.assertIn(MSG, script)
         self.assertIn('buttons {"Later", "Quit and reopen"}', script)
@@ -265,7 +265,7 @@ class DialogCommandTests(unittest.TestCase):
             'with icon (POSIX file "/bundle/router-icon.png")', script)
 
     def test_missing_icon_falls_back_to_the_note_icon(self):
-        with mock.patch.object(notice_mod, 'ICON',
+        with mock.patch.object(notice_mod._dialog(), 'ICON',
                                Path('/no/such/router-icon.png')):
             cmd = notice_mod.dialog_command(
                 '1.0.1', platform_name='darwin',

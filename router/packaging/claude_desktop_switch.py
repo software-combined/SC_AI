@@ -24,10 +24,8 @@ _receipts._atomic_write = _desktop.atomic_write
 _platform = _load('claude_desktop_platform')
 _service = _load('service')
 _accounts = _load('claude_profile_accounts')
-TITLE = 'SCG Router'
 BUNDLE_ID = 'com.anthropic.claudefordesktop'
 LAUNCHER_ID = 'com.softwarecombined.router.claude-switch'
-ICON = Path(__file__).parent / 'assets' / 'router-icon.png'
 DESTINATIONS = {'1p': 'your Claude subscription', '3p': 'OpenRouter'}
 PROFILE_ACTIONS = ('start', 'switch')
 NO_SUBSCRIPTION = ('No Claude subscription is set up on this computer, so Claude stays '
@@ -75,9 +73,6 @@ def attached_profile(home):
         return profile / 'claude_desktop_config.json', doc
     except (OSError, ValueError, TypeError, KeyError, SystemExit) as exc:
         raise SwitchError('Claude is not connected to SCG Router. Run setup again.') from exc
-
-
-dialog_script = _platform.dialog_script
 
 
 def _sync_context(home, third, profile_env=None):

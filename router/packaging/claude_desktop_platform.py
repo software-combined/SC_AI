@@ -1,6 +1,5 @@
 """Desktop identity, lifecycle, dialogs and owned shortcuts; `app` defaults to Claude."""
 import collections
-import json
 import os
 import plistlib
 import shlex
@@ -27,8 +26,6 @@ _windows_codex = _load('router_windows_codex', 'windows_codex.py')
 _windows_dialogs = _load('router_windows_dialog', 'windows_dialog.py')
 _dialogs = _load('router_client_dialog', 'client_dialog.py')
 _shell = _load('router_windows_shell', 'windows_shell.py')
-TITLE = 'SCG Router'
-ICON = Path(__file__).parent / 'assets' / 'router-icon.png'
 BUNDLE_ID = 'com.anthropic.claudefordesktop'
 APP_DESKTOP_ID = BUNDLE_ID
 # `writers`: executable names that must belong to the verified app, since a
@@ -37,19 +34,8 @@ App = collections.namedtuple('App', 'bundle_id writers')
 CLAUDE = App(BUNDLE_ID, ('claude', 'claude-desktop', 'claude.exe'))
 
 
-def dialog_script(message, confirm=False, labels=('Continue', 'Cancel')):
-    # The last label is the safe action; a confirmation's action is the default.
-    quote = lambda value: json.dumps(str(value), ensure_ascii=False)
-    safe = quote(labels[-1])
-    default = quote(labels[0]) if confirm else safe
-    buttons = '{%s, %s}' % (safe, default) if confirm else '{%s}' % safe
-    return ('display dialog %s with title %s buttons %s default button %s '
-            'cancel button %s with icon (POSIX file %s)'
-            % (quote(message), quote(TITLE), buttons, default, safe, quote(ICON)))
-
-
 _ps = _shell.ps_quote
-_windows_dialog = _windows_dialogs.script
+
 
 def _run(command, run, timeout=5, platform_name=None):
     flags = {'creationflags': 0x08000000} if (platform_name or sys.platform) == 'win32' else {}
@@ -58,17 +44,7 @@ def _run(command, run, timeout=5, platform_name=None):
 
 def _dialog(message, platform_name, confirm, run, tool_path=None, detailed=False,
             labels=('Continue', 'Cancel')):
-    if platform_name == 'darwin':
-        argv = [tool_path or '/usr/bin/osascript', '-e', dialog_script(message, confirm, labels)]
-    elif platform_name == 'win32':
-        argv = _shell.argv(_windows_dialog(message, confirm, labels), tool_path)
-    else:
-        argv = [tool_path or _dialogs.tool(platform_name) or 'zenity',
-                '--title', TITLE, '--window-icon', str(ICON), '--width=460',
-                '--question' if confirm else '--info', '--text', str(message),
-                '--ok-label', labels[0] if confirm else labels[-1]]
-        if confirm:
-            argv += ['--cancel-label', labels[1]]
+    argv = _dialogs.notice_argv(message, platform_name, confirm, labels, tool_path)
     answer = _run(argv, run, 120, platform_name)
     if detailed:
         return answer
@@ -316,7 +292,7 @@ def install_launcher(home, python, action='switch', applications=None,
                   "$s=$w.CreateShortcut(%s);if(Test-Path -LiteralPath %s){"
                   "if($s.Description -ne %s -or $s.Arguments -ne %s){throw 'unowned launcher'}};"
                   "$s.TargetPath=%s;$s.Arguments=%s;$s.Description=%s;$s.IconLocation=%s;$s.Save()"
-                  % tuple(map(_ps, (path, path, marker, arguments, python, arguments, marker, ICON))))
+                  % tuple(map(_ps, (path, path, marker, arguments, python, arguments, marker, _dialogs.ICON))))
         applications.mkdir(parents=True, exist_ok=True)
         answer = _run(_shell.argv(script), run, 15, platform_name)
         if answer.returncode:
@@ -330,7 +306,7 @@ def install_launcher(home, python, action='switch', applications=None,
         command = ' '.join((_desktop_arg(python), _desktop_arg(launch), '--action', action))
         applications.mkdir(parents=True, exist_ok=True)
         _atomic.replace_text(path, '[Desktop Entry]\nType=Application\nName=' + name +
-                             '\nExec=' + command + '\nIcon=' + str(ICON) +
+                             '\nExec=' + command + '\nIcon=' + str(_dialogs.ICON) +
                              '\nTerminal=false\nX-SCG-Owner=' + marker + '\n', mode=0o755)
     else:
         return None
@@ -371,7 +347,7 @@ def install_mac_app(target, bundle_id, python, home, launcher, extra=(), plist=N
         iconset = Path(tmp) / 'router.iconset'
         iconset.mkdir()
         for size, icon_name in ((512, 'icon_512x512.png'), (1024, 'icon_512x512@2x.png')):
-            run(['/usr/bin/sips', '-z', str(size), str(size), str(ICON), '--out',
+            run(['/usr/bin/sips', '-z', str(size), str(size), str(_dialogs.ICON), '--out',
                  str(iconset / icon_name)], check=True, capture_output=True, timeout=15)
         run(['/usr/bin/iconutil', '-c', 'icns', str(iconset), '-o',
              str(resources / 'router.icns')], check=True, capture_output=True, timeout=15)

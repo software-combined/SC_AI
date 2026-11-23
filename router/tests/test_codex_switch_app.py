@@ -85,7 +85,7 @@ class SwitchCodexAppTests(unittest.TestCase):
         self.assertTrue(executable.stat().st_mode & 0o100)
         self.assertEqual((self.home / app.LAUNCHER).read_bytes(),
                          (ROOT / 'packaging' / app.LAUNCHER).read_bytes())
-        icon = str(app._platform.ICON)
+        icon = str(app._platform._dialogs.ICON)
         self.assertEqual([call[0] for call in self.calls],
                          ['/usr/bin/sips', '/usr/bin/sips', '/usr/bin/iconutil'])
         self.assertEqual([call[4] for call in self.calls[:2]], [icon, icon])
