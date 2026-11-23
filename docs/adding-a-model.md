@@ -150,13 +150,13 @@ runtime-verified.
 
 A row may pin or steer its serving endpoints with `provider_prefs`,
 using OpenRouter's documented `provider` object. Set it only from a recorded
-probe or incident in `docs/compatibility.md`, and prefer
+probe or incident, and prefer
 `ignore: [<endpoint>]` over a hard `order` plus `allow_fallbacks: false`,
 which removes failover.
 
 A row may set `auto_compact_token_limit` to make Codex compact that model's
 threads earlier than its context window would; without it, Codex follows the
-window. Set it only from recorded evidence in `docs/compatibility.md`, as for
+window. Set it only from recorded probe or incident evidence, as for
 MiMo V2.6 Pro. It is a separate field because `live_refresh` rewrites
 `context_window` from the provider's advertised length, so a lowered window
 would not stick. `live_refresh` and `models add` leave the limit alone, and

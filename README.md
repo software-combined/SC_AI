@@ -75,9 +75,8 @@ deciding to deploy.
 
 Router source, installers, tools, tests, and infrastructure live in `router/`.
 Plugins remain under `plugins/`. The root setup plugin keeps its
-`scg-openrouter` identity. See [architecture](docs/architecture.md) and
-[the repository transition](docs/repository-transition.md) for boundaries
-and compatibility.
+`scg-openrouter` identity. See [architecture](docs/architecture.md) for
+boundaries and compatibility.
 
 Use Python 3.14 or later. Run Router checks and builds from `router/`:
 

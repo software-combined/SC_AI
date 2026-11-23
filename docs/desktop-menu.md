@@ -102,9 +102,9 @@ Open SCG Router when you need the control window.
 The tray helper retries registration when the host returns.
 SCG Router does not install a desktop extension.
 
-## Verification record
+## Acceptance
 
-Build checks and offline transition tests do not establish desktop acceptance.
-See [compatibility](compatibility.md) for actual client versions and reply evidence.
-The [native acceptance matrix](native-installers.md#acceptance-matrix) remains required
+Build checks and offline tests do not establish desktop acceptance.
+See [compatibility](compatibility.md) for the current client versions.
+The [native acceptance matrix](native-installers.md#acceptance-matrix) is required
 for each intended platform and connection.

@@ -304,7 +304,7 @@ Keep the existing full-verification path; add recurring controls only when justi
 For measured examples and pitfalls, consult the Router's
 [job-graph benchmark](references/worked-example.md),
 [runner-time benchmark](references/runner-time-benchmark.md),
-[complete source and layout comparison](https://github.com/software-combined/SC_AI/blob/main/docs/ci-source-comparison.md),
-[Windows suite split](https://github.com/software-combined/SC_AI/blob/main/docs/windows-ci-benchmark.md), or
+[complete source and layout comparison](https://github.com/software-combined/SC_AI/blob/023dbe5f752b29a083028e132b09986c82a9419b/docs/ci-source-comparison.md),
+[Windows suite split](https://github.com/software-combined/SC_AI/blob/023dbe5f752b29a083028e132b09986c82a9419b/docs/windows-ci-benchmark.md), or
 [offline fixture comparison](references/offline-fixture-benchmark.md) when relevant.
 Their provider, commands and layouts are examples, not requirements for another repository.

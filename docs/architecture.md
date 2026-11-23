@@ -9,8 +9,21 @@ adapters and transport stay in Router. Plugins have their own release versions.
 
 The Router builder includes shared plugins, licences, and guides while keeping
 the installed flat layout. Source paths never become installed-state paths.
-GitHub workflows run Router commands in `router/`; local action paths still
-resolve from the repository root. See [the transition](repository-transition.md).
+GitHub workflows run Router commands in `router/`; local action paths
+resolve from the repository root. `.agents/plugins/marketplace.json` registers
+the marketplace packages, and delivery generates the Claude marketplace
+manifest in the local installed marketplace. Source builds work without
+filesystem links. Installed Python module names, launch commands, plugin IDs,
+preferences, keys and saved state keep their installed names.
+
+The canonical source is `software-combined/SC_AI`. Evidence links point
+to `software-combined/SC_AI_Router-archive`, the private archive of the
+`software-combined/SC_AI_Router` source; reading it needs authorised access.
+Router's local-marketplace migration recognises existing marketplace source
+registrations.
+A clone of `software-combined/SC_AI_Router` cannot fast-forward to this source,
+because the histories differ. Keep local work and use a fresh clone; do not
+force-reset an existing checkout.
 
 ## Router domain ownership
 
@@ -465,6 +478,18 @@ opens no connection, reads no response, logs
 nothing and never retries. `strip_retry.py` keeps the `annotation_retry`
 lines and asks `attempt_policy.Ledger` for the one repair send. The Messages
 adapters propose no repair.
+Codex desktop can send the ChatGPT-specific `access_programs` field with a
+fresh task. `ExternalResponsesProvider.prepare` removes it before dispatch, and
+`SubscriptionProvider.prepare` keeps it; the model, reasoning effort, tool
+declarations and tool-result history stay unchanged. The annotation retry is
+bounded to one additional dispatch. Its `annotation_retry` event records
+`eligible`, `attempted` and `outcome` (`ineligible`, `unchanged`, `started`,
+`accepted`, `rejected` or `transport_error`). Rejections include status and
+bounded classification metadata. `accepted` means HTTP acceptance only; the
+normal stream outcome and client acceptance probe establish completion. A
+rejected retry follows the ordinary failure policy, including credit,
+authentication and context handling. Deterministic refusals are cached
+against the original request.
 `context_recovery.py` adds fixed recovery guidance for client-declared context
 resets on either Responses route, finding the `<context_window>` message by the
 same rule. Codex owns saved history and executes its
@@ -1156,7 +1181,11 @@ The adapter returns numeric HRESULT and identifier-only exception type without m
   projection duties through `model_metadata.py` (pure normalization) and
   `clients/` (capability projection, picker visibility); the served
   instruction text and its capped delegation roster live in the
-  `model_instructions.py` leaf (Plan 154).
+  `model_instructions.py` leaf (Plan 154). Codex lists at most five
+  `spawn_agent` model overrides, in catalogue order. The subscription
+  roster comes first, so router models do not appear there. The served roster
+  line tells routed sessions which ids they can still pass explicitly; an
+  explicit router id routes normally unless company policy rejects it.
 - Client activation lives in `packaging/codex_config.py`: the Codex block
   (its Switch Codex variants in `codex_switch_config.py`), picker
   preservation, the seeded startup model, the managed `[desktop]`

@@ -250,8 +250,8 @@ hand-edited conflict instead of overwriting it.
   model, with those connector servers excluded. Before the two repairs
   above, `anthropic/claude-fable-5.1` refused every turn and
   `google/gemini-3.8-flash` returned an empty answer after its tool
-  call. The versions, the failures and the run are recorded in
-  `docs/compatibility.md`.
+  call. The Git history of `docs/compatibility.md` keeps the versions, the
+  failures and the run.
 - Historical deferred-tool verification with earlier discovery IDs,
   2026-09-22: a synthetic 700-tool MCP server,
   `z-ai/glm-5.3-flash`, Claude Code `2.1.223` and a router built from the
@@ -261,8 +261,9 @@ hand-edited conflict instead of overwriting it.
   is why the rewrite above is described as hardening: OpenRouter tolerates
   the raw shape today, and the routed path no longer depends on that. The
   shape the client sends is captured offline by
-  `tools/capture_claude_shapes.py`, and `docs/compatibility.md` carries the
-  run record, including the first, rate-limited control attempt.
+  `tools/capture_claude_shapes.py`, and the Git history of
+  `docs/compatibility.md` keeps the run record, including the first,
+  rate-limited control attempt.
 
 ### Bounded Claude Code verification
 
@@ -361,12 +362,13 @@ model call; its cached identity becomes invalid when the account or workspace ch
 The installed macOS launchers passed both subscription-to-OpenRouter-to-subscription
 and OpenRouter-to-subscription-to-OpenRouter Code-tab round trips, preserving
 original tool results and the newest turns. This acceptance does not cover Cowork
-sharing or Windows/Linux switching. See [compatibility evidence](compatibility.md)
-for client versions, tested models and limits.
+sharing or Windows/Linux switching. See [compatibility](compatibility.md)
+for the current client versions and limits.
 
 The [SCG Router menu](desktop-menu.md) offers explicit Claude connections on Mac,
 Windows and Linux. Native desktop acceptance remains separate from source and
-filesystem checks; see the compatibility record for outstanding platform checks.
+filesystem checks; see the [native acceptance matrix](native-installers.md#acceptance-matrix)
+for the required platform checks.
 Mac setup retains **Open Claude** and **Switch Claude** recovery launchers.
 **Open Claude** opens the app with the selected connection.
 **Switch Claude** asks for confirmation,

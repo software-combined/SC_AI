@@ -34,8 +34,8 @@ Disabled schedules stay disabled. Windows normally delays catch-up runs by ten m
 see [Microsoft's scheduling behavior](https://learn.microsoft.com/en-us/windows/win32/taskschd/tasksettings-startwhenavailable).
 Failed verification restores prior definitions and retries on the next maintenance pass.
 Both runtime folders remain available. Do not remove old setup folders during recovery.
-See the [27 October Windows acceptance evidence](compatibility/windows-2026-10-27.md)
-for verified source changes and the remaining device checks.
+Device acceptance on Windows follows the
+[native acceptance matrix](native-installers.md#acceptance-matrix) and its Windows checks.
 
 Temporary network, update-signature and download failures retry on the existing schedule.
 The current Router keeps running. Rejected updates cannot install.
@@ -180,8 +180,8 @@ tool results remain available; saved chat history is unchanged.
 
 If the error persists after updating Router, share the model name and safe
 `upstream_rejected` diagnostics with IT. Do not share raw chat or request bodies.
-The [focused compatibility record](compatibility/saved-tool-declarations-2026-11-11.md)
-describes the verified scope. The reproducer is `tools/probe_duplicate_tools.py`; it runs offline
+Current schemas win. A saved schema can fill in a declaration that has none.
+The reproducer is `tools/probe_duplicate_tools.py`; it runs offline
 unless `--live --max-calls 3` explicitly enables its bounded provider comparison.
 
 ## Claude on OpenRouter rejects Codex tool schemas

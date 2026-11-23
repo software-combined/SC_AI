@@ -1,5 +1,11 @@
 # Changelog
 
+## scg-optimise-ci 0.1.15 (2026-11-24)
+
+- Link the complete source and layout comparison and the Windows suite split
+  to a fixed commit, so the links keep working after the Router docs drop
+  those evidence pages.
+
 ## scg-codebase-readiness 0.1.0 (2026-11-23)
 
 - New plugin. The `codebase-ai-readiness` skill audits one repository against

@@ -78,19 +78,18 @@ aws cloudformation deploy --stack-name scg-router-feed --region ap-southeast-2 \
     HostedZoneId="$FEED_HOSTED_ZONE_ID" ImmutableSubjectPrefix="$FEED_IMMUTABLE_SUBJECT"
 ```
 
-No subscription confirmation step is left for the reader route. The per-write
-email is retired; the reader now sits on the central SCG AWS notification
-service, which watches the same `bundles/` prefix with its own EventBridge
-rule and reports each write as a branded publication. That route belongs to
-the private infrastructure repository, so its subscription list and source-stack alarms are the
-delivery checks.
+Publication notices come from the central SCG AWS notification service. It
+watches the same `bundles/` prefix with its own EventBridge rule and reports
+each write as a branded publication, so the reader route needs no subscription
+confirmation. That route belongs to the private infrastructure repository, so
+its subscription list and source-stack alarms are the delivery checks.
 
 The local formatter, topic, queue and narrow failure alarm stay as the rollback
 path. They monitor only that local formatter rule, not central delivery.
 `tests/test_feed_infra.py` compiles the inline function, drives it with a
 hostile key and pins the grants.
 
-To restore the direct route, deploy the pre-retirement `infra/feed.yaml` that
+To restore the direct route, deploy the version of `infra/feed.yaml` that
 contains `FeedPublishSubscription`, passing `NotificationEmail="$EMAIL"` with
 the deploy. The recipient must confirm the new SNS subscription, and the
 rollback is incomplete until
@@ -116,8 +115,15 @@ Actions secret interface without printing them. GitHub masks their values in
 workflow logs. The release preflight checks all three and fails closed before
 checkout if any value is empty.
 
+The feed serial must keep increasing across repositories, so a new repository's
+workflow counter must not reset it. The repository variable
+`RELEASE_SERIAL_OFFSET` holds the last live serial from the publication freeze
+and stays fixed. The release builder adds the workflow run number to it, and
+the release workflow refuses to publish from `software-combined/SC_AI` when the
+variable is empty.
+
 `FEED_STACK` stays a literal in the workflow: a stack name carries no account
-id. Both publishers now require `--bucket`, so a fork that runs them with no
+id. Both publishers require `--bucket`, so a fork that runs them with no
 arguments fails with a message naming the argument instead of publishing to
 someone else's bucket.
 
@@ -183,12 +189,7 @@ curl -s -o /dev/null -w '%{http_code}\n' https://dist.softwarecombined.com/stabl
 # 200 once a release is published.
 ```
 
-### Retired: token rotation and the embed-token migration switch (2026-09-12)
-
-There is no feed token to rotate: the feed is public and token-free. The
-old token-bearing `latest.json` asset on the `v0.6.25.42` release is inert
-but should still be retired before enabling immutable releases. The
-repository visibility flip remains its own owner-gated step (plan 144).
+### Recover from a bad release
 
 Feed bundles are immutable and the updater refuses a feed whose serial is
 older than the last accepted one, so recovering from a bad release is
@@ -401,6 +402,33 @@ key while switched. Your chosen chat model stays unchanged. If Luna is absent
 from the key's model list or company policy excludes it, these helpers cannot run.
 Archiving a conversation still fails with "Failed to archive conversation",
 a ChatGPT app (Codex) issue, so switch back to archive it.
+
+### Subscription chats after a router restart
+
+An ongoing Codex chat can request a subscription model before Codex asks the
+restarted router for `/models`. The saved model preferences are not a complete
+entitlement list: a model discovered before the restart can be
+missing from them. Rejecting that first request would turn a routine update
+into Codex's "model is not available on this machine" error.
+
+For a missing native model, the router asks the native catalogue using the
+request's subscription authentication and client version. It routes the
+original request only if the returned roster allows it. The same recovery
+applies when compaction is the first request. Concurrent resumptions reuse one
+result. Account, workspace and version boundaries stay in force, and recovery
+never switches a subscription request to OpenRouter.
+
+An unavailable catalogue returns a retryable service error. Rejected
+authentication clears that account's discovery scope. A model absent from a
+successful catalogue response stays unavailable. The router does not repeat
+discovery for every request.
+
+`tests/test_subscription_restart.py` covers this offline. Run its wrapper from
+`router/`; it uses synthetic credentials and mocked upstreams:
+
+```bash
+python3.14 tools/probe_subscription_restart.py
+```
 
 ## Express updates
 
@@ -641,8 +669,28 @@ before any file, pointer or launchd change. `--feed` selects one run's
 source and is never pinned, so a local test feed cannot freeze future
 updates. Run local feed experiments in a disposable OS user session or VM,
 with its own service manager and Codex configuration. A different `--home`
-alone does not isolate the fixed user service names or client configuration;
-see [Linux upgrade and verification](linux-upgrade.md).
+alone does not isolate the fixed user service names or client configuration.
+
+### Check the Linux desktop app identity
+
+From `router/`, run the read-only check for the installed desktop app:
+
+```sh
+python3.14 packaging/desktop_linux.py --app codex
+python3.14 packaging/desktop_linux.py --app claude
+```
+
+Each command reports the selected desktop entry, executable path, app root and
+the package version stored in the app's Electron `package.json`. That is the
+app's internal package version, not its distribution package-manager release.
+The check refuses unrecognised wrappers and wrappers with relative targets.
+It does not start or stop the app or change its settings.
+
+On Linux, a successful update check with no newer release proves checking
+only, and timer activity alone does not prove an update succeeded. To prove
+installation, use a disposable Linux user session or a systemd-enabled VM with
+a newer test bundle, then check the health version. Do not uninstall the live
+router to test removal; test uninstall in that isolated setup.
 
 ## Layout of the state directory
 
@@ -1171,22 +1219,15 @@ then `launchctl print` for the router agent (`schtasks /query` on Windows).
 Roll back by re-running the installer with `--rollback --to` naming the
 previous release.
 
-## Decision log
+## Design rules
 
-Request cap removed. Compaction runs through a billable summariser
-call. The catalogue is a generated snapshot from the registry (live
-in-router catalogue pending); live model metadata refreshes weekly
-into the registry. Model rows are data; new behaviour is always code.
-Subscription picker gate removed (Plan 178): the twin swap left an
-OpenRouter-billed row wearing the subscription row's name, and the picker
-only reloads when the client starts. Every subscription row is listed
-again, with its twin beside it, and an exhausted row answers the refusal
-message instead of moving.
+The router has no request cap (`tools/check_policy_scans.py` keeps one from
+returning); request size limits still apply. Compaction runs through a billable
+summariser call. The catalogue is a generated snapshot from the registry, and
+live model metadata refreshes weekly into the registry. Model rows are data;
+new behaviour is always code.
 
-## One-time cleanup after 0.4.0
-
-Delete from the state directory on the author's machine:
-`compatibility-release.json`, the `before-*` folders,
-`config-before-*.toml`, `stdout.log`, `stderr.log`, and `retired/` after
-one week. Keep `mixed-router-state.json`, `activation.json`,
-`openrouter.key`, `current`, `releases/`, and `logs/`.
+The picker lists every subscription row with its OpenRouter twin beside it.
+An exhausted subscription row answers with the refusal message instead of
+moving to its twin, because the picker reloads only when the client starts and
+a moved row would show an OpenRouter-billed model under the subscription name.
