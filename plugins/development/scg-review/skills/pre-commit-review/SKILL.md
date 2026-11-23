@@ -174,7 +174,7 @@ Right before spawning reviewers, confirm `git write-tree` still prints the revie
 
 ## Step 7: Brief and run the four review lanes
 
-Run correctness, quality, adversarial and security after Pass 1 is finished and staged. Use independent contexts and the same frozen tree. Respect available child slots: run at most three reviewers at once, then the remaining lane. Scheduling does not make a lane optional. Each lane owns one failure class in the [lane guide](../../references/lanes.md).
+Run correctness, quality, adversarial and security after Pass 1 is finished and staged. Use independent contexts and the same frozen tree. Launch all four lanes at once. Wait and launch a lane later only when the runtime refuses another child for a concurrency limit; that refusal is scheduling, not a handoff failure. Scheduling does not make a lane optional. Each lane owns one failure class in the [lane guide](../../references/lanes.md).
 
 List the context files reviewers need beyond the staged files: direct callers or importers of changed exports; adjacent tests and fixtures; schemas, contracts, builders, snapshots, workflow definitions or config that define the changed behaviour; and docs or runbooks when behaviour or deployment changes. If a lane cannot inspect required context, its review is incomplete.
 

@@ -34,7 +34,7 @@ certificate. Device policy can still block them; contact IT if that happens.
 
 Windows Store Codex needs no separate CLI install or PATH change. Router
 discovers its current package for setup and SC tools, including scheduled updates.
-An unclear or denied lookup offers **Try again** and **Cancel**, without another
+If Windows cannot confirm the package, setup does not connect it and shows no
 download instruction. Subscription choices and disabled plugins stay preserved.
 
 The SCG Router app saves setup in your user account. After setup, you can
@@ -42,27 +42,55 @@ delete the download or eject the disk image. Opening a newer installer updates
 SCG Router. With the same or an older download, the installer keeps the
 installed version and shows **SCG Router is up to date**. Open SCG Router to
 check setup, repair it, connect another assistant, replace your key or remove
-the router. These keep the existing channel and settings. **Connect another assistant** adds your
-selection while preserving existing connections.
+the router. These keep the existing channel and settings. **Update or repair**
+and **Connect another assistant** both connect any assistant installed since
+setup and keep existing connections. After a `--clients none` setup, only
+**Connect another assistant** connects new assistants. After a `--client none`
+(service only) setup, neither connects one; run setup with `--clients` instead.
 
 The default channel is `stable`. Use `--channel=beta` on macOS/Linux or
 `-Channel beta` in PowerShell only when you intend to follow pre-releases.
 Native setup ends with one notice. It names the connected assistants and says
-how to restart each one. Restart your assistant, choose a model and check that
-it replies. **Check setup** in the SCG Router menu checks the reply and SC tools.
+how to restart each one. If no assistant was connected, the notice says to
+install Codex or Claude if needed, then open SCG Router and choose **Update or
+repair**.
+Restart your assistant, choose a model and check that it replies.
+**Check setup** in the SCG Router menu checks the reply and SC tools.
 
-## Choose or change assistants
+## Which assistants connect
 
-The installer asks which assistant you use and where. Cancel at either
-question changes no attachments or subscription choices. With no available dialog, the default is Codex.
-A fresh install asks when it can show a dialog; `--choose-clients` asks again.
-`ROUTER_NO_CLIENT_CHOOSER=1` suppresses the questions for unattended runs.
-Explicit flags take precedence; attaching never detaches another client.
-Updates without a selection retain the attached assistants. If no attachments
-are recorded, setup uses the saved selection, then Codex for a legacy install.
-`--clients` selects only the requested additions, including after service-only
-setup. `--client none` conflicts with an attachment request.
+Setup asks no question about assistants. It looks for Codex (app or terminal),
+Claude Code and the Claude desktop app, and connects each one it finds. Each
+assistant connects on its own: if one cannot connect, the others still do.
+Claude desktop keeps its Claude subscription sign-in. If a newly found Claude
+desktop cannot connect, setup skips it without a message. An assistant that
+is already connected and cannot be updated makes setup report a failure after
+the others finish; choose **Update or repair** to try it again.
 
+Only a manual run looks for new assistants: the installer, the bootstrap script,
+**Update or repair** and **Connect another assistant**. Scheduled and Express
+updates keep the connected assistants and add none. Once an assistant is
+connected, a run that passes only `--openai-mode`, `--claude-mode` or
+`--anthropic-mode` changes the modes of the connected assistants and adds none.
+Setup never disconnects an assistant, except
+that `--client none` (service only) removes every attachment when it installs a
+release. Every install starts on the ChatGPT and Claude subscriptions.
+
+A saved choice decides what a manual run adds:
+
+- `--client none` (service only): no run looks for or connects an assistant
+  until a run passes `--clients` or `--client`.
+- `--clients none` (no terminal assistant, also the result of
+  `--clients none --desktop`): the installer, the bootstrap script and
+  **Update or repair** add nothing and keep this choice.
+  **Connect another assistant** (installer flag `--connect-found`) connects the
+  assistants it finds and then saves the connected terminal assistants as the choice.
+- `--clients codex` or `--clients claude`: a manual run still connects the
+  other assistants it finds.
+
+Explicit flags replace detection for scripted installs. `--clients` attaches
+only the named clients, including after service-only setup. `--client none`
+conflicts with an attachment request.
 From a source checkout's `router/` directory, with Python 3.14, use the command for your intended setup:
 
 | Assistant | Command |
@@ -73,8 +101,8 @@ From a source checkout's `router/` directory, with Python 3.14, use the command 
 | Both Claude surfaces | `python3.14 packaging/install.py --clients claude --desktop` |
 | Service only | `python3.14 packaging/install.py --client none` |
 
-A bootstrap install needs no checkout. Re-run the current setup script with
-`--choose-clients` (Windows: `-ChooseClients`), or use the
+A bootstrap install needs no checkout. Re-run the current setup script to
+connect a newly installed assistant, or use the
 [installed interpreter and installer](claude-code.md#setup).
 For Claude desktop, choose **Claude**, then **OpenRouter**, in the SCG Router menu.
 Claude restarts on OpenRouter. The first switch sets up the OpenRouter profile; switch back and forth once to bring your saved Code tasks.

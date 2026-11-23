@@ -334,17 +334,17 @@ def _updater():
 
 
 def _read_failures(home):
-    """Update-failure state (Plan 131: owned by updater.py)."""
+    """Update-failure state, read through the updater."""
     return _updater()._read_failures(home)
 
 
 def update_failures(home):
-    """Failed attempts per version (Plan 131: owned by updater.py)."""
+    """Failed attempts per version."""
     return _updater().update_failures(home)
 
 
 def record_update_failure(home, version):
-    """Count a failed attempt (Plan 131: owned by updater.py)."""
+    """Count a failed attempt; update_status owns the record."""
     return _updater().record_update_failure(home, version)
 
 

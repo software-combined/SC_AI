@@ -66,9 +66,8 @@ are never copied between machines.
 `ai_router/protocols/messages.py`, `ai_router/models.json`,
 `ai_router/messages_errors.py`, `ai_router/messages_events.py`,
 `ai_router/routed_base_instructions.txt`,
-`ai_router/subscription_base_instructions.txt`, `ai_router/agents.py`,
+`ai_router/subscription_base_instructions.txt`,
 `ai_router/model_instructions.py`,
-`ai_router/agents_general.txt`, `ai_router/agents_dev.txt`,
 `tools/provision_key.py`, `tools/global_instructions.py`, `tools/disable.py`.
 
 Development probes, capture utilities, benchmark scripts and publishing

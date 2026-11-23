@@ -264,7 +264,7 @@ def _open_key_window(python, home, setup_url, clients):
 
 def _attach_current(args, home, python):
     return _client_choice.attach_current(args, home, codex=_codex_config, desktop=_desktop_config,
-        claude=attach_claude, write_state=_write_state, python=python,
+        claude=attach_claude, python=python, write_state=_write_state,
         resolve=_resolve_clients_and_modes, ensure_state=ensure_state, ready=_current_ready)
 
 
@@ -311,15 +311,16 @@ def _do_install(args, _fetch=fetch, _run=None, delivery=None):
     serial = check_serial(home, latest, pinned=bool(args.feed))
     if delivery is not None: delivery.update(latest=latest, feed=feed)
     current = current_version(home)
+    args.found = _client_choice.newly_found(args, home, _codex_config, (delivery or {}).get('automatic', True))
     # Current-runtime repair keeps its code; verified maintenance can advance independently.
     repair = bool(args.setup or args.repair) and not newer(latest['version'], current)
     if delivery is not None: delivery['repair_version'] = current if repair else None
     if not newer(latest['version'], current) and not repair:
         _delivery.recover_current(home, delivery, python, current)
         print(f'up to date {current}')
-        if (args.clients is None and args.client is None and not args.choose_clients
-                and not args.desktop and args.claude_mode is None
-                and args.anthropic_mode is None and args.openai_mode is None):
+        if (not _client_choice.flagged(args) and not args.found
+                and args.claude_mode is None and args.anthropic_mode is None
+                and args.openai_mode is None):
             return 0 if args.dry_run else _complete_choices(home, python)
         return _attach_current(args, home, python)
     if args.dry_run:
@@ -359,7 +360,7 @@ def _do_install(args, _fetch=fetch, _run=None, delivery=None):
     if args.repair and not _delivery.close_assistants(home):
         args.repair_cancelled = True
         raise SystemExit('Repair cancelled; run setup again when your assistants are ready.')
-    client, clients, _, mode = _resolve_clients_and_modes(args, home, state, repair=repair)
+    _, clients, _, mode = _resolve_clients_and_modes(args, home, state, repair=repair)
     python = _delivery.activate(home, delivery, python)
     # Keep first-run keys in the window. TTL mirrors setup.SETUP_TTL_S without
     # importing runtime code on Python 3.9; --setup or a keyless service arms it.
@@ -422,56 +423,32 @@ def _do_install(args, _fetch=fetch, _run=None, delivery=None):
         healthy = False
     if not healthy:
         _delivery.refuse_failed_cohort(delivery)
-        _rollback_failed_install(home, state, backend, latest, previous, catalog_path,
-                                 before_catalog)
+        _rollback_failed_install(home, state, backend, latest, previous, catalog_path, before_catalog)
     if delivery is not None: delivery['installed_version'] = latest['version']
-    # Stage the restart notice once the new version is healthy (fresh
-    # installs are a no-op); notice failures never surface.
-    _svc.notice.record(home, previous, latest['version'], args.clients)
-    previous_receipt = _codex_config.codex_attachment(home)
     saved = None if args.desktop or args.client == 'none' else _desktop_config.saved_profile(home, _codex_config)
-    if clients == 'none':
-        if args.desktop or saved:
-            # An explicit desktop request attaches that profile alone;
-            # a saved profile is refreshed without detaching other clients.
-            _client_choice.attach_desktop_only(args, home, state, _codex_config,
-                                               _desktop_config, saved, python)
-        else:
-            if args.client == 'none':
-                _delivery._load('client_removal').remove_all(home, _codex_config,
-                    lambda expected, entry: _restore_owned_config(home, python, expected, entry), python)
-                _delivery._load('claude_profile_hook').uninstall(home)
-        prune_releases(home, latest['version'], previous,
-                       backend.pinned_release(home))
-        if not args.feed:
-            (home / 'feed-serial').write_text(str(serial) + '\n')
-        backend.start_updates(home)
-        _finish_key_setup(args, home, python, setup_url, 'claude' if args.desktop else clients)
-        print(f"router {latest['version']}; health ok; {_client_choice.none_outcome(args, bool(saved))}")
-        return 0
-    if clients in ('claude', 'both'): attach_claude(home, state, python=python)
-    if args.desktop or saved: _desktop_config.attach(home, state, _codex_config, saved, python=python)
-    # Only explicit service-only installation or uninstall drops attachments.
-    if clients == 'claude':
-        # Claude-only: the shared service is up; Codex settings untouched.
-        if not args.feed:
-            (home / 'feed-serial').write_text(str(serial) + '\n')
-        backend.start_updates(home)
-        _finish_key_setup(args, home, python, setup_url, clients)
-        print(f"router {latest['version']}; health ok; Claude Code attached")
-        return 0
-    _client_choice.attach_codex(home, state, mode, _codex_config, previous_receipt, static_catalogue=args.static_catalogue, python=python)
+    if args.client == 'none':
+        _delivery._load('client_removal').remove_all(home, _codex_config,
+            lambda expected, entry: _restore_owned_config(home, python, expected, entry), python)
+        _delivery._load('claude_profile_hook').uninstall(home)
+    names = _client_choice.wanted(args, clients, saved)
+    try:
+        connected = _client_choice.attach_each(home, state, mode, names, codex=_codex_config,
+            desktop=_desktop_config, claude=attach_claude, python=python, saved=saved,
+            static_catalogue=args.static_catalogue, explicit=_client_choice.flagged(args))
+    finally:
+        # Stage the healthy version's notice even if an attach fails (fresh installs: no-op).
+        _client_choice.save_attached(args, home, state, _codex_config, _write_state)
+        _svc.notice.record(home, previous, latest['version'], args.clients)
     # launchd keeps the updater command until the job is reloaded and a
     # scheduled run defers that reload, so pruning its release breaks it.
-    prune_releases(home, latest['version'], previous,
-                   backend.pinned_release(home))
+    prune_releases(home, latest['version'], previous, backend.pinned_release(home))
     if not args.feed:
         # One-shot rule, as for the feed URL: a pinned feed keeps its own
         # serial, so recording it makes the real feed look stale for good.
         (home / 'feed-serial').write_text(str(serial) + '\n')
     backend.start_updates(home)
     _finish_key_setup(args, home, python, setup_url, clients)
-    print(f"router {latest['version']}; health ok; restart Codex to load the router")
+    print(f"router {latest['version']}; health ok; {_client_choice._connected(connected, home, _codex_config)}")
     return 0
 
 
@@ -599,8 +576,7 @@ def build_parser():
     parser.add_argument('--support', action='store_true', help='Write a redacted support bundle and print its path.')
     parser.add_argument('--uninstall', action='store_true')
     parser.add_argument('--restart', action='store_true', help='Restart SCG Router after running replies finish.')
-    parser.add_argument('--preflight', action='store_true',
-                        help='Report missing install prerequisites and exit.')
+    parser.add_argument('--preflight', action='store_true', help='Report missing install prerequisites and exit.')
     parser.add_argument('--status', action='store_true',
                         help='Print installed version, service, client, and key status.')
     parser.add_argument('--json', action='store_true',
@@ -610,23 +586,23 @@ def build_parser():
                         help='First-run key window: mint a setup link and open it even when a key exists.')
     parser.add_argument('--repair', action='store_true',
                         help='Update or repair existing setup, preserving working keys and saved choices.')
-    parser.add_argument('--choose-clients', action='store_true', help='Ask which assistant and surface this computer uses.')
     parser.add_argument('--openai-mode', default=None)
     parser.add_argument('--anthropic-mode', default=None,
                         choices=('subscription', 'none'),
                         help='Independent Claude subscription choice; '
                              'unset follows the OpenAI mode as before.')
     parser.add_argument('--client', default=None, choices=(_client_roster.DEFAULT_CLIENT, 'none'),
-                        help='Client to activate (default codex); none leaves '
-                             'all client settings and guidance untouched.')
+                        help='Client to activate (default codex); none runs the service only '
+                             'and removes every client attachment when it installs a release.')
     parser.add_argument('--clients', default=None, choices=_client_roster.CLIENT_IDS + ('both', 'none'),
-                        help='Clients to attach (default codex); both attaches '
-                             'Codex and Claude Code; none attaches no terminal client.')
+                        help='Clients to attach (default: those found on this computer); '
+                             'both attaches Codex and Claude Code; none attaches no terminal client.')
     parser.add_argument('--claude-mode', default=None,
                         choices=('subscription', 'none'),
                         help='Independent Claude subscription choice; '
                              'unset follows the Anthropic mode as before.')
     parser.add_argument('--desktop', action='store_true', help='Also attach the Claude desktop gateway profile.')
+    parser.add_argument('--connect-found', action='store_true', help='Attach found assistants despite --clients none.')
     return parser
 
 

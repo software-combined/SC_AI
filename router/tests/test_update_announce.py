@@ -63,17 +63,17 @@ class AnnounceTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             home = Path(tmp)
             record, show = self._announce(
-                home, {'port': 9, 'token': 'tok'}, reply)
+                home, {'port': 9, 'token': 'tok', 'clients': 'codex'}, reply)
         names = ['A', 'B', 'C', '+1 more']
         record.assert_called_once_with(
-            home, '9.9.9', '9.9.9', None, names=names)
+            home, '9.9.9', '9.9.9', 'codex', names=names)
         show.assert_called_once_with(home, names=names)
         self.assertEqual(reply.url, 'http://127.0.0.1:9/tok/model-prompt')
 
     def test_nothing_pending_runs_no_dialog(self):
         with tempfile.TemporaryDirectory() as tmp:
             record, show = self._announce(
-                Path(tmp), {'port': 9, 'token': 'tok'},
+                Path(tmp), {'port': 9, 'token': 'tok', 'clients': 'codex'},
                 self._reply({'pending': [], 'url': None}))
         record.assert_not_called()
         show.assert_not_called()
@@ -97,7 +97,7 @@ class AnnounceTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp, \
                 mock.patch.dict(os.environ, {'ROUTER_NO_NOTICE': '1'}):
             record, show = self._announce(
-                Path(tmp), {'port': 9, 'token': 'tok'}, opener)
+                Path(tmp), {'port': 9, 'token': 'tok', 'clients': 'codex'}, opener)
         record.assert_not_called()
         show.assert_not_called()
 
@@ -107,7 +107,7 @@ class AnnounceTests(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as tmp:
             self.updater._announce_new_models(
-                Path(tmp), {'port': 9, 'token': 'tok'}, _urlopen=boom)
+                Path(tmp), {'port': 9, 'token': 'tok', 'clients': 'codex'}, _urlopen=boom)
 
     def test_named_model_state_stays_quiet_until_the_names_change(self):
         notice = self.updater._svc.notice

@@ -8,10 +8,12 @@
 - Count a deferred Windows update once. The retry counter no longer rises twice, and the deferral message appears once.
 - Setup asks one access question: sign in with your work account or use your own key. It no longer asks about ChatGPT or Claude subscriptions and assumes you use them; IT can still pass `--openai-mode none` or `--claude-mode none`. Saved choices are kept.
 - Setup no longer offers or writes starter instructions (`AGENTS.md`). An existing file is untouched.
-- Setup ends with one notice that names your assistants and how to restart them. During setup it no longer asks for a test message, an SC tool check, a Claude switch to OpenRouter or (on Windows) a Codex restart, and the access window shows no separate confirmation. **Check setup** and the Claude menu still offer those checks and the switch.
+- Setup ends with one notice that names your assistants and how to restart them. During setup it no longer asks for a test message, an SC tool check, a Claude switch to OpenRouter or (on Windows) a Codex restart, and the access window shows no separate confirmation. **Check setup** still offers the reply checks, and the Claude menu offers the switch.
 - Opening the Mac installer again installs, updates or repairs, as on Windows, instead of showing a list of actions. With the same or an older installer it only says SCG Router is up to date.
 - **Update or repair** asks you to close your assistants only when a connection must change, or when Claude desktop uses OpenRouter.
+- Setup asks no question about assistants. It connects Codex, Claude Code and the Claude app when it finds them, and one that cannot connect does not stop the others. If none connects, the closing notice says to install Codex or Claude if needed and choose **Update or repair**. Scheduled updates, and runs that only change modes once an assistant is connected, never connect a new assistant. A saved `--client none` connects nothing. A saved `--clients none` keeps the installer, bootstrap and **Update or repair** from connecting new assistants; **Connect another assistant** still connects them. Without a saved choice, update notices name only the assistants that are connected.
 - On Windows, a folder or name that contains a curly apostrophe (’) no longer breaks setup shortcuts, startup or dialogs. Shortcuts, startup, notices and Windows maintenance start the Windows system copy of PowerShell.
+- The installer and `bootstrap.sh` option `--choose-clients`, the `bootstrap.ps1` option `-ChooseClients` and the `ROUTER_NO_CLIENT_CHOOSER` setting are removed. Scripts that pass them should drop them.
 - On Linux, restart notices appear on computers that have only the dialog tool bundled with setup, as other SCG Router windows already do.
 
 ## 1.3.65

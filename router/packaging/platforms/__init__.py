@@ -15,6 +15,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import loader  # noqa: E402
 
+_status = loader.load(Path(__file__).resolve().parents[1] / 'update_status.py')
+
 
 def _load(name, filename):
     return loader.load(Path(__file__).resolve().parent / filename, name)
@@ -75,11 +77,11 @@ class NoRepair:
 
     def recover_interrupted(self, home):
         """Restore an interrupted installation; the caller holds install.lock."""
-        return 'inactive'
+        return _status.INACTIVE
 
     def reconcile_after_update(self, home, service):
         """Retry an interrupted installation after an update, without waiting."""
-        return 'inactive'
+        return _status.INACTIVE
 
     def recover_pending(self, python, home, release_dir, version):
         """Finish a legacy install whose scheduled tasks are still pending."""

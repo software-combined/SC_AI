@@ -100,8 +100,8 @@ class RotationLifecycleTests(unittest.TestCase):
         with self.assertRaisesRegex(SystemExit, 'recover.*Claude profile'):
             choice.attach_current(args, self.rig.home, codex=receipts,
                 desktop=desktop_config, claude=terminal, python='synthetic-python',
-                write_state=mock.Mock(), resolve=lambda *a: ('codex', 'claude', 'subscription', 'subscription'),
-                ensure_state=lambda *a: self.rig.state.copy(), ready=ready)
+                resolve=lambda *a: ('codex', 'claude', 'subscription', 'subscription'),
+                ensure_state=lambda *a: self.rig.state.copy(), ready=ready, write_state=mock.Mock())
         terminal.assert_not_called()
         ready.assert_not_called()
         self.assertEqual(self.rig.receipt_path.read_bytes(), before)

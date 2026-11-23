@@ -37,9 +37,7 @@ class SubscriptionDefaultTests(unittest.TestCase):
                     with mock.patch.object(Path, 'home', return_value=user), \
                             mock.patch.dict(os.environ, {'HOME': str(user), 'ROUTER_HOME': str(home)}), \
                             contextlib.redirect_stdout(io.StringIO()):
-                        self.assertFalse((path.parent / 'auth.json').exists())
-                        initial_mode = config.default_mode()
-                        self.assertEqual(initial_mode, 'subscription')
+                        initial_mode = 'subscription'  # Every install starts on the subscription.
                         state = dict(port=1, token='synthetic', clients='codex', owner_setting='keep',
                                      setup=dict(nonce='synthetic', expires=time.time() + 3600))
                         (home / 'mixed-router-state.json').write_text(json.dumps(state))

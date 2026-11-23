@@ -23,6 +23,11 @@
 - `build_report.py` writes one self-contained HTML report with the Software
   Combined colours, light and dark modes, and a phone layout.
 
+## scg-review 0.7.6 (2026-11-23)
+
+- Launch all four review lanes at once. Wait and launch a lane later only
+  when the runtime refuses another child for a concurrency limit.
+
 ## scg-agent-factory 1.2.0 (2026-11-23)
 
 - Require the project manager and every owner to read this skill and the roster

@@ -26,7 +26,7 @@ Have Codex or Claude installed. You need your own subscription for subscription
 models. External providers require a separate key and charge for usage.
 
 1. Open [Install SCG Router](https://hub.softwarecombined.com/install) and choose your computer.
-2. Open the installer and choose your assistant. Use the work-account route only when your organisation has enabled it.
+2. Open the installer. It connects Codex, Claude Code and the Claude app when it finds them, then asks how to set up model access. Use the work-account route only when your organisation has enabled it.
 3. Reopen your assistant, select an available model, and send a short greeting.
 
 You should receive a reply. Installation alone does not prove the connection works.

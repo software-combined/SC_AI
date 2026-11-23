@@ -4,8 +4,8 @@
 # runtime from runtimes.json, verifies every download by SHA-256, then runs
 # the verified bundle installer. The feed is public: no token is needed.
 # Usage:
-#   .\bootstrap.ps1 [-Channel beta] [-ChooseClients] [-AcceptMicrosoftRuntimeTerms]
-param([string]$Channel = 'stable', [switch]$ChooseClients, [switch]$AcceptMicrosoftRuntimeTerms)
+#   .\bootstrap.ps1 [-Channel beta] [-AcceptMicrosoftRuntimeTerms]
+param([string]$Channel = 'stable', [switch]$AcceptMicrosoftRuntimeTerms)
 $ErrorActionPreference = 'Stop'
 $homeDir = if ($env:ROUTER_HOME) { $env:ROUTER_HOME } else { Join-Path $HOME '.codex\mixed-model-router' }
 $homeDir = [IO.Path]::GetFullPath($homeDir)
@@ -98,8 +98,7 @@ if ($LASTEXITCODE -ne 0) { exit 1 }
 # its own feed from the router home, which may still name the old channel.
 # Persist the channel only once the install proves out, so an aborted
 # bootstrap cannot move a stable host onto pre-releases.
-$choose = if ($ChooseClients) { @('--choose-clients') } else { @() }
-& $py (Join-Path $homeDir 'bootstrap\packaging\install.py') --home $homeDir --python $py --feed "$feedOrigin/$Channel/latest.json" @repair @choose
+& $py (Join-Path $homeDir 'bootstrap\packaging\install.py') --home $homeDir --python $py --feed "$feedOrigin/$Channel/latest.json" @repair
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 $current = & $py -c 'import pathlib,sys;p=pathlib.Path(sys.argv[1]);print(p.resolve().name if p.is_symlink() and p.is_dir() else p.read_text().strip() if p.exists() else str())' (Join-Path $homeDir 'current')
 $landed = $false

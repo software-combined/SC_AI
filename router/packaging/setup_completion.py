@@ -32,24 +32,22 @@ def complete_native(resources, home, run_installer):
 
 
 def confirm_client(home, dialog, client, saved_key):
-    label = {'codex': 'Codex', 'claude': 'Claude Code', 'claude-desktop': 'Claude desktop'}[client]
-    if saved_key and client != 'claude-desktop':
+    label = {'codex': 'Codex', 'claude': 'Claude Code'}[client]
+    if saved_key:
         return dialog.confirm_result(
             'Your saved key is ready. Keep %s open and keep your current model. '
             'Send a message and use an enabled SC tool, such as SC documentation. '
             'If both already work, choose Confirm.' % label,
             home, labels=('Confirm', 'Later')) is True
     return dialog.confirm(
-        'To finish setup for %s:\n\n%s'
+        'To finish setup for %s:\n\nQuit and reopen it, then start a new chat. '
         'Choose an OpenRouter model and send a greeting. Use an enabled SC tool, '
         'such as SC documentation.\n\n'
-        'Choose Continue only after you receive a reply and the SC tool works.'
-        % (label, 'Choose Code and start a new task. ' if client == 'claude-desktop'
-           else 'Quit and reopen it, then start a new chat. '), home=home)
+        'Choose Continue only after you receive a reply and the SC tool works.' % label, home=home)
 
 
 def ready_message(clients, saved_key):
-    if saved_key and clients and 'claude-desktop' not in clients:
+    if saved_key and clients:
         labels = ['Codex' if client == 'codex' else 'Claude Code' for client in clients]
         return 'Ready. %s %s connected. You can keep working in this chat.' % (
             ' and '.join(labels), 'is' if len(labels) == 1 else 'are')
@@ -65,7 +63,8 @@ def finish_message(clients):
     """Name each attached assistant and its restart; never claim a reply was checked."""
     found = [(label, step) for name, label, step in RESTARTS if name in clients]
     if not found:
-        return 'No assistant was found. Install Codex or Claude, then open SCG Router again.'
+        return ('No assistant was connected. Install Codex or Claude if needed, '
+                'then open SCG Router and choose Update or repair.')
     steps = [step[0].upper() + step[1:] for _, step in found]
     if len(found) == 1:
         text = 'SCG Router is ready. %s to use it.' % steps[0]

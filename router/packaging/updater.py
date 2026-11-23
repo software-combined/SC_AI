@@ -28,7 +28,8 @@ _status = _svc.load('router_update_status', Path(__file__).with_name('update_sta
 _reconcile = _svc.load('router_update_reconcile', Path(__file__).with_name('update_reconcile.py'))
 _platforms = _svc.load('router_platforms', Path(__file__).with_name('platforms') / '__init__.py')
 
-MAX_VERSION_FAILURES = 3
+# install.py and diagnostics.py read this name; update_status owns the value.
+MAX_VERSION_FAILURES = _status.MAX_VERSION_FAILURES
 ANNOUNCE_TIMEOUT_S = 5
 REPLY_LIMIT = 1 << 20
 
@@ -112,16 +113,15 @@ def _pending_reply(state, _urlopen=None):
         return json.loads(response.read(REPLY_LIMIT).decode())
 
 
-def _codex_attached(state):
+def _codex_attached(home, state):
     """True when this install serves Codex, so the offer is not a dead end.
 
-    `--clients` records the attachments; legacy state carries only `client`
-    (absence means Codex). Claude-only and service-only installs are skipped.
+    The saved choice, else the receipts, name the attachments; a missing
+    choice is not Codex. Claude-only and service-only installs are skipped.
     """
-    clients = state.get('clients')
-    if clients is not None:
-        return clients in ('codex', 'both')
-    return state.get('client', 'codex') != 'none'
+    choice = _svc.load('router_client_choice', Path(__file__).with_name('client_choice.py'))
+    codex = _svc.load('router_codex_config', Path(__file__).with_name('codex_config.py'))
+    return choice.saved_clients(home, state, codex) in ('codex', 'both')
 
 
 def _announce_new_models(home, state, _urlopen=None):
@@ -129,7 +129,7 @@ def _announce_new_models(home, state, _urlopen=None):
     try:
         if os.environ.get('ROUTER_NO_NOTICE') == '1':
             return
-        if not _codex_attached(state):
+        if not _codex_attached(home, state):
             return
         reply = _pending_reply(state, _urlopen)
         rows = reply.get('pending') or []
@@ -169,12 +169,11 @@ def bind(**overrides):
 def _read_failures(home):
     """State document plus its failure map; (None, {}) when unreadable.
 
-    Update-failure owner (Plan 131), moved out of service.py. Always read
-    fresh: the child installer writes the same file, and merging onto a
-    stale copy would drop its changes.
+    Always read fresh: the child installer writes the same file, and merging
+    onto a stale copy would drop its changes.
     """
     state = _svc._state.read(_svc._state.path(home))
-    return (None, {}) if state is None else (state, _failures(state))
+    return (None, {}) if state is None else (state, _status.failure_counts(state))
 
 
 def update_failures(home):
@@ -182,35 +181,14 @@ def update_failures(home):
     return _read_failures(home)[1]
 
 
-def _failures(state):
-    failures = state.get('update_failures')
-    return dict(failures) if isinstance(failures, dict) else {}
-
-
 def record_update_failure(home, version):
     """Count a failed attempt at one version; returns the new count."""
-    def count(state):
-        failures = _failures(state)
-        verified = state.get('latest_verified', {})
-        contexts = state.setdefault('update_failure_context', {})
-        if isinstance(verified, dict) and verified.get('version') == version and isinstance(contexts, dict):
-            context = {key: verified.get(key) for key in ('channel', 'source')}
-            if version in contexts and contexts[version] != context:
-                failures.pop(version, None)
-            contexts[version] = context
-        failures[version] = failures.get(version, 0) + 1
-        state['update_failures'] = failures
-    state = _svc._state.update(home, count, _svc._atomic_write)
+    state = _svc._state.update(home, lambda doc: _status.count_failure(doc, version), _svc._atomic_write)
     return 0 if state is None else state['update_failures'][version]
 
 
 def clear_update_failures(home, version):
-    def clear(state):
-        failures = _failures(state)
-        if version in failures:
-            del failures[version]
-            state['update_failures'] = failures
-    _svc._state.update(home, clear, _svc._atomic_write)
+    _svc._state.update(home, lambda doc: _status.clear_failures(doc, version), _svc._atomic_write)
 
 
 def _park(home, etag, etag_path, version):
