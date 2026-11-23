@@ -135,8 +135,8 @@ def retained(resources, home, expected_target=None, *, repair=False):
     return destination
 
 
-def install_arguments(resources, home, state=None, *, choose=False, key=False, repair=False, package=False):
-    """Use permanent Python and a local bundle, preserving existing clients."""
+def install_arguments(resources, home, *, key=False, repair=False):
+    """Use permanent Python and a local bundle; the installer picks the clients."""
     resources, home = Path(resources), Path(home)
     doc = metadata(resources)
     python = resources / 'runtime' / doc['runtime_exec']
@@ -150,10 +150,6 @@ def install_arguments(resources, home, state=None, *, choose=False, key=False, r
         args.append('--setup')
     elif repair:
         args.append('--repair')
-    elif choose or not state:
-        args.append('--choose-clients')
-    elif not package:
-        args += ['--clients', state.get('clients', 'codex')]
     return args
 
 

@@ -90,8 +90,9 @@ def assistant_status(home, state, python=None):
     if report.get('receipt') == 'readable' and entries:
         owned = all(row.get('classification') == 'owned' for row in entries.values())
         return status.READY if owned else status.FAILED
-    elif report.get('receipt') == 'missing' and state.get('clients') == 'none':
-        return status.READY
+    elif report.get('receipt') == 'missing' and _load('client_choice').saved_clients(
+            home, state, _load('codex_config')) == 'none':
+        return status.READY  # Nothing is attached and none is wanted: nothing to verify.
     return status.FAILED if report.get('receipt') == 'conflict' else status.UNKNOWN
 
 

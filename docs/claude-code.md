@@ -17,16 +17,14 @@ up separately. This section covers the terminal (`claude`); for the app, use
 
 ### Set it up
 
-Run the installer. It asks which assistant you use and where, and attaches
-only what you answer:
+Run the installer. It connects every assistant it finds on this computer,
+Claude Code and the Claude app included:
 
 ```sh
-python3.14 packaging/install.py --choose-clients
+python3.14 packaging/install.py
 ```
 
-Choose **Claude**, then **Terminal** for the terminal alone or **Both** to
-connect the app as well. The same choice without the questions, and the other
-Claude options:
+To connect only named clients instead:
 
 ```sh
 python3.14 packaging/install.py --clients claude            # terminal only
@@ -37,8 +35,7 @@ python3.14 packaging/install.py --clients claude --desktop  # terminal and app
 Then quit and restart Claude Code. That is the whole setup: the installer
 writes the three public settings it owns in `~/.claude/settings.json`, keeps your
 existing subscription sign-in, and records what it changed so the same
-installer can undo it. Attaching is additive, so nothing you did not ask for
-is removed, and cancelling a question changes nothing. The one thing it will
+installer can undo it. Attaching is additive, so nothing is removed. The one thing it will
 not do is overwrite a setting you edited by hand: it refuses and tells you to
 fix that value first.
 
@@ -100,19 +97,19 @@ Two things defeat it, and neither is something the installer can fix quietly:
   connector servers for that session with
   `--strict-mcp-config --mcp-config '{"mcpServers": {}}'`.
 
-On a machine installed from the bootstrap there is no checkout to run from, so
-download the current bootstrap first (an older download rejects the new flag),
+On a machine installed from the bootstrap there is no checkout to run from.
+Choose **Update or repair** in the SCG Router menu, re-run the current bootstrap,
 or run the installer already in the router home:
 
 ```sh
-# beta hosts: download the current bootstrap, then ask it to attach a client
+# beta hosts: download the current bootstrap, then run it to connect what it finds
 curl -fsSL https://dist.softwarecombined.com/install/bootstrap.sh -o bootstrap.sh
-sh bootstrap.sh --channel=beta --choose-clients
+sh bootstrap.sh --channel=beta
 # a stable host omits --channel=beta
 
 # or run the installer already in the router home with its pinned interpreter
 # (use $ROUTER_HOME instead of $HOME if the router was installed elsewhere)
-"$HOME/.codex/mixed-model-router/runtime/python/bin/python3.14" "$HOME/.codex/mixed-model-router/releases/$(cat "$HOME/.codex/mixed-model-router/current")/packaging/install.py" --choose-clients
+"$HOME/.codex/mixed-model-router/runtime/python/bin/python3.14" "$HOME/.codex/mixed-model-router/releases/$(cat "$HOME/.codex/mixed-model-router/current")/packaging/install.py" --clients claude
 ```
 
 ### Check it worked

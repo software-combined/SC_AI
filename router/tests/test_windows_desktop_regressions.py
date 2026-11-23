@@ -11,7 +11,6 @@ from unittest import mock
 from tests.test_codex_desktop_switch import switcher
 from tests.test_codex_config_proof import proof, _load
 
-dialog = _load('windows_client_dialog_test', 'packaging/client_dialog.py')
 native = _load('windows_native_dialog_test', 'packaging/native_dialog.py')
 notice = _load('windows_notice_console_test', 'packaging/notice.py')
 NO_WINDOW = 0x08000000
@@ -130,9 +129,6 @@ class WindowsDesktopTests(unittest.TestCase):
         platform.show_message('Ready', 'win32', run=run)
         self.assertEqual(run.call_args.kwargs.get('creationflags'), NO_WINDOW)
         run.return_value.stdout = 'ChatGPT'
-        dialog.ask('win32', 'powershell', run)
-        self.assertTrue(all(call.kwargs.get('creationflags') == NO_WINDOW
-                            for call in run.call_args_list[-2:]))
         with mock.patch.object(native.sys, 'platform', 'win32'), \
                 mock.patch.object(native.dialog, 'tool', return_value='powershell'), \
                 mock.patch.object(native.subprocess, 'Popen') as popen:

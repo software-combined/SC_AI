@@ -68,16 +68,6 @@ class NativePayloadTests(unittest.TestCase):
             self.assertEqual(facts['downloads'], {'access_ready': True, 'public': True})
             self.assertEqual((home / 'download-auth.json').read_text(), '{old or corrupt auth')
 
-    def test_desktop_only_guides_missing_plugin_setup_tools_before_installing(self):
-        setup = module('native_setup')
-        dialog = mock.Mock()
-        dialog.confirm.return_value = False
-        with mock.patch('shutil.which', return_value=None), \
-                mock.patch.object(setup.webbrowser, 'open') as browser:
-            self.assertTrue(setup._missing_assistant(['--clients', 'none', '--desktop'], dialog))
-        self.assertIn('Claude desktop', dialog.confirm.call_args.args[0])
-        browser.assert_not_called()
-
     def test_retains_files_before_the_download_is_deleted(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
@@ -90,7 +80,7 @@ class NativePayloadTests(unittest.TestCase):
             self.assertTrue((kept / 'payload/bundle.tar.gz').is_file())
             self.assertNotIn(str(download), ' '.join(args))
 
-    def test_reopening_keeps_existing_client_selection(self):
+    def test_reopening_keeps_the_saved_channel_and_names_no_clients(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             source = resources(root / 'download', channel='stable')
@@ -98,13 +88,12 @@ class NativePayloadTests(unittest.TestCase):
             home.mkdir()
             (home / 'channel').write_text('beta\n')
             (home / 'feed').write_text('file:///managed/feed.json\n')
-            args = payload.install_arguments(source, home, {'clients': 'claude'})
-            self.assertEqual(args[args.index('--clients') + 1], 'claude')
-            self.assertNotIn('--choose-clients', args)
+            args = payload.install_arguments(source, home)
+            self.assertNotIn('--clients', args)  # The installer attaches what it finds.
             self.assertEqual((home / 'channel').read_text(), 'beta\n')
             self.assertEqual((home / 'feed').read_text(), 'file:///managed/feed.json\n')
 
-    def test_native_first_setup_and_add_send_only_the_chosen_new_clients(self):
+    def test_native_setup_never_asks_which_assistant(self):
         setup = module('native_setup')
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
@@ -116,23 +105,19 @@ class NativePayloadTests(unittest.TestCase):
                     (home / 'current').write_text('1.2.0\n')
                     (home / 'mixed-router-state.json').write_text('{"clients":"codex"}')
                 dialog = mock.MagicMock()
-                dialog.dialog.ask.return_value = ('claude', 'terminal')
-                dialog.dialog.plan.return_value = ('claude', False)
-                load, invoke, which = setup.load, setup.run_installer, shutil.which
+                load, invoke = setup.load, setup.run_installer
                 run = mock.Mock(return_value=SimpleNamespace(returncode=1))
                 with mock.patch.object(setup, 'load', side_effect=lambda name:
                         dialog if name == 'native_dialog' else mock.Mock()
                         if name == 'native_shortcuts' else load(name)), \
-                        mock.patch('shutil.which', side_effect=lambda name, **kwargs:
-                                   '/assistant' if name == 'claude' else which(name, **kwargs)), \
                         mock.patch.object(setup, 'run_installer', side_effect=lambda *args:
                                           invoke(*args, run=run)):
                     self.assertEqual(setup.onboard(source, home, 'add' if existing else 'resume'), 1)
                 args = run.call_args.args[0]
-                self.assertEqual(args[args.index('--clients') + 1], 'claude')
-                self.assertNotIn('--setup', args)
-                self.assertNotIn('--choose-clients', args)
-                self.assertEqual(args.count('--clients'), 1)
+                self.assertFalse(set(args) & {'--clients', '--desktop', '--setup'})
+                self.assertEqual('--repair' in args, existing)
+                self.assertEqual('--connect-found' in args, existing)  # Connect another assistant
+                dialog.choose.assert_not_called()
 
     def test_replacing_key_uses_pure_repair_and_passes_the_actual_home(self):
         setup = module('native_setup')
@@ -158,7 +143,7 @@ class NativePayloadTests(unittest.TestCase):
                     setup._key(source, home, replace=True, run=run)
             first, key = run.call_args_list
             self.assertEqual(first.args[0].count('--setup'), 1)
-            self.assertFalse(set(first.args[0]) & {'--clients', '--choose-clients', '--desktop'})
+            self.assertFalse(set(first.args[0]) & {'--clients', '--desktop'})
             self.assertEqual(key.kwargs['env']['ROUTER_HOME'], str(home))
 
     def test_refuses_a_tampered_bundle_before_creating_the_home(self):

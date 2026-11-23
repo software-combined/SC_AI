@@ -1,13 +1,11 @@
-"""The client chooser: two questions, one answer per client surface.
+"""One single-select question in the router's popup style.
 
 Runs on the installer's Python 3.9 with no router imports, next to the
 update notice and the first-run key window, and follows the same popup
 style (AGENTS.md 4a): the title `SCG Router`, the bundled icon, plain
-language, a single selection and Continue/Cancel on both questions.
+language, a single selection and two actions with the safe one last.
 """
 import json
-import os
-import subprocess
 import sys
 from pathlib import Path
 
@@ -18,43 +16,6 @@ _shell = loader.load(Path(__file__).resolve().with_name('windows_shell.py'))
 
 TITLE = 'SCG Router'
 ICON = Path(__file__).resolve().parent / 'assets' / 'router-icon.png'
-TIMEOUT_S = 300
-CANCELLED = object()
-
-# ChatGPT's app and terminal share one attachment, so its surface answer
-# only shapes the confirmation line.
-ASSISTANTS = (('chatgpt', 'ChatGPT'), ('claude', 'Claude'), ('both', 'Both'))
-SURFACES = (('app', 'Desktop app'), ('terminal', 'Terminal'), ('both', 'Both'))
-ASSISTANT_QUESTION = 'Which AI assistant do you use?'
-SURFACE_QUESTION = 'Where do you use it?'
-PLANS = {('chatgpt', 'app'): ('codex', False),
-         ('chatgpt', 'terminal'): ('codex', False),
-         ('chatgpt', 'both'): ('codex', False),
-         ('claude', 'app'): ('none', True),
-         ('claude', 'terminal'): ('claude', False),
-         ('claude', 'both'): ('claude', True),
-         ('both', 'app'): ('codex', True),
-         ('both', 'terminal'): ('both', False),
-         ('both', 'both'): ('both', True)}
-CONFIRM = {('chatgpt', 'app'): 'The Codex app will use this router.',
-           ('chatgpt', 'terminal'): 'Codex in the terminal will use this router.',
-           ('chatgpt', 'both'): 'The Codex app and terminal will use this router.',
-           ('claude', 'app'): 'The Claude app will use this router.',
-           ('claude', 'terminal'): 'Claude Code in the terminal will use this router.',
-           ('claude', 'both'): 'The Claude app and Claude Code will use this router.',
-           ('both', 'app'): 'The Codex and Claude apps will use this router.',
-           ('both', 'terminal'): 'Codex and Claude Code will use this router.',
-           ('both', 'both'): 'Codex, Claude Code and the Claude app will use this router.'}
-NO_TOOL_NOTE = 'The selection window is unavailable. Setup will use Codex.'
-# The same absence on an explicit --choose-clients run attaches nothing, so
-# that path must not promise a client.
-NO_TOOL_EXPLICIT_NOTE = 'The selection window is unavailable; nothing was attached.'
-NO_ANSWER_NOTE = 'No apps were selected.'
-
-
-def plan(assistant, surface):
-    """(clients, desktop) for one answered pair; KeyError means a bad answer."""
-    return PLANS[(assistant, surface)]
 
 
 def tool(platform_name=None, which=None, home=None):
@@ -75,7 +36,7 @@ def _labels(items):
 
 
 def _macos_script(question, items, labels):
-    """A native popup menu keeps both questions to two action buttons."""
+    """A native popup menu keeps the question to two action buttons."""
     return ('ObjC.import("AppKit");\n'
             'function run() {\n'
             '    var app = $.NSApplication.sharedApplication;\n'
@@ -172,71 +133,3 @@ def answer(platform_name, stdout, items):
         if text == label:
             return key
     return None
-
-
-def ask(platform_name=None, tool_path=None, run=None):
-    """Return two choices, CANCELLED for cancellation, or None on failure."""
-    if platform_name is None:
-        platform_name = sys.platform
-    if tool_path is None:
-        tool_path = tool(platform_name)
-    if tool_path is None:
-        return None
-    if run is None:
-        run = subprocess.run
-    picked = []
-    for question, options in ((ASSISTANT_QUESTION, ASSISTANTS),
-                              (SURFACE_QUESTION, SURFACES)):
-        try:
-            result = run(argv(tool_path, platform_name, question, options),
-                         stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                         text=True, timeout=TIMEOUT_S,
-                         **({'creationflags': 0x08000000} if platform_name == 'win32' else {}))
-        except (OSError, subprocess.SubprocessError):
-            return None
-        cancel_code = 0 if platform_name == 'darwin' else (
-            2 if platform_name == 'win32' else 1)
-        if result.returncode == cancel_code and not (result.stdout or '').strip():
-            return CANCELLED
-        if result.returncode:
-            return None
-        picked.append(answer(platform_name, result.stdout, options))
-        if picked[-1] is None:
-            return None
-    return tuple(picked)
-
-
-def maybe_ask(args, home, platform_name=None, tool_path=None, run=None,
-              attached=False):
-    """Ask on a fresh interactive install, or when --choose-clients is passed.
-
-    Explicit flags, --dry-run, an unattended run and the suppression variable
-    all leave the choice alone; nothing here ever blocks an install. `home` is
-    the install home and `attached` says whether it already serves a client:
-    the installer owns that receipt, so this module never names its file.
-    """
-    if args.dry_run or os.environ.get('ROUTER_NO_CLIENT_CHOOSER') == '1':
-        return False
-    if args.clients is not None or args.client is not None or args.desktop:
-        return False
-    if not args.choose_clients:
-        if not sys.stdin.isatty() or attached:
-            return False
-    if tool_path is None:
-        tool_path = tool(platform_name, home=home)
-    if tool_path is None:
-        print(NO_TOOL_NOTE if not args.choose_clients else NO_TOOL_EXPLICIT_NOTE)
-        return False
-    selection = ask(platform_name, tool_path, run)
-    if selection is CANCELLED:
-        args.clients = 'none'
-        args.desktop = False
-        args.client_choice_cancelled = True
-        print(NO_ANSWER_NOTE)
-        return False
-    if selection is None:
-        print(NO_TOOL_NOTE if not args.choose_clients else NO_TOOL_EXPLICIT_NOTE)
-        return False
-    args.clients, args.desktop = plan(*selection)
-    print(CONFIRM[selection])
-    return True

@@ -52,10 +52,9 @@ def install_mod_factory():
     platforms = module._platforms
     platforms.host = lambda svc: platforms.select(module.PLATFORM, svc, svc.run)
     module._completion.sys = SimpleNamespace(platform='darwin')
-    # Installer tests must never open the real client chooser. Tests that
-    # exercise the chooser replace these seams with their own fake dialog.
-    module._client_choice._dialog.tool = lambda *args, **kwargs: None
-    module._client_choice._dialog.ask = _unexpected_dialog
+    # Installer tests never look for the real assistants on this computer:
+    # the rig has Codex only. Detection tests replace this seam themselves.
+    module._client_choice.detect = lambda *args, **kwargs: ('codex',)
     module._delivery.close_assistants = _unexpected_dialog
     module._svc.notice._spawn = _unexpected_dialog
     module._updater._offer_notices = lambda *_: None

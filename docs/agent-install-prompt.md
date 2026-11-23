@@ -6,16 +6,16 @@ needs no separate Codex CLI, Python install or PATH change.
 Give your agent this prompt before starting setup:
 
 > Set up SCG Router through the current approved staff instructions.
-> Before starting setup, ask which assistants I use
-> (Codex, Claude Code, Claude desktop, or a combination). Keep my existing
+> Setup connects the assistants it finds on this computer (Codex, Claude Code
+> and Claude desktop), so do not ask which ones to connect. Keep my existing
 > subscriptions as the default and preserve other clients and saved choices.
 >
-> Use the native installer for my computer and its assistant chooser.
+> Use the native installer for my computer.
 > You can download, open and navigate the supported app within my authorisation.
 > Leave credentials, assistant preferences, licence and security decisions to me.
 > If Router is already installed, open its permanent SCG Router app.
-> Read its status first. Use Update or repair only for a diagnosed fault,
-> or Connect another assistant for an explicit addition. Do not create a parallel installation
+> Read its status first. Use Update or repair for a diagnosed fault or to connect
+> a newly installed assistant. Do not create a parallel installation
 > or download Codex again merely because command lookup cannot find it.
 > Store Codex includes the supported setup tool; Router must discover it.
 >
@@ -35,7 +35,7 @@ Give your agent this prompt before starting setup:
 > If a supported correction needs IT access or my decision, explain the
 > exact blocker and the next action without claiming setup is complete.
 >
-> Verify the selected assistants, installed SC plugins and automatic updates
+> Verify the connected assistants, installed SC plugins and automatic updates
 > through SCG Router's Check setup. Follow the current Router management
 > skill and retained troubleshooting guide for read-only status diagnostics.
 > Use the retained interpreter and tools, without guessing paths or commands.

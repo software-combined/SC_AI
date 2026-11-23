@@ -154,6 +154,7 @@ class _CurrentInstallerFixture:
                 mock.patch.object(service, 'health', side_effect=health), \
                 mock.patch.object(service, 'time', clock), \
                 mock.patch.object(backend, '_post_shutdown', side_effect=lambda _: tasks['query'].update(instances=[])), \
+                mock.patch.object(install_mod._client_choice, 'detect', return_value=()), \
                 contextlib.redirect_stdout(output):
             result = install_mod.do_install(args, _fetch=lambda _: json.dumps({'version': feed}).encode())
         return result, output.getvalue()
@@ -263,7 +264,7 @@ class CurrentInstallerRecoveryTests(_CurrentInstallerFixture, unittest.TestCase)
                 self.assertLess(_verbs(calls).index('run'), _verbs(calls).index('health'))
                 self.assertLess(_verbs(calls).index('health'), _verbs(calls).index('enable'))
                 if extra:
-                    self.assertIn('nothing to attach', output)
+                    self.assertIn('no assistant connected', output)
 
     def test_current_version_health_is_required_before_update_activation(self):
         with tempfile.TemporaryDirectory() as tmp:

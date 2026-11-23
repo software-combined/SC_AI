@@ -113,16 +113,15 @@ def _pending_reply(state, _urlopen=None):
         return json.loads(response.read(REPLY_LIMIT).decode())
 
 
-def _codex_attached(state):
+def _codex_attached(home, state):
     """True when this install serves Codex, so the offer is not a dead end.
 
-    `--clients` records the attachments; legacy state carries only `client`
-    (absence means Codex). Claude-only and service-only installs are skipped.
+    The saved choice, else the receipts, name the attachments; a missing
+    choice is not Codex. Claude-only and service-only installs are skipped.
     """
-    clients = state.get('clients')
-    if clients is not None:
-        return clients in ('codex', 'both')
-    return state.get('client', 'codex') != 'none'
+    choice = _svc.load('router_client_choice', Path(__file__).with_name('client_choice.py'))
+    codex = _svc.load('router_codex_config', Path(__file__).with_name('codex_config.py'))
+    return choice.saved_clients(home, state, codex) in ('codex', 'both')
 
 
 def _announce_new_models(home, state, _urlopen=None):
@@ -130,7 +129,7 @@ def _announce_new_models(home, state, _urlopen=None):
     try:
         if os.environ.get('ROUTER_NO_NOTICE') == '1':
             return
-        if not _codex_attached(state):
+        if not _codex_attached(home, state):
             return
         reply = _pending_reply(state, _urlopen)
         rows = reply.get('pending') or []
