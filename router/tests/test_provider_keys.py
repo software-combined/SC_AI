@@ -5,7 +5,6 @@ key" for the installer and diagnostics, and it must agree with the router's
 own `Credentials.key_for`. A status surface that reports usable while the
 router refuses to boot is the failure this pins. No network, no real install.
 """
-import importlib.util
 import json
 import os
 import shutil
@@ -17,16 +16,14 @@ from pathlib import Path
 from ai_router import provider_defs
 from ai_router.credentials import Credentials
 from tests._platform import requires_posix_perms
+from tests.loading import load
 
 ROOT = Path(__file__).resolve().parents[1]
 
 
 def _load():
     """Spec-load the module the way packaging/install.py and diagnostics do."""
-    spec = importlib.util.spec_from_file_location(
-        'provider_keys_under_test', ROOT / 'packaging' / 'provider_keys.py')
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
+    module = load(ROOT / 'packaging' / 'provider_keys.py', 'provider_keys_under_test')
     module.bind(provider_defs)
     return module
 

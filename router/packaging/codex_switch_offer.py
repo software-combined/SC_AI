@@ -2,7 +2,7 @@
 
 Codex desktop 26.917.51856 and later disables Send for every model once the
 ChatGPT allowance runs out. The router records each such episode in
-`codex-usage-limit.json` (docs/runtime-files.md). Every updater pass, the
+`codex-usage-limit.json` (docs/DATA.md). Every updater pass, the
 minute Express job included, reads it here and offers each of these at most
 once per episode:
 
@@ -17,19 +17,22 @@ anything. It applies only to Codex installs in subscription mode. A detached
 worker from the retained controller shows it on every platform. Missing
 dialogs leave the offer pending.
 
-Python 3.9-safe, stdlib only and inert on import: the updater loads it by
+Python 3.9-safe, stdlib only and side-effect free on import (apart from `sys.path`): the updater loads it by
 path, and Switch Codex's installer reuses `APP`.
 """
 import argparse
-import importlib.util
 import json
 import os
 import plistlib
 import re
+import subprocess
 import sys
 import time
 from datetime import datetime
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import loader  # noqa: E402
 
 APP = Path.home() / 'Applications' / 'Switch Codex.app'
 CHATGPT_APP = Path('/Applications/ChatGPT.app')
@@ -56,10 +59,7 @@ _VERSION = re.compile(r'\d{1,9}(?:\.\d{1,9}){0,5}')
 
 
 def _load(name, filename):
-    spec = importlib.util.spec_from_file_location(name, filename)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+    return loader.load(filename, name)
 
 
 _HERE = Path(__file__).resolve().parent
@@ -204,7 +204,7 @@ def _offer_desktop(home):
     """Start a retained, detached worker; a launch is not presentation."""
     try:
         version = (Path(home) / 'control-version').read_text().strip()
-        if not re.fullmatch(r'\d+(?:\.\d+){2,3}', version):
+        if not _load('router_offer_update_status', _HERE / 'update_status.py').version(version):
             return None
         helper = Path(home) / 'control' / version / 'packaging' / Path(__file__).name
         if not helper.is_file():
@@ -231,14 +231,82 @@ def offer(home, now=None, platform_name=None):
         return None
 
 
+def _owner(name):
+    """A sibling owner, loaded only when an offer is shown."""
+    return _load('router_offer_' + name, _HERE / (name + '.py'))
+
+
+def offer_and_switch(home, dialog, platform_name=None):
+    """Show a due offer, then ask through the switch owner before any restart."""
+    platform_name = platform_name or sys.platform
+    # Hold only the offer lock while waiting for the person. Updates must not wait.
+    with _owner('service').install_lock(home, '.codex-switch-offer.lock') as held:
+        if not held:
+            return dict(outcome='cancelled')
+        try:
+            _recover_claim(home)
+        except (OSError, ValueError):
+            return dict(outcome='cancelled')
+        found = due(home)
+        if found is None:
+            return dict(outcome='cancelled')
+        kind, current = found
+        seen_at = current['seen_at']
+        entry = _codex.codex_attachment(home)
+        destination = _switch.SWITCHED if kind == SWITCH else _switch.return_target(entry)
+        before = _offered(home, seen_at)
+        try:
+            _claim(home, seen_at, before, kind)
+        except (OSError, ValueError):
+            return dict(outcome='cancelled')
+        message = (BACK_OPENROUTER if kind == BACK
+                   and destination in (_switch.SWITCHED_SIGNED_IN, _switch.OPENROUTER)
+                   else MESSAGES[kind])
+        if platform_name == 'win32':
+            try:
+                answer = _owner('windows_dialog').show(message, home, True,
+                                                      labels=('Open Switch Codex', 'Later'))
+            except (OSError, ValueError, subprocess.SubprocessError):
+                answer = None
+        else:
+            answer = dialog.confirm_result(message, home, labels=('Open Switch Codex', 'Later'))
+        try:
+            found = due(home, include_offered=True)
+            unchanged = _codex.codex_attachment(home) == entry
+        except (OSError, ValueError, SystemExit):
+            found = None
+        # A dialog that was not shown, or an offer that went stale meanwhile, stays pending.
+        if found is None or found[0] != kind or found[1]['seen_at'] != seen_at or not unchanged or answer is None:
+            _finish_claim(home, seen_at, before)
+            return dict(outcome='cancelled')
+        if not answer:
+            _finish_claim(home, seen_at, before + [kind])
+            return dict(outcome='cancelled')
+        owner = _owner('codex_desktop_switch')
+        failed = False
+        try:
+            result = owner.switch(home, target=destination, expected=entry, offer_kind=kind, offer_seen=seen_at)
+        except (Exception, SystemExit) as exc:
+            result, failed = False, True
+            safe = str(exc) if isinstance(exc, owner.SwitchError) else 'SCG Router could not finish. Try again.'
+            try:
+                dialog.message(safe)
+            except (Exception, SystemExit):
+                pass
+        try:
+            _finish_claim(home, seen_at, before if result is False else before + [kind])
+        except (OSError, ValueError):
+            pass
+        return dict(outcome=('failed' if failed else 'cancelled')
+                    if result is None or result is False else 'done')
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--home', type=Path, required=True)
     parser.add_argument('--desktop-offer', action='store_true', required=True)
     args = parser.parse_args()
     try:
-        control = _load('router_offer_control', _HERE / 'desktop_control.py')
-        dialog = _load('router_offer_dialog', _HERE / 'native_dialog.py')
-        control._limit_offer(args.home, dialog)
+        offer_and_switch(args.home, _load('router_offer_dialog', _HERE / 'native_dialog.py'))
     except (Exception, SystemExit):
         pass  # The next updater pass can retry a dialog that was not shown.

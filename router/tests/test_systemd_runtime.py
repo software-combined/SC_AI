@@ -1,6 +1,5 @@
 """Real bundled router processes and unsigned updates; only systemctl is faked."""
 import contextlib
-import importlib.util
 import io
 import os
 import subprocess
@@ -13,6 +12,7 @@ from unittest import mock
 from tests._platform import unix_only
 from tests.install_fixtures import _install_mod, systemd_show
 from tests.test_release import _release_mod
+from tests.loading import load
 
 
 @unix_only
@@ -110,9 +110,7 @@ class SystemdRuntimeTests(unittest.TestCase):
                 self.stop()
             return subprocess.CompletedProcess(cmd, 0, '', '')
         if len(cmd) > 1 and Path(cmd[1]).name == 'install.py':
-            spec = importlib.util.spec_from_file_location('downloaded_install', cmd[1])
-            child = importlib.util.module_from_spec(spec)
-            spec.loader.exec_module(child)
+            child = load(cmd[1], 'downloaded_install')
             # Run the real downloaded installer with the same fake OS boundary.
             result = self.prepare(child).main(cmd[2:])
             return subprocess.CompletedProcess(cmd, result, '', '')

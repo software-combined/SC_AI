@@ -5,7 +5,7 @@ Implements the two greps that used to be inline shell in
 (`python3.14 tools/check_policy_scans.py`) and in CI:
 
 - request-cap scan: the cap was removed by owner decision
-  (`docs/operations.md`); any reintroduction fails.
+  (`docs/DESIGN.md`); any reintroduction fails.
 - secrets scan: OpenRouter keys and bearer tokens must never be committed.
 - dialect scan: an upstream dialect comparison reads the constant the
   definition table exports, never a raw string (Plan 152).
@@ -107,7 +107,7 @@ def check_request_cap():
     hits = [str(p.relative_to(ROOT.parent if ROOT.name == 'router' else ROOT)) for p in _iter_files(SCAN_ALL)
         if p.resolve() != SELF and REQUEST_CAP_RE.search(p.read_bytes())]
     if hits:
-        print('request cap removed by decision (docs/operations.md); '
+        print('request cap removed by decision (docs/DESIGN.md); '
               'do not reintroduce')
         for hit in hits:
             print(f'  {hit}')

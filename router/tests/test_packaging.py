@@ -1,11 +1,14 @@
-import importlib.util
 import re
 import shutil
+import subprocess
+import sys
 import tarfile
 import json
 import tempfile
 import unittest
 from pathlib import Path
+
+from tests.loading import load
 
 # Only the members `packaging/release.py` cannot discover by globbing need an
 # explicit contract: modules under ai_router/, tools/ and docs/ travel
@@ -26,11 +29,7 @@ EXPLICIT_FILES = (
 
 
 def _release_module():
-    spec = importlib.util.spec_from_file_location(
-        'router_release', Path(__file__).resolve().parents[1] / 'packaging' / 'release.py')
-    release_mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(release_mod)
-    return release_mod
+    return load('packaging/release.py', 'router_release')
 
 class PackagingTests(unittest.TestCase):
     def test_apache_only_licence_gate(self):
@@ -50,6 +49,14 @@ class PackagingTests(unittest.TestCase):
         sh, ps1 = (root / 'install.sh').read_text(), (root / 'install.ps1').read_text()
         self.assertIn('install.py', sh)
         self.assertIn('install.py', ps1)
+
+    def test_installer_refuses_an_interpreter_older_than_the_runtime(self):
+        installer = Path(__file__).resolve().parents[1] / 'packaging' / 'install.py'
+        code = 'import runpy, sys; sys.version_info = (3, 13); runpy.run_path(sys.argv[1], run_name="__main__")'
+        result = subprocess.run([sys.executable, '-c', code, str(installer), '--help'],
+                                capture_output=True, text=True, timeout=60)
+        self.assertEqual(result.returncode, 1)
+        self.assertIn('needs Python 3.14', result.stderr)
 
     def test_file_list_covers_the_runtime_import_closure(self):
         # A fresh copy-install following the bundle inventory must start: every
@@ -88,9 +95,9 @@ class PackagingTests(unittest.TestCase):
     def test_linked_setup_installs_its_own_build(self):
         # --url-base keeps the built feed pointing at the local tarball.
         root = Path(__file__).resolve().parents[1]
-        self.assertIn('(docs/setup.md)', (root.parent / 'README.md').read_text())
+        self.assertIn('(docs/start/setup.md)', (root.parent / 'README.md').read_text())
         blocks = re.findall(r'```(?:sh|powershell)\n(.*?)```',
-                            (root.parent / 'docs' / 'setup.md').read_text(), re.S)
+                            (root.parent / 'docs' / 'start' / 'setup.md').read_text(), re.S)
         release_blocks = [block for block in blocks if 'packaging/release.py' in block]
         self.assertEqual(len(release_blocks), 2)
         posix, windows = release_blocks
@@ -109,10 +116,7 @@ class PackagingTests(unittest.TestCase):
 
     def test_release_bundle_contains_deploy_list(self):
         root = Path(__file__).resolve().parents[1]
-        spec = importlib.util.spec_from_file_location(
-            'router_release', root / 'packaging' / 'release.py')
-        release_mod = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(release_mod)
+        release_mod = load(root / 'packaging' / 'release.py', 'router_release')
         out = root / 'dist-test-packaging'
         self.addCleanup(shutil.rmtree, str(out), True)
         release_mod.main(['--out', str(out)])
@@ -142,42 +146,6 @@ class PackagingTests(unittest.TestCase):
     def test_version_is_semver(self):
         version = (Path(__file__).resolve().parents[1] / 'packaging' / 'VERSION').read_text().strip()
         self.assertRegex(version, r'^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$')
-
-    def test_installer_surface_parses_as_python39(self):
-        # Plan 061: the installer runs on Python 3.9+ while the router
-        # needs 3.14. Plan 156 adds a real 3.9 import check
-        # (tools/check_installer_python39.py); this test keeps the grammar
-        # pin for every surface file, including the parse-only entry points.
-        # feature_version misses PEP 604 unions (`X | Y` parses as BinOp
-        # but raises at runtime on 3.9), so annotations get their own walk.
-        import ast
-        root = Path(__file__).resolve().parents[1]
-        surface = []
-        for line in (root / 'config' / 'installer-python-surface.txt').read_text().splitlines():
-            line = line.strip()
-            if not line or line.startswith('#'):
-                continue
-            mode, name = line.split()
-            self.assertIn(mode, ('load', 'parse'))
-            surface.append(name)
-        self.assertTrue(surface)
-        for name in surface:
-            with self.subTest(name=name):
-                src = (root / name).read_text()
-                tree = ast.parse(src, filename=name, feature_version=(3, 9))
-                for node in ast.walk(tree):
-                    ann = None
-                    if isinstance(node, ast.arg):
-                        ann = node.annotation
-                    elif isinstance(node, (ast.FunctionDef,
-                                           ast.AsyncFunctionDef)):
-                        ann = node.returns
-                    elif isinstance(node, ast.AnnAssign):
-                        ann = node.annotation
-                    if (isinstance(ann, ast.BinOp)
-                            and isinstance(ann.op, ast.BitOr)):
-                        self.fail('%s:%s uses a PEP 604 union, '
-                                  'unavailable on Python 3.9' % (name, ann.lineno))
 
     def test_build_composes_full_version_and_manifest(self):
         root = Path(__file__).resolve().parents[1]

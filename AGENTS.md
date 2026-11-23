@@ -28,9 +28,13 @@ procedure in section 9. Never push directly to `main`.
 
 ## 2a. Architecture
 
-[docs/architecture.md](docs/architecture.md) defines module responsibilities and
+[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) defines module responsibilities and
 allowed dependency direction. Place new modules within those boundaries and
-update the map when responsibilities change.
+update the map when responsibilities change. The [docs index](docs/README.md)
+lists every guide; start with the entry pages beside it:
+[RULES](docs/RULES.md), [DESIGN](docs/DESIGN.md), [DATA](docs/DATA.md),
+[PATTERNS](docs/PATTERNS.md), [TESTING](docs/TESTING.md) and
+[GLOSSARY](docs/GLOSSARY.md).
 
 ## 3. Source limits
 
@@ -39,7 +43,13 @@ tools use 400/700; tests use 300/500. Check these with
 `python3.14 tools/check_source_limits.py`. A file above
 the soft cap needs a baseline entry, which is a ceiling: the file may shrink
 freely and may not grow past the recorded count. Remove the entry once the
-file is back under the cap. Keep router and provider modules small.
+file is back under the cap. The same check ratchets three counts per file in
+`config/source-ratchets-baseline.json`: lines with more than one statement,
+lines over 120 characters, and platform comparisons in `packaging/` outside
+`packaging/platforms/` and the seven self-contained `*_launch.py` launchers it
+names. New
+files start at zero; counts may only fall. Split
+by responsibility, never by packing lines. Keep router and provider modules small.
 An upstream is one entry in
 `ai_router/provider_defs.py` (host, endpoint prefixes, key location,
 catalogue, failure dialect) consumed by adapter classes parameterized with
@@ -128,13 +138,15 @@ type `feat`, `fix`, `refactor`, `test`, `chore` or `docs`.
 
 Test discovery runs the fast core suite. Installer tests are opt-in via
 `SCG_RUN_INSTALLER_TESTS=1` (native CI runners cover them on scope for release
-PRs into `main` and pushes to `main`). Development continuous integration (CI)
-runs fast static checks; main acceptance uses the same selector and retains full
-remote regression outside the narrow plugin documentation path.
-Stable tags publish only an exact
-main commit with a successful `Check` run; beta tags publish a commit that
-`development` or `main` moved to (their first-parent line). Neither repeats those
-acceptance checks.
+PRs into `main`). Development continuous integration (CI)
+runs fast static checks; main acceptance runs on pull requests into `main`, uses
+the same selector and retains full remote regression outside the narrow plugin
+documentation path. A push to `main` runs no second copy. Stable tags publish
+only a `main` merge commit whose tree equals its pull request head, after that
+pull request's main acceptance `Check` run succeeded and only if `main` did not
+move after that run began; beta tags publish a commit
+that `development` or `main` moved to (their first-parent line). Neither repeats
+those acceptance checks.
 Local pre-commit requirements above still apply.
 
 ### Bounded live regression probes
@@ -162,16 +174,16 @@ Every user-visible router change updates `router/CHANGELOG.md` and
 matching `packaging/VERSION`, then run the release workflow. Plugin-only changes
 follow section 9; they never bump `packaging/VERSION` or trigger router tags.
 New entries go under `## Unreleased` and move under the version heading when
-the tag is cut; entries older than the current minor series move, unedited,
-to `docs/changelog-archive.md`.
+the tag is cut; entries older than the current minor series are removed from
+`router/CHANGELOG.md` (Git history keeps them).
 
 ## 7. Compatibility rule
 
 After any Codex desktop or Claude Code upgrade, run the paid probe from
 `tools/probe_codex_runtime.py` on one OpenRouter model and one OpenAI model,
 plus one OpenRouter model and one subscription model through a real Claude
-Code session (see `docs/claude-code.md`), before publishing a release.
-Record both client versions in `docs/compatibility.md`.
+Code session (see `docs/clients/claude-code-reference.md`), before publishing a release.
+Record both client versions in `docs/release/compatibility.md`.
 
 ## 8. Model naming convention
 
@@ -193,7 +205,7 @@ must produce conforming rows; the registry naming test enforces it.
 ## 9. Agent plugins
 
 This repository hosts the `scg-agent-plugins` marketplace. See
-[agent plugins](docs/agent-plugins.md) for installation and available plugins.
+[agent plugins](docs/plugins/agent-plugins.md) for installation and available plugins.
 Author under `plugins/<domain>/<name>` and link skills from their
 [domain page](plugins/README.md); installed plugin caches are delivery copies. The root
 `scg-openrouter` plugin stays outside the marketplace. Keep the marketplace
@@ -234,7 +246,7 @@ simplicity; this file and the review skill retain all verification gates.
   and directly related plugin-release instructions in this file.
   Plugin verification-policy updates may also promote only
   `tools/plugin_verification.py`, `.github/workflows/check.yml`, their regression
-  tests, `CONTRIBUTING.md`, `docs/architecture.md` and `docs/agent-plugins.md`
+  tests, `CONTRIBUTING.md`, `docs/ARCHITECTURE.md` and `docs/plugins/agent-plugins.md`
   through this scoped procedure. These policy changes require full verification.
   Verify the complete diff against current `main`, run all required checks and
   reviews on that exact candidate,

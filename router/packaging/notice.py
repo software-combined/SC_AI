@@ -16,15 +16,12 @@ import time
 from datetime import datetime, timezone
 from pathlib import Path
 
-import importlib.util as _ilu
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import loader  # noqa: E402
 
 
 def _load(name):
-    spec = _ilu.spec_from_file_location('router_notice_' + name,
-        Path(__file__).resolve().with_name(name + '.py'))
-    module = _ilu.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+    return loader.load(Path(__file__).resolve().with_name(name + '.py'))
 
 
 _atomic_write, _text = (_load(name) for name in ('atomic_write', 'notice_text'))
@@ -35,7 +32,6 @@ dialog_names = _text.dialog_names  # the updater lists models the same way
 NOTICE_FILE = 'update-notice.json'
 CATALOGUE_FILE = 'mixed-models.json'
 PICKER_BASELINE_FILE = 'picker-baseline.json'
-TITLE = 'SCG Router'
 DISMISS = 'Later'
 REOPEN = 'Quit and reopen'
 OK = 'OK'
@@ -46,8 +42,11 @@ PROBE_TIMEOUT = 5
 # display, osascript without a GUI).
 # Long enough to catch that, short enough not to hold the updater.
 PROBE_GRACE_S = 1.0
-ICON = Path(__file__).resolve().parent / 'assets' / 'router-icon.png'
-ICON_NAME = 'router-icon.png'
+
+def _dialog():
+    """The dialog owner, loaded when a notice is drawn so the service import stays small."""
+    return _load('client_dialog')
+
 
 def _utcnow():
     return datetime.now(timezone.utc).isoformat(timespec='seconds')
@@ -63,8 +62,8 @@ def _home_icon(home):
     icon rather than a path that may disappear.
     """
     try:
-        target = Path(home) / ICON_NAME
-        target.write_bytes(ICON.read_bytes())
+        target = Path(home) / _dialog().ICON.name
+        target.write_bytes(_dialog().ICON.read_bytes())
         return str(target)
     except OSError:
         return None
@@ -95,16 +94,15 @@ def _pid_alive(pid):
         if sys.platform == 'win32':
             query = ('(Get-CimInstance Win32_Process -Filter "ProcessId=%d")'
                      '.CommandLine' % pid)
-            out = subprocess.run(['powershell', '-NoProfile', '-Command',
-                                  query], stdout=subprocess.PIPE,
-                                 stderr=subprocess.DEVNULL, text=True,
-                                 timeout=PROBE_TIMEOUT, creationflags=0x08000000)
+            out = _load('windows_shell').run_script(query, stdout=subprocess.PIPE,
+                                                    stderr=subprocess.DEVNULL, text=True,
+                                                    timeout=PROBE_TIMEOUT)
         else:
             out = subprocess.run(['ps', '-p', str(pid), '-o', 'command='],
                                  stdout=subprocess.PIPE,
                                  stderr=subprocess.DEVNULL, text=True,
                                  timeout=PROBE_TIMEOUT)
-        return TITLE in (out.stdout or '')
+        return _dialog().TITLE in (out.stdout or '')
     except (OSError, ValueError, subprocess.SubprocessError):
         return False
 
@@ -192,11 +190,11 @@ def record(home, previous, version, clients=None, names=None):
             _remember_picker(home, picker)
             return False
         if not clients:
-            # A scheduled update passes no --clients; the install recorded
-            # the attachment set in the router state.
+            # A scheduled update passes no --clients; the saved choice, else
+            # the receipts, name the attachment set. A missing choice is not Codex.
             try:
                 state = json.loads((Path(home) / 'mixed-router-state.json').read_text())
-                clients = state.get('clients')
+                clients = _load('client_choice').saved_clients(home, state, _load('codex_config'))
             except (OSError, ValueError, AttributeError):
                 clients = None
         doc = {'version': version, 'at': _utcnow(),
@@ -238,42 +236,6 @@ def record_attachment(home, version, event):
         return False
 
 
-def current_restart(home, version):
-    """A current Codex restart decision belongs to the whole setup journey."""
-    try:
-        doc = json.loads((Path(home) / NOTICE_FILE).read_text())
-    except (OSError, ValueError):
-        return False
-    if (not isinstance(doc, dict) or doc.get('version') != version
-            or _text.clients(doc.get('clients')) not in ('codex', 'both')):
-        return False
-    names = doc.get('names')
-    return bool(doc.get('attachment') or doc.get('client_change') or doc.get('shown')
-                or (names if isinstance(names, list) else _text.pending_names(home)))
-
-
-def record_client_change(home, version, event):
-    """Stage one restart reason for a changed, verified Codex setup target."""
-    try:
-        path = Path(home) / NOTICE_FILE
-        try:
-            doc = json.loads(path.read_text())
-        except (OSError, ValueError):
-            doc = {}
-        doc = doc if isinstance(doc, dict) else {}
-        if doc.get('client_change') == event or doc.get('version') == version and doc.get('shown'):
-            return False
-        if doc.get('shown'):
-            doc.pop('names', None)
-        doc.update(version=version, client_change=event, clients='codex', at=_utcnow(),
-                   completion_selected=True)
-        doc.pop('shown', None)
-        _atomic_write.replace_json(path, doc)
-        return True
-    except (OSError, ValueError):
-        return False
-
-
 def suppress_closed_client_restart(home):
     """Do not queue a restart notice when the client can read settings on next launch."""
     try:
@@ -281,7 +243,13 @@ def suppress_closed_client_restart(home):
         doc = json.loads(path.read_text())
         if not isinstance(doc, dict) or not (doc.get('attachment') or doc.get('client_change')):
             return False
-        doc.update(shown=True, restart_pending=False, restart_result='not_open', freshness='unknown')
+        if doc.get('names'):
+            # Drop only the restart reason; the added models still need their notice.
+            for key in ('attachment', 'client_change'):
+                doc.pop(key, None)
+            doc.update(restart_pending=False)
+        else:
+            doc.update(shown=True, restart_pending=False, restart_result='not_open', freshness='unknown')
         _atomic_write.replace_json(path, doc)
         return True
     except (OSError, ValueError):
@@ -292,23 +260,14 @@ def _darwin_script(message, icon, restart=True):
     """AppleScript for the dialog, restarting Codex when asked.
 
     The restart is the last thing the script does, so a failure to quit or
-    relaunch can never take the dialog down with it. Strings stay raw
-    UTF-8: AppleScript has no unicode escape, and the default json.dumps
-    escaping would emit one for any accented path. A Claude-only install has
-    no Codex app to reopen, so it gets the plain OK dialog.
+    relaunch can never take the dialog down with it. A Claude-only install
+    has no Codex app to reopen, so it gets the plain OK dialog.
     """
-    quote = lambda text: json.dumps(text, ensure_ascii=False)  # noqa: E731
-    icon_clause = (' with icon (POSIX file %s)' % quote(icon)
-                   if icon else ' with icon note')
     if not restart:
-        return ('display dialog %s buttons {"%s"} default button "%s" '
-                'with title "%s"%s'
-                % (quote(message), OK, OK, TITLE, icon_clause))
+        return _dialog().display_dialog(message, (OK,), OK, shown=icon or '')
     return '\n'.join([
-        'set answer to button returned of (display dialog %s with title "%s" '
-        'buttons {"%s", "%s"} default button "%s" cancel button "%s"%s)'
-        % (quote(message), TITLE, DISMISS, REOPEN, REOPEN, DISMISS,
-           icon_clause),
+        'set answer to button returned of (%s)'
+        % _dialog().display_dialog(message, (DISMISS, REOPEN), REOPEN, DISMISS, shown=icon or ''),
         'if answer is "%s" then' % REOPEN,
         '  try',
         '    tell application id "%s" to quit' % CODEX_BUNDLE_ID,
@@ -322,7 +281,7 @@ def _darwin_script(message, icon, restart=True):
     ])
 
 
-def _linux_command(message, icon=None, app=None, restart=True):
+def _linux_command(message, tool, icon=None, app=None, restart=True):
     """argv for the Linux dialog, quitting and relaunching the app.
 
     zenity reports the choice through its exit status, so the restart runs
@@ -332,11 +291,7 @@ def _linux_command(message, icon=None, app=None, restart=True):
     Without the desktop app installed the dialog is informational, exactly
     as before.
     """
-    dialog = ['zenity', '--question' if app and restart else '--info',
-              '--title=' + TITLE]
-    if icon:
-        dialog.append('--window-icon=' + icon)
-    dialog.append('--text=' + message)
+    dialog = _dialog().zenity(tool, 'question' if app and restart else 'info', message, shown=icon or '')
     if not (app and restart):
         return dialog + ['--ok-label=' + (DISMISS if restart else OK)]
     dialog += ['--ok-label=' + REOPEN, '--cancel-label=' + DISMISS]
@@ -359,26 +314,26 @@ def dialog_command(version, platform_name=None, which=None, icon=None,
     to the bundled logo and is dropped when that asset is not installed.
     `clients` names the attached client(s): only a Codex install gets the
     app restart button, because that button relaunches the Codex app.
-    `names` are the added models the dialog may list.
+    `names` are the added models the dialog may list. Linux uses the
+    shared dialog tool, so `home` selects its retained setup wrapper.
     """
     if platform_name is None:
         platform_name = sys.platform
     if which is None:
         which = shutil.which
-    if icon is None and ICON.is_file():
-        icon = str(ICON)
+    if icon is None:
+        icon = _dialog().icon()
     clients = _text.clients(clients)
     restart = clients in ('codex', 'both')
     message = _message(version, clients, names, attachment)
-    if platform_name == 'darwin':
-        if which('osascript') is None:
+    if platform_name == 'darwin' or platform_name.startswith('linux'):
+        tool = _dialog().tool(platform_name, which, home)
+        if tool is None:
             return None
-        return ['osascript', '-e', _darwin_script(message, icon, restart)]
-    if platform_name.startswith('linux'):
-        if which('zenity') is not None:
-            app = LINUX_APP if restart and which(LINUX_APP) is not None else None
-            return _linux_command(message, icon, app, restart)
-        return None
+        if platform_name == 'darwin':
+            return [tool, '-e', _darwin_script(message, icon, restart)]
+        app = LINUX_APP if restart and which(LINUX_APP) is not None else None
+        return _linux_command(message, tool, icon, app, restart)
     if platform_name == 'win32' and home is not None:
         return _load('notice_windows').command(home)
     return None
@@ -443,7 +398,8 @@ def show_pending(home, spawn=None, pid_alive=None, names=None):
         if not names and not attachment:
             return False
         cmd = dialog_command(version, icon=_home_icon(home) or '',
-                             clients=doc.get('clients', 'codex'), names=names, attachment=attachment)
+                             clients=doc.get('clients', 'codex'), names=names, attachment=attachment,
+                             home=home)
         if cmd is None:
             return False
         shown = {'version': version, 'shown': True, 'at': _utcnow()}

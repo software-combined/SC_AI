@@ -1,5 +1,4 @@
 """Offline Claude switching: user cancellation and profile preservation."""
-import importlib.util
 import json
 import plistlib
 import subprocess
@@ -11,11 +10,9 @@ from unittest import mock
 
 from tests.test_claude_desktop_config import _profile, _state, desktop_config
 from tests.install_fixtures import install_mod
+from tests.loading import load
 ROOT = Path(__file__).resolve().parents[1]
-spec = importlib.util.spec_from_file_location(
-    'desktop_switch', ROOT / 'packaging' / 'claude_desktop_switch.py')
-switcher = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(switcher)
+switcher = load(ROOT / 'packaging' / 'claude_desktop_switch.py', 'desktop_switch')
 
 
 def result(stdout='', returncode=0):
@@ -287,7 +284,7 @@ class SwitchTests(unittest.TestCase):
                 self.assertIn(label, script)
                 self.assertIn('"SCG Router"', script)
                 self.assertIn('buttons {"Cancel", "Continue"}', script)
-                self.assertIn(json.dumps(str(switcher.ICON), ensure_ascii=False), script)
+                self.assertIn(json.dumps(str(switcher._platform._dialogs.ICON), ensure_ascii=False), script)
                 for word in ('nonce', 'loopback', 'catalogue', 'token', 'endpoint', 'process'):
                     self.assertNotIn(word, script.lower())
 
@@ -312,13 +309,10 @@ class SwitchTests(unittest.TestCase):
         self.assertTrue(switcher.os.name == 'nt' or executable.stat().st_mode & 0o100)
         self.assertEqual((self.home / 'claude_profile_launch.py').read_bytes(),
                          (ROOT / 'packaging' / 'claude_profile_launch.py').read_bytes())
-        self.assertEqual(self.run.call_args_list[0].args[0][4], str(switcher.ICON))
+        self.assertEqual(self.run.call_args_list[0].args[0][4], str(switcher._platform._dialogs.ICON))
 
     def test_launcher_follows_current_release_after_update(self):
-        spec = importlib.util.spec_from_file_location(
-            'switch_launch', ROOT / 'packaging' / 'claude_profile_launch.py')
-        launcher = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(launcher)
+        launcher = load(ROOT / 'packaging' / 'claude_profile_launch.py', 'switch_launch')
         launch_path = self.home / 'claude_profile_launch.py'
         for version in ('first', 'updated'):
             with self.subTest(version=version):

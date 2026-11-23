@@ -1,7 +1,7 @@
 # Thin wrapper: the installer lives in install.py (Plan 041).
 # Plan 057 W6: never run the bare `python` alias, which a stock Windows 11
 # profile resolves to the Microsoft Store stub. The py launcher ships with
-# every python.org install; install.py itself then locates Python 3.14.
+# every python.org install. install.py needs Python 3.14 and refuses an older one.
 $ErrorActionPreference = 'Stop'
 $installer = Join-Path $PSScriptRoot 'install.py'
 if (Get-Command py -ErrorAction SilentlyContinue) {

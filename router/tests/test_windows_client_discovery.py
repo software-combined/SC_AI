@@ -54,13 +54,17 @@ class StoreOnboardingTests(unittest.TestCase):
         return SimpleNamespace(returncode=0, stdout=json.dumps(
             dict(installed=entries, marketplaces=[])), stderr='')
 
+    def detect(self):
+        choice = module('client_choice')
+        desktop = mock.Mock(**{'app_identity.side_effect': OSError('no desktop app')})
+        with mock.patch('subprocess.run', side_effect=self.runner), \
+                mock.patch.object(choice, '_load', return_value=desktop):
+            return choice.detect('win32')
+
     def test_all_four_consumers_use_store_cli_and_preserve_disabled_plugins(self):
-        setup, skills = module('native_setup'), module('agent_skills')
+        skills = module('agent_skills')
         readiness, diagnostics = module('native_readiness'), module('diagnostics')
-        dialog = mock.Mock()
-        with mock.patch.object(setup.webbrowser, 'open') as browser:
-            self.assertFalse(setup._missing_assistant(['--clients', 'codex'], dialog, self.runner))
-        browser.assert_not_called()
+        self.assertEqual(self.detect(), ('codex',))
         result, refused = skills.register('codex', self.home / 'marketplace',
             ['scg-documentation', 'scg-review', 'scg-router-management'],
             run=self.runner, which=lambda *args, **kwargs: None)
@@ -168,20 +172,9 @@ class StoreOnboardingTests(unittest.TestCase):
         self.cli = moved / self.cli.relative_to(self.root)
         self.assertEqual(self.resolver.resolve('codex', run=self.runner), str(self.cli))
 
-    def test_retry_repeats_identity_lookup_cancel_never_downloads_or_writes(self):
-        setup, dialog = module('native_setup'), mock.Mock()
-        self.api.packages.side_effect = [PermissionError('private'), ['Codex_fixture'], ['Codex_fixture']]
-        dialog.confirm_result.return_value = True
-        self.assertFalse(setup._missing_assistant(['--clients', 'codex'], dialog, self.runner))
-        self.assertEqual(self.api.packages.call_count, 3)
+    def test_an_unconfirmed_store_codex_is_not_found_and_nothing_is_written(self):
         self.api.packages.side_effect = PermissionError('private')
-        for answer in (False, None):
-            dialog.confirm_result.return_value = answer
-            with mock.patch.object(setup.webbrowser, 'open') as browser:
-                self.assertTrue(setup._missing_assistant(['--clients', 'codex'], dialog, self.runner))
-            browser.assert_not_called()
-        self.assertEqual(dialog.confirm_result.call_args.kwargs['labels'], ('Try again', 'Cancel'))
-        self.assertNotIn('private', dialog.confirm_result.call_args.args[0])
+        self.assertEqual(self.detect(), ())
         self.assertFalse((self.home / '.codex').exists())
 
     def test_existing_path_and_npm_shims_keep_precedence_and_claude_never_queries_store(self):
@@ -237,9 +230,9 @@ class StoreOnboardingTests(unittest.TestCase):
                 self.assertTrue(all(command[1:] == ['--version'] or
                     command[1:3] == ['plugin', 'list'] for command in self.commands))
 
-    def test_store_only_setup_does_not_offer_another_download(self):
-        setup = module('native_setup')
-        import windows_codex
+    def test_store_only_codex_is_found_without_another_download(self):
+        choice = module('client_choice')
+        windows_codex = choice.client_executable.windows_codex
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary).resolve() / 'StoreCodex'
             app = root / 'app/ChatGPT.exe'
@@ -254,16 +247,14 @@ class StoreOnboardingTests(unittest.TestCase):
             api.packages.return_value = ['Codex_fixture']
             api.package_path.return_value = str(root)
             api.user.return_value, api.session.return_value = 'fixture-user', 1
-            dialog = mock.Mock()
+            desktop = mock.Mock(**{'app_identity.side_effect': OSError('no desktop app')})
             with mock.patch('sys.platform', 'win32'), \
                     mock.patch('shutil.which', return_value=None), \
                     mock.patch.object(windows_codex, 'bindings', return_value=api), \
+                    mock.patch.object(choice, '_load', return_value=desktop), \
                     mock.patch('subprocess.run', return_value=mock.Mock(
-                        returncode=0, stdout='codex-cli 0.164.0\n')) as run, \
-                    mock.patch.object(setup.webbrowser, 'open') as browser:
-                self.assertFalse(setup._missing_assistant(['--clients', 'codex'], dialog))
-            browser.assert_not_called()
-            dialog.confirm.assert_not_called()
+                        returncode=0, stdout='codex-cli 0.164.0\n')) as run:
+                self.assertEqual(choice.detect('win32'), ('codex',))
             self.assertEqual(run.call_args.args[0], [str(cli), '--version'])
             api.activate.assert_not_called()
             api.end.assert_not_called()

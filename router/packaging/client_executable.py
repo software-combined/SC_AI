@@ -7,7 +7,9 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import codex_config_proof
-import windows_codex
+import loader
+
+windows_codex = loader.load(Path(__file__).with_name('windows_codex.py'))
 
 
 def _windows_codex_dirs(environ=None):

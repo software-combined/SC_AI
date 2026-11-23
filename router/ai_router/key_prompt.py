@@ -1,19 +1,21 @@
 """First-run key window flow (Plan 139); the loopback page is the fallback.
 
 The installer spawns this module with the setup URL and the running router
-calls `open_window` from a worker thread. Either way the popup collects the
-key, the subscription choice for each client this install serves (Codex,
-Claude Code, or both) and the starter through `ai_router.key_dialog`,
-submits them to the single-use nonce route and shows a native confirmation.
+calls `open_window` from a worker thread. Either way the popup asks how to
+connect (work account or own key), collects the key through
+`ai_router.key_dialog` when needed, submits it to the single-use nonce route
+and shows a native confirmation. Subscription modes come from the installer's
+defaults or saved choices, never from this window.
 The key never enters argv, the environment, a file or a log: it travels from
 the dialog tool's stdout pipe straight into the POST body. A host with no
 dialog tool falls back to the loopback page, which stays the only HTML
 surface.
 
-Run manually: `python -m ai_router.key_prompt <setup-url> [--clients codex]`
+Run manually: `python -m ai_router.key_prompt <setup-url>`
 or pipe the URL on stdin with `--stdin` so it never appears in `ps`.
 """
 import json
+import os
 import subprocess
 import sys
 import threading
@@ -51,30 +53,12 @@ def _payload(status, body):
     return status, payload
 
 
-def _mode_line(mode, provider_id=None):
-    label = provider_defs.label_for(provider_id or provider_defs.DEFAULT_EXTERNAL)
-    return ('ChatGPT subscription and %s' % label if mode == 'subscription'
-            else '%s models only' % label)
-
-
-def _confirm_text(payload, which='codex', *, managed=False):
+def _confirm_text(payload, *, managed=False):
     if managed:
-        names = {'codex': 'Codex', 'claude': 'Claude Code', 'both': 'Codex and Claude Code',
-                 'none': 'SCG Router'}[key_dialog.clients(which)]
-        return ('Your work key and choices are saved.\n\nContinue installation. '
-                'Then open SCG Router and choose Check setup to finish connecting %s.' % names)
-    lines = []
-    if which in ('codex', 'both'):
-        lines.append('Codex: ' + _mode_line(payload.get('mode')))
-    if which in ('claude', 'both'):
-        lines.append('Claude Code: ' + _mode_line(payload.get('claude_mode')))
-    if payload.get('starter'):
-        lines.append(payload['starter'])
-    return ('Your key and choices are saved.\n\nKey: %s\nCredit left: %s\n%s\n\n'
-            'To finish setup, open SCG Router and choose Check setup.'
+        return 'You are signed in. Your work key is saved on this computer.'
+    return ('Your key is saved on this computer.\n\nKey: %s\nCredit left: %s'
             % (payload.get('label', 'your key'),
-               setup_page.remaining(payload.get('limit'), payload.get('usage')),
-               '\n'.join(lines)))
+               setup_page.remaining(payload.get('limit'), payload.get('usage'))))
 
 
 def _open_page(url, opener=None, label=provider_defs.label_for(provider_defs.DEFAULT_EXTERNAL)):
@@ -89,14 +73,14 @@ def _open_page(url, opener=None, label=provider_defs.label_for(provider_defs.DEF
 
 
 def run_window(url, tool_path=None, platform_name=None, which=None, run=None,
-               opener=None, clients='codex', post=None, provider_id=None,
-               label=provider_defs.label_for(provider_defs.DEFAULT_EXTERNAL), work=False):
+               opener=None, post=None, provider_id=None,
+               label=provider_defs.label_for(provider_defs.DEFAULT_EXTERNAL), work=False,
+               confirm=True):
     """Prompt, submit, confirm. 0 stored, 2 cancelled, 3 no GUI, 1 refused."""
     if not _local_setup_url(url):
         return 1
     if platform_name is None:
         platform_name = sys.platform
-    clients = key_dialog.clients(clients)
     if tool_path is None:
         tool_path = key_dialog.tool(platform_name=platform_name, which=which)
     if tool_path is None:
@@ -107,14 +91,13 @@ def run_window(url, tool_path=None, platform_name=None, which=None, run=None,
         try:
             collected = work_account.MANUAL
             if managed:
-                collected = work_account.collect(tool_path, platform_name, clients, run)
+                collected = work_account.collect(tool_path, platform_name, run)
                 if collected is work_account.CANCELLED:
                     return 2
             if collected is work_account.MANUAL:
                 managed = False
                 collected = key_dialog.collect(tool_path, platform_name=platform_name,
-                                               run=run, which=clients,
-                                               provider_id=provider_id)
+                                               run=run, provider_id=provider_id)
         except work_account.SignInFailed as exc:
             key_dialog.message(tool_path, str(exc), platform_name=platform_name, run=run)
             return 1
@@ -127,8 +110,6 @@ def run_window(url, tool_path=None, platform_name=None, which=None, run=None,
             key_dialog.message(tool_path, f'Paste an {label} key before saving.',
                                platform_name=platform_name, run=run)
             continue
-        # Windows writes CRLF; the split above leaves the key without the
-        # trailing CR, but the choices keep theirs until they are mapped.
         try:
             status, payload = submit(url, collected, opener=post)
         except (OSError, ValueError):
@@ -137,8 +118,9 @@ def run_window(url, tool_path=None, platform_name=None, which=None, run=None,
                                platform_name=platform_name, run=run)
             return 1
         if payload.get('ok'):
-            key_dialog.message(tool_path, _confirm_text(payload, clients, managed=managed),
-                               platform_name=platform_name, run=run)
+            if confirm:
+                key_dialog.message(tool_path, _confirm_text(payload, managed=managed),
+                                   platform_name=platform_name, run=run)
             return 0
         error = payload.get('error') or 'setup failed (%s)' % status
         if status == 409:
@@ -150,7 +132,7 @@ def run_window(url, tool_path=None, platform_name=None, which=None, run=None,
 
 
 def open_window(url, thread=False, which=None, opener=None, platform_name=None,
-                run=None, clients='codex', post=None, provider_id=None):
+                run=None, post=None, provider_id=None):
     """Open the popup (or the page); True when a window was started.
 
     `thread=True` is the router path: the popup must not hold the request
@@ -165,27 +147,31 @@ def open_window(url, thread=False, which=None, opener=None, platform_name=None,
         return _open_page(url, opener, label)
     if not thread:
         return run_window(url, platform_name=platform_name, which=which, run=run,
-                          opener=opener, clients=clients, post=post,
+                          opener=opener, post=post,
                           provider_id=provider_id, label=label, work=True) == 0
     threading.Thread(target=run_window, args=(url,),
                      kwargs=dict(platform_name=platform_name, which=which,
-                                 run=run, opener=opener, clients=clients, post=post,
+                                 run=run, opener=opener, post=post,
                                  provider_id=provider_id, label=label, work=True),
                      daemon=True).start()
     return True
 
 
 def _parse(argv):
-    """The setup URL plus the optional attachment set the installer knows."""
-    args, which = list(argv), 'codex'
+    """The setup URL, or None; a trailing `--clients <set>` is ignored.
+
+    Installers and setup apps still pass `--clients`, so
+    it stays accepted although the window asks nothing per client.
+    """
+    args = list(argv)
     if len(args) >= 2 and args[-2] == '--clients':
-        which, args = key_dialog.clients(args[-1]), args[:-2]
+        args = args[:-2]
     if args == ['--stdin']:
         # The installer pipes the URL here so the token never appears in `ps`.
         args = [sys.stdin.readline().strip()]
     if len(args) != 1 or not _local_setup_url(args[0]):
-        return None, None
-    return args[0], which
+        return None
+    return args[0]
 
 
 def _local_setup_url(url):
@@ -202,13 +188,14 @@ def _local_setup_url(url):
 
 
 def main(argv=None):
-    """CLI entry point: `python -m ai_router.key_prompt <setup-url> [--clients set]`."""
-    url, which = _parse(sys.argv[1:] if argv is None else argv)
+    """CLI entry point: `python -m ai_router.key_prompt <setup-url>`."""
+    url = _parse(sys.argv[1:] if argv is None else argv)
     if url is None:
-        print('usage: python -m ai_router.key_prompt (<loopback setup URL> | --stdin) '
-              '[--clients codex|claude|both|none]', file=sys.stderr)
+        print('usage: python -m ai_router.key_prompt (<loopback setup URL> | --stdin)',
+              file=sys.stderr)
         return 1
-    return run_window(url, clients=which, work=True)
+    # Native setup shows its own closing notice, so it skips this confirmation.
+    return run_window(url, work=True, confirm=os.environ.get('ROUTER_NO_KEY_CONFIRM') != '1')
 
 
 if __name__ == '__main__':

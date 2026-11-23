@@ -3,7 +3,6 @@
 MacOS here means AppleScript, Windows a WinForms/PowerShell dialog and
 Linux zenity; no test in this module launches a real dialog.
 """
-import importlib.util
 import json
 import subprocess
 import sys
@@ -12,24 +11,37 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
+from tests.loading import load
+
 _ROOT = Path(__file__).resolve().parents[1]
 
 
 def _notice_mod():
-    spec = importlib.util.spec_from_file_location(
-        'router_notice', _ROOT / 'packaging' / 'notice.py')
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+    return load(_ROOT / 'packaging' / 'notice.py', 'router_notice')
 
 
 notice_mod = _notice_mod()
 
 MSG = ('SCG Router was updated to 1.0.1. '
        'Quit and reopen Codex to use the new models.')
+# A home with no retained setup, so Linux tests never find a real installed wrapper.
+NO_SETUP = Path('/synthetic/router-home')
 
 
 class RecordTests(unittest.TestCase):
+    def test_restart_suppression_keeps_an_added_models_notice(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            home = Path(tmp)
+            path = home / notice_mod.NOTICE_FILE
+            path.write_text(json.dumps({'attachment': ['codex'], 'names': ['Model A'], 'restart_pending': True}))
+            self.assertTrue(notice_mod.suppress_closed_client_restart(home))
+            doc = json.loads(path.read_text())
+            self.assertEqual((doc.get('shown'), doc['names'], doc['restart_pending']), (None, ['Model A'], False))
+            self.assertNotIn('attachment', doc)
+            path.write_text(json.dumps({'attachment': ['codex'], 'restart_pending': True}))
+            notice_mod.suppress_closed_client_restart(home)
+            self.assertTrue(json.loads(path.read_text())['shown'])
+
     def test_fresh_install_stages_nothing(self):
         with tempfile.TemporaryDirectory() as tmp:
             home = Path(tmp) / 'home'
@@ -178,7 +190,7 @@ class DialogCommandTests(unittest.TestCase):
         cmd = notice_mod.dialog_command(
             '1.0.1', platform_name='darwin',
             which=lambda name: '/usr/bin/' + name)
-        self.assertEqual(cmd[0], 'osascript')
+        self.assertEqual(cmd[0], '/usr/bin/osascript')
         script = cmd[cmd.index('-e') + 1]
         self.assertIn(MSG, script)
         self.assertIn('buttons {"Later", "Quit and reopen"}', script)
@@ -253,7 +265,7 @@ class DialogCommandTests(unittest.TestCase):
             'with icon (POSIX file "/bundle/router-icon.png")', script)
 
     def test_missing_icon_falls_back_to_the_note_icon(self):
-        with mock.patch.object(notice_mod, 'ICON',
+        with mock.patch.object(notice_mod._dialog(), 'ICON',
                                Path('/no/such/router-icon.png')):
             cmd = notice_mod.dialog_command(
                 '1.0.1', platform_name='darwin',
@@ -263,16 +275,16 @@ class DialogCommandTests(unittest.TestCase):
 
     def test_linux_prefers_zenity(self):
         cmd = notice_mod.dialog_command(
-            '1.0.1', platform_name='linux',
+            '1.0.1', platform_name='linux', home=NO_SETUP,
             which=lambda name: '/usr/bin/' + name
             if name == 'zenity' else None)
-        self.assertEqual(cmd[0], 'zenity')
+        self.assertEqual(cmd[0], '/usr/bin/zenity')
         self.assertIn('--ok-label=Later', cmd)
         self.assertTrue(any(MSG in part for part in cmd))
 
     def test_linux_zenity_uses_the_icon_when_given(self):
         cmd = notice_mod.dialog_command(
-            '1.0.1', platform_name='linux',
+            '1.0.1', platform_name='linux', home=NO_SETUP,
             which=lambda name: '/usr/bin/' + name
             if name == 'zenity' else None,
             icon='/bundle/router-icon.png')
@@ -280,12 +292,12 @@ class DialogCommandTests(unittest.TestCase):
 
     def test_linux_offers_restart_when_the_app_is_installed(self):
         cmd = notice_mod.dialog_command(
-            '1.0.1', platform_name='linux',
+            '1.0.1', platform_name='linux', home=NO_SETUP,
             which=lambda name: '/usr/bin/' + name)
         self.assertEqual(cmd[:2], ['sh', '-c'])
         self.assertIn('pkill -x chatgpt', cmd[2])
         self.assertIn('setsid -f chatgpt', cmd[2])
-        dialog = cmd[cmd.index('zenity'):]
+        dialog = cmd[cmd.index('/usr/bin/zenity'):]
         self.assertEqual(dialog[1], '--question')
         self.assertIn('--ok-label=Quit and reopen', dialog)
         self.assertIn('--cancel-label=Later', dialog)
@@ -294,14 +306,14 @@ class DialogCommandTests(unittest.TestCase):
 
     def test_linux_without_zenity_keeps_the_notice_pending(self):
         cmd = notice_mod.dialog_command(
-            '1.0.1', platform_name='linux',
+            '1.0.1', platform_name='linux', home=NO_SETUP,
             which=lambda name: '/usr/bin/' + name
             if name == 'notify-send' else None)
         self.assertIsNone(cmd)
 
     def test_linux_without_tools_is_none(self):
         self.assertIsNone(notice_mod.dialog_command(
-            '1.0.1', platform_name='linux', which=lambda name: None))
+            '1.0.1', platform_name='linux', home=NO_SETUP, which=lambda name: None))
 
     def test_win32_uses_the_retained_notice_worker(self):
         worker = mock.Mock(command=mock.Mock(return_value=['retained-python', 'notice-worker']))
@@ -323,12 +335,9 @@ class DialogCommandTests(unittest.TestCase):
 class ReleaseBundleTests(unittest.TestCase):
     def test_release_bundle_contains_the_notice_modules_and_icon(self):
         root = _ROOT
-        spec = importlib.util.spec_from_file_location(
-            'router_release', root / 'packaging' / 'release.py')
-        release_mod = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(release_mod)
+        release_mod = load(root / 'packaging' / 'release.py', 'router_release')
         for member in ('packaging/notice.py', 'packaging/notice_text.py', 'packaging/notice_windows.py',
-                       'packaging/setup_restart.py', 'packaging/assets/router-icon.png'):
+                       'packaging/assets/router-icon.png'):
             self.assertIn(member, release_mod.bundle_files(root))
         self.assertTrue(
             (root / 'packaging' / 'assets' / 'router-icon.png').is_file())

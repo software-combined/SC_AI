@@ -136,17 +136,16 @@ class RuntimeRebindTests(unittest.TestCase):
             (home / 'mixed-router-state.json').write_text('{}')
             doc = dict(version='1.3.13.203', runtime_exec='pythonw.exe', menu_sha256='a' * 64)
             platforms, adapter = mock.Mock(), mock.Mock()
-            platforms.select.return_value = adapter
+            platforms.host.return_value = adapter
             svc = original('service')
             svc.load = mock.Mock(return_value=platforms)
             def load(name):
                 return dict(service=svc,
                     native_resources=SimpleNamespace(current=lambda _: home / 'setup/new'),
                     native_payload=SimpleNamespace(metadata=lambda _: doc)).get(name) or original(name)
-            with mock.patch.object(owner.sys, 'platform', 'win32'), \
-                    mock.patch.object(owner, 'load', side_effect=load):
+            with mock.patch.object(owner, 'load', side_effect=load):
                 self.assertEqual(owner.reconcile(home), 'deferred')
-                platforms.select.assert_not_called()
+                adapter.runtime_matches.assert_not_called()
                 doc['version'] = '1.3.14.204'
                 before = (home / 'mixed-router-state.json').read_bytes()
                 for matches, outcome in ((True, 'ready'), (False, 'repairable')):

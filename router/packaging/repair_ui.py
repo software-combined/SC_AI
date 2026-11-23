@@ -1,26 +1,27 @@
 """Interactive maintenance uses the existing graceful assistant-close flow."""
-import importlib.util
 import subprocess
 import sys
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import loader  # noqa: E402
+
 
 def _load(name):
-    spec = importlib.util.spec_from_file_location('router_repair_' + name,
-                                                Path(__file__).with_name(name + '.py'))
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+    return loader.load(Path(__file__).with_name(name + '.py'))
 
 
-def close_assistants(home, run=subprocess.run, *, removing=False):
-    """Explicit repair/removal only. Scheduled updates never call this helper."""
+def close_assistants(home, run=subprocess.run, *, removing=False, owned=False):
+    """Explicit repair/removal only. Scheduled updates never call this helper.
+
+    `owned` means every attachment is already SCG Router's own, so repair rewrites nothing.
+    """
     entries = _load('codex_config').read_receipt(home).get('clients', {})
     labels = {'codex': 'Codex', 'claude': 'Claude Code', 'claude-desktop': 'Claude desktop'}
     if not isinstance(entries, dict) or set(entries) - labels.keys():
         raise SystemExit('Assistant connection conflict: damaged_receipt.')
-    if removing:
-        # Removal restores settings with apps open; only Claude on OpenRouter must
+    if removing or owned:
+        # Removal and an owned repair keep apps open; only Claude on OpenRouter must
         # close first, because its connection is written while it is closed.
         entries = {name: entry for name, entry in entries.items()
                    if name == 'claude-desktop' and _on_openrouter(home)}

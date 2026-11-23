@@ -1,23 +1,20 @@
-"""Native setup dialogs, sharing the router's title, icon and two actions."""
-import importlib.util
+"""Native setup dialogs; the dialog owner draws them with at most two actions."""
 import os
 import re
 import subprocess
 import sys
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import loader  # noqa: E402
+
 
 def _load(name):
-    spec = importlib.util.spec_from_file_location(
-        'router_native_dialog_' + name, Path(__file__).with_name(name + '.py'))
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+    return loader.load(Path(__file__).with_name(name + '.py'))
 
 
 dialog = _load('client_dialog')
 platform = _load('claude_desktop_platform')
-TITLE, ICON = dialog.TITLE, dialog.ICON
 
 
 def choose(question, options, run=subprocess.run, *, labels=('Continue', 'Cancel')):
@@ -105,15 +102,11 @@ class Progress:
                 return self
             except FileNotFoundError:
                 pass  # The fresh-install path still has the styled script window.
-        if sys.platform == 'darwin':
-            args = ['/usr/bin/osascript', '-e', platform.dialog_script(text, labels=labels)]
-        elif sys.platform == 'win32':
-            args = ['powershell', '-NoProfile', '-WindowStyle', 'Hidden',
-                    '-Command', platform._windows_dialog(text, False, labels)]
+        if sys.platform in ('darwin', 'win32'):
+            args = dialog.notice_argv(text, sys.platform, False, labels)
         else:
-            args = [dialog.tool(), '--progress', '--pulsate', '--auto-close',
-                    '--title=' + TITLE, '--window-icon=' + str(ICON),
-                    '--text=' + text, '--cancel-label=' + self.button]
+            args = dialog.zenity(dialog.tool(), 'progress', text, '--pulsate', '--auto-close',
+                                 '--cancel-label=' + self.button)
         self.process = subprocess.Popen(args, stdout=subprocess.DEVNULL,
                                         stderr=subprocess.DEVNULL, stdin=subprocess.PIPE,
                                         **({'creationflags': 0x08000000} if sys.platform == 'win32' else {}))

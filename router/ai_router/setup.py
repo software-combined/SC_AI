@@ -3,7 +3,7 @@
 The installer normally opens a native popup (`ai_router.key_prompt`) and the
 running router spawns one when a request arrives keyless. Both submit here,
 through the same single-use nonce route the HTML page uses, so validation,
-owner-only storage, the starter and nonce closure stay in one place. The URL
+owner-only storage and nonce closure stay in one place. The URL
 carries a short-lived nonce distinct from the long-lived path token. Browsers
 POST with an Origin header, so the route enforces same-origin itself; the
 generic DNS-rebinding rejection stays closed for everything else.
@@ -16,8 +16,7 @@ import time
 from pathlib import Path
 from urllib.parse import parse_qsl
 
-from . import key_prompt, key_store, provider_defs, setup_page, state as state_mod
-from .atomic_write import StaleTmp, replace_json
+from . import atomic_write, key_prompt, key_store, provider_defs, setup_page, state as state_mod
 from .events import log_event
 
 _ON_WINDOWS = os.name == 'nt'
@@ -60,7 +59,6 @@ def handle_setup(state, home, nonce, is_post, form, _urlopen=None, _now=None):
         return status, setup_page.done(result.get('label'), result.get('limit'),
                                        result.get('usage'),
                                        result.get('mode') or state.get('openai_mode', ''),
-                                       result.get('starter', ''),
                                        state.get('clients', 'codex'))
     return status, setup_page.form(nonce, provider_id, result.get('error'))
 
@@ -79,17 +77,14 @@ def _submit(state, home, form, _urlopen):
     provider_id = key_store.window_provider(state)
     fields = dict(parse_qsl(form.decode('utf-8', 'replace'), keep_blank_values=True))
     key = fields.get('key', '').strip()
-    # The native popup only sends the choices it actually asked; the HTML
-    # page always sends both. A claude-only setup therefore leaves Codex
-    # settings (openai_mode, agents_profile, starter) untouched.
+    # The popup and the page send only the key, so saved modes stay as the
+    # installer set them. Older callers may still send a mode, which is
+    # validated and saved; their starter `profile` field is ignored.
     mode = fields.get('mode')
-    profile = fields.get('profile')
     claude_mode = fields.get('claude_mode')
     if not key:
         return 422, {'ok': False, 'error': 'paste a key before saving'}
     if mode is not None and mode not in ('subscription', 'none'):
-        return 422, {'ok': False, 'error': 'unknown choice; resubmit the form'}
-    if profile is not None and profile not in ('general', 'dev'):
         return 422, {'ok': False, 'error': 'unknown choice; resubmit the form'}
     if claude_mode is not None and claude_mode not in ('subscription', 'none'):
         return 422, {'ok': False, 'error': 'unknown choice; resubmit the form'}
@@ -125,22 +120,12 @@ def _submit(state, home, form, _urlopen):
                              'could not protect %s; delete it and resubmit this page'
                              % key_path}
             return 500, {'ok': False, 'error': 'could not protect the key file'}
-    from . import agents as _agents  # starter lives under ~/.codex
-    starter = 'skipped'
-    if profile is not None:
-        try:
-            starter = _agents.install(profile)
-        except Exception:
-            starter = 'skipped'
-    if not _finish_setup(state, home, mode, profile, claude_mode):
-        if profile is not None:
-            _agents.revert(starter)
+    if not _finish_setup(state, home, mode, claude_mode):
         return 500, {'ok': False, 'key_saved': True, 'error':
                      'Your key is saved, but setup needs attention. '
                      'Open SCG Router and choose Check setup, or contact Software Combined IT.'}
-    line = _agents.describe(starter)
     return 200, {'ok': True, 'label': label, 'limit': limit, 'usage': usage,
-                 'mode': mode, 'claude_mode': claude_mode or '', 'starter': line}
+                 'mode': mode, 'claude_mode': claude_mode or ''}
 
 
 def open_key_window(server, home, provider_id=None, _opener=None, _prompt=None):
@@ -171,24 +156,21 @@ def open_key_window(server, home, provider_id=None, _opener=None, _prompt=None):
             return key_store.window_provider(state) == provider_id
         nonce = _secrets.token_urlsafe(32)
         expires = int(time.time()) + SETUP_TTL_S
-        path = state_mod.path(home)
-        try:
-            doc = state_mod.read(path)
-            if doc is None:
-                return False
+
+        def mint(doc):
             doc['setup'] = {'nonce': nonce, 'expires': expires,
                             'provider': provider_id}
-            _atomic_replace(path, doc)
+        try:
+            if _update_state(home, mint) is None:
+                return False
         except (OSError, ValueError):
             return False
         if isinstance(state, dict):
-            state['setup'] = {'nonce': nonce, 'expires': expires,
-                              'provider': provider_id}
+            mint(state)
         url = ('http://127.0.0.1:%s/%s/setup/%s'
                % (state.get('port'), state.get('token'), nonce))
     try:
         opened = prompt(url, thread=True, opener=opener,
-                        clients=state.get('clients', 'codex'),
                         provider_id=provider_id) is not False
     except (OSError, ValueError):
         try:
@@ -205,34 +187,34 @@ def open_key_window(server, home, provider_id=None, _opener=None, _prompt=None):
 
 
 
-def _atomic_replace(path, doc):
+def _update_state(home, mutate):
     # A crash between create and replace leaves the deterministic tmp behind;
     # the writer's default policy clears it once and retries, so a later nonce
     # mint or close cannot fail closed forever until someone unlinks it by hand.
     try:
-        replace_json(path, doc, mode=None, tmp_name=path.name + '.setup.tmp')
-    except StaleTmp:
+        return state_mod.update(home, mutate, atomic_write, mode=None,
+                                tmp_name=state_mod.STATE_NAME + '.setup.tmp')
+    except atomic_write.StaleTmp:
         # Only a leftover we could not clear is remapped; every other OSError
         # keeps its own reason for the caller.
-        raise OSError('could not replace %s' % path)
+        raise OSError('could not replace %s' % state_mod.path(home))
 
 
-def _finish_setup(state, home, mode=None, profile=None, claude_mode=None):
-    """Drop the nonce and persist mode, profile and Claude's choice."""
-    path = state_mod.path(home)
-    try:
-        from . import catalogue
-        doc = state_mod.read(path)
-        if doc is None:
-            return False
+def _finish_setup(state, home, mode=None, claude_mode=None):
+    """Drop the nonce and persist any mode an older caller still sends."""
+    def finish(doc):
         doc.pop('setup', None)
         if mode in ('subscription', 'none'):
             doc['openai_mode'] = mode
-        if profile in ('general', 'dev'):
-            doc['agents_profile'] = profile
         if claude_mode in ('subscription', 'none'):
             doc['claude_mode'] = claude_mode
             doc['anthropic_mode'] = claude_mode
+
+    try:
+        from . import catalogue
+        doc = state_mod.read(state_mod.path(home))
+        if doc is None:
+            return False
         from . import availability as _availability
         from . import provider_defs as _defs
         # A fresh key changes what its provider allows: refresh every
@@ -255,18 +237,12 @@ def _finish_setup(state, home, mode=None, profile=None, claude_mode=None):
         catalogue.merge_file(Path(home) / 'mixed-models.json',
                              openai_mode=mode or doc.get('openai_mode', 'subscription'),
                              available=_avail)
-        _atomic_replace(path, doc)
+        if _update_state(home, finish) is None:
+            return False
     except (OSError, ValueError):
         return False
     if isinstance(state, dict):
-        state.pop('setup', None)
-        if mode in ('subscription', 'none'):
-            state['openai_mode'] = mode
-        if profile in ('general', 'dev'):
-            state['agents_profile'] = profile
-        if claude_mode in ('subscription', 'none'):
-            state['claude_mode'] = claude_mode
-            state['anthropic_mode'] = claude_mode
+        finish(state)
     return True
 
 

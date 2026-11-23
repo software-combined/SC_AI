@@ -25,7 +25,7 @@ REPO = 'software-combined/SC_AI'
 # bundle_files() and keeps an explicit required-files assertion, so a member
 # dropped from this list still fails the gate.
 PACKAGING_FILES = (
-    'packaging/VERSION', 'packaging/install.py', 'packaging/bundle.py',
+    'packaging/VERSION', 'packaging/install.py', 'packaging/bundle.py', 'packaging/loader.py',
     'packaging/launchd.py',
     'packaging/router_launch.py', 'packaging/service.py',
     'packaging/feed.py', 'packaging/feed_verify.py',
@@ -38,17 +38,15 @@ PACKAGING_FILES = (
     'packaging/client_executable.py', 'packaging/setup_completion.py',
     'packaging/install_delivery.py', 'packaging/repair_ui.py', 'packaging/native_payload.py',
     'packaging/windows_installation.py',
-    'packaging/native_controller.py', 'packaging/native_setup.py', 'packaging/setup_restart.py',
+    'packaging/native_controller.py', 'packaging/native_setup.py',
     'packaging/native_launch.py', 'packaging/native_dialog.py',
     'packaging/native_shortcuts.py', 'packaging/native_readiness.py',
     'packaging/desktop_control.py', 'packaging/desktop_model.py',
     'packaging/desktop_menu.py', 'packaging/desktop_launch.py',
     'packaging/desktop_startup.py', 'packaging/desktop_service.py',
     'packaging/native_resources.py',
-    'packaging/download_auth.py', 'packaging/download_oauth.py',
-    'packaging/download_session.py', 'packaging/download_enrolment.py',
+    'packaging/download_oauth.py',
     'packaging/control_models.py',
-    'packaging/download_notice.py',
     'packaging/assets/router-icon.png',
     'packaging/assets/signin.html',
     'packaging/assets/inter-400.woff2', 'packaging/assets/inter-OFL.txt',
@@ -69,7 +67,7 @@ PACKAGING_FILES = (
     'packaging/desktop_windows.py',
     'packaging/windows_native.py',
     'packaging/windows_codex.py',
-    'packaging/windows_dialog.py',
+    'packaging/windows_dialog.py', 'packaging/windows_shell.py',
     'packaging/codex_switch_transaction.py',
     'packaging/claude_desktop_switch.py',
     'packaging/claude_profile_rotation.py',
@@ -244,7 +242,7 @@ def main(argv=None):
     # Shared guides link to source components; installed bundles keep flat paths.
     for name in payloads:
         if name.startswith('docs/') and name.endswith('.md'):
-            payloads[name] = payloads[name].replace(b'](../router/', b'](../')
+            payloads[name] = re.sub(rb'\]\(((?:\.\./)+)router/', rb'](\1', payloads[name])
     manifest_files = {name: hashlib.sha256(data).hexdigest() for name, data in payloads.items()}
     manifest = {'version': version, 'files': manifest_files,
                 'codex_tested': 'unknown', 'min_python': MIN_PYTHON,

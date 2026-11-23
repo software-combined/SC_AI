@@ -121,11 +121,11 @@ class NativeRepairArgumentsTests(unittest.TestCase):
                            native_resources=owner, native_controller=mock.Mock(), desktop_menu=mock.Mock())
             with mock.patch.object(setup, 'load', side_effect=lambda name:
                     modules[name] if name in modules else original(name)), \
-                    mock.patch.object(setup, 'run_installer', return_value=SimpleNamespace(returncode=0)), \
-                    mock.patch.object(setup, '_select') as choose, \
-                    mock.patch.object(setup, '_key'), mock.patch.object(setup, '_check'):
+                    mock.patch.object(setup, 'run_installer', return_value=SimpleNamespace(returncode=0)) as run, \
+                    mock.patch.object(setup, '_key'), mock.patch.object(setup, '_check'), \
+                    mock.patch.object(setup, 'status', return_value={'serving': True}):
                 self.assertEqual(setup.onboard(root / 'Resources', home, 'resume'), 0)
-            choose.assert_not_called()
+            self.assertEqual(run.call_args.args[-1], ['--repair'])
             self.assertEqual(shortcuts.install.call_count, 2)
             self.assertTrue(owner.ready(home))
             self.assertEqual(json.loads(state.read_text())['component_repairs']['controls'], 'ready')
@@ -133,7 +133,7 @@ class NativeRepairArgumentsTests(unittest.TestCase):
             self.assertNotIn('last_error', json.loads(state.read_text()))
 
     @unix_only
-    def test_native_legacy_pointer_uses_repair_without_the_client_chooser(self):
+    def test_native_legacy_pointer_uses_repair(self):
         setup = module('native_setup')
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
@@ -146,10 +146,8 @@ class NativeRepairArgumentsTests(unittest.TestCase):
             with mock.patch.object(setup, 'load', side_effect=lambda name: dialog
                     if name in ('native_dialog', 'native_shortcuts') else original(name)), \
                     mock.patch.object(setup, 'retained', return_value=source), \
-                    mock.patch.object(setup, '_select', return_value=['--clients', 'claude']) as choose, \
                     mock.patch.object(setup, 'run_installer', return_value=SimpleNamespace(returncode=1)) as run:
                 self.assertEqual(setup.onboard(source, home, 'resume'), 1)
-            choose.assert_not_called()
             self.assertEqual(run.call_args.args[-1], ['--repair'])
 
     def test_existing_setup_uses_public_saved_channel_and_newest_controller(self):
@@ -165,13 +163,12 @@ class NativeRepairArgumentsTests(unittest.TestCase):
             control.mkdir(parents=True)
             (control / 'install.py').write_text('# verified retained controller')
             (home / 'control-version').write_text('1.3.2.185')
-            args = payload.install_arguments(source, home, {'clients': 'claude'}, repair=True)
+            args = payload.install_arguments(source, home, repair=True)
             self.assertEqual(args[1], str(control / 'install.py'))
             self.assertIn('https://dist.softwarecombined.com/beta/latest.json', args)
             self.assertIn('--repair', args)
             self.assertNotIn('--clients', args)
             self.assertNotIn('--setup', args)
-            self.assertNotIn('--choose-clients', args)
 
     def test_stable_controls_run_newer_maintenance_code_after_runtime_rollback(self):
         root_source = Path(__file__).resolve().parents[1]

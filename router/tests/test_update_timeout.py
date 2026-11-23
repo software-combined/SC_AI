@@ -3,7 +3,6 @@ import contextlib
 import io
 import json
 import subprocess
-import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -19,19 +18,22 @@ class VerifiedTimeoutTests(unittest.TestCase):
         self.home = Path(self.enterContext(tempfile.TemporaryDirectory()))
         (self.home / 'current').write_text('1.0.0')
         (self.home / 'releases/1.0.0').mkdir(parents=True)
+        # Load the verifier first: a test loader resets the shared module cache,
+        # and the Windows hooks resolve their siblings through that cache.
+        self.verifier = module('feed_verify')
         self.install = install_mod_factory()
         self.updater = self.install._updater
         self.blob, self.latest = _craft_bundle('1.0.1')
         self.latest['express'] = True
-        self.verifier = module('feed_verify')
         self.seed, public = self.verifier.generate_keypair()
         self.enterContext(mock.patch.object(self.updater, '_FEED_VERIFY_KEY', public))
         self.candidate = dict(port=1, token='synthetic', clients='none',
             last_applied_version='1.0.1', component_repairs={
                 name: 'ready' for name in self.updater._status.COMPONENTS})
         self.save({})
-        self.platform = SimpleNamespace(platform='win32', executable=sys.executable, exc_info=sys.exc_info)
-        self.enterContext(mock.patch.object(self.updater, 'sys', self.platform))
+        self.platform, platforms = 'win32', self.updater._platforms
+        self.enterContext(mock.patch.object(platforms, 'host',
+            side_effect=lambda svc: platforms.select(self.platform, svc, svc.run)))
         self.enterContext(mock.patch.object(self.updater._models, 'refresh'))
         self.enterContext(mock.patch.object(self.updater._models, 'accept'))
         self.enterContext(mock.patch.object(self.updater._reconcile, 'run'))
@@ -142,7 +144,7 @@ class VerifiedTimeoutTests(unittest.TestCase):
                 ('linux', self.error, 'installer_timeout'),
                 ('win32', subprocess.SubprocessError('private error'), 'installer_failed')):
             with self.subTest(platform=platform, code=code):
-                self.platform.platform, self.error = platform, error
+                self.platform, self.error = platform, error
                 (self.home / 'current').write_text('1.0.0')
                 self.save({})
                 self.assert_failed(code)

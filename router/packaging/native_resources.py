@@ -1,6 +1,5 @@
-"""Verify target Resources; Windows joins required installation completion."""
+"""Verify target Resources; a platform backend may make them part of required installation completion."""
 import hashlib
-import importlib.util
 import json
 import os
 import re
@@ -11,10 +10,16 @@ import tempfile
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from native_payload import load, metadata, retained, target
+from native_payload import Deferred, load, metadata, retained, target
+import loader  # noqa: E402
 
 MAX_BYTES = 250 * 1024 * 1024
 HASH = re.compile('[0-9a-f]{64}')
+
+
+def _backend():
+    platforms = loader.load(Path(__file__).parent / 'platforms' / '__init__.py', 'router_platforms')
+    return platforms.host(load('service'))
 
 
 def current(home):
@@ -50,7 +55,7 @@ def ready(home):
         delivery = json.loads(record.read_text()) if record.exists() else {}
         failed = not isinstance(delivery, dict) or delivery.get('status') == 'failed'
         newer_core = load('bundle').newer(service.current_version(Path(home)), doc['version'])
-        coherent = sys.platform != 'win32' or load('windows_installation').ready(home)
+        coherent = _backend().installation_ready(home)
         return bool(doc.get('menu_sha256')) and not failed and not newer_core and coherent
     except (OSError, ValueError, KeyError, TypeError):
         return False
@@ -99,10 +104,7 @@ def download(url, destination, row, fetch=None):
 def unpack(archive, destination):
     """Portable data-only extraction, including internal runtime links, on Python 3.9+."""
     root = (Path(destination) / 'Resources').resolve()
-    spec = importlib.util.spec_from_file_location('router_native_stage',
-        Path(__file__).parent / 'native/native_stage.py')
-    stage = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(stage)
+    stage = loader.load(Path(__file__).parent / 'native/native_stage.py')
     hardlinks = []
     with tarfile.open(archive, 'r:gz') as stream:
         names = stage._member_names(stream, links=True)
@@ -163,8 +165,9 @@ def reconcile(home, latest, feed_url, fetch=None):
     row = descriptor(latest)
     if row is None or load('service').current_version(home) != latest['version']:
         return False
-    if sys.platform == 'win32':
-        return load('windows_installation').controls(home, latest, feed_url, fetch)
+    repaired = _backend().repair_controls(home, latest, feed_url, fetch)
+    if repaired is not None:
+        return repaired
     previous = None
     try:
         previous = current(home)
@@ -205,21 +208,21 @@ def deliver(home, latest, feed_url, fetch=None):
     try:
         delivered = reconcile(home, latest, feed_url, fetch)
         if delivered:
-            _record(home, 'ready')
+            _record(home, load('update_status').READY)
         return delivered
     except (Exception, SystemExit) as error:
         if getattr(error, 'ownership_conflict', False):
             # A user-owned entry is a known block, not a router failure.
             load('atomic_write').replace_json(Path(home) / 'desktop-delivery.json',
                                              dict(status='blocked'))
-            _record(home, 'unknown')
+            _record(home, load('update_status').UNKNOWN)
             print('SCG Router menu delivery is blocked by an existing shortcut or startup entry.')
             return False
-        if sys.platform == 'win32' and isinstance(error, SystemExit) and error.code == 0:
+        if isinstance(error, Deferred):
             return False  # The unchanged or restored cohort remains usable; retry quietly.
         load('atomic_write').replace_json(Path(home) / 'desktop-delivery.json',
                                          dict(status='failed'))
-        _record(home, 'failed')
+        _record(home, load('update_status').FAILED)
         print('SCG Router menu update needs repair. Check setup for routing status.')
         return False
 
@@ -236,25 +239,20 @@ def confirm_controls(home, resources):
             return False
         load('atomic_write').replace_json(home / 'desktop-delivery.json',
                                           dict(status='ready', version=doc['version']))
-        _record(home, 'ready', complete=True)
+        _record(home, load('update_status').READY, complete=True)
         return True
 
 
 def _record(home, outcome, complete=False):
+    def mark(state):
+        components = status.set_components(state, controls=outcome)
+        if (complete and components.get('assistants') == status.READY
+                and all(value == status.READY for value in status.components(state).values())
+                and state.get('last_applied_version') == service.current_version(Path(home))):
+            error = '' if state.get('last_error') in ('installer_failed', 'installer_timeout') else None
+            status.record(state, error=error, repaired=True)
     try:
-        service = load('service')
-        state = service._state.read(service._state.path(Path(home)))
-        if isinstance(state, dict):
-            components = state.get('component_repairs')
-            if not isinstance(components, dict):
-                components = state['component_repairs'] = {}
-            components['controls'] = outcome
-            status = load('update_status')
-            if (complete and components.get('assistants') == 'ready'
-                    and all(value == 'ready' for value in status.components(state).values())
-                    and state.get('last_applied_version') == service.current_version(Path(home))):
-                error = '' if state.get('last_error') in ('installer_failed', 'installer_timeout') else None
-                status.record(state, error=error, repaired=True)
-            service._write_state(Path(home), state)
+        service, status = load('service'), load('update_status')
+        service._state.update(Path(home), mark, service._atomic_write)
     except (OSError, ValueError, TypeError):
         pass  # A notice cannot fail a completed routing update.

@@ -3,19 +3,17 @@ import json
 import shutil
 import subprocess
 import sys
-import importlib.util
 import tarfile
 import unittest
 from pathlib import Path
+
+from tests.loading import load
 
 _ROOT = Path(__file__).resolve().parents[1]
 
 
 def _release_mod():
-    spec = importlib.util.spec_from_file_location('router_release', _ROOT / 'packaging' / 'release.py')
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+    return load(_ROOT / 'packaging' / 'release.py', 'router_release')
 
 
 release_mod = _release_mod()
@@ -123,7 +121,7 @@ class ReleaseTests(unittest.TestCase):
                     'ai_router/routed_base_instructions.txt',
                     'ai_router/subscription_base_instructions.txt',
                     'packaging/router_launch.py',
-                    'packaging/service.py',
+                    'packaging/service.py', 'packaging/loader.py',
                     'packaging/feed.py',
                     'packaging/atomic_write.py',
                     'packaging/notice.py',

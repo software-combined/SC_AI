@@ -137,11 +137,10 @@ class RetryPresentationTests(unittest.TestCase):
         control, operator = module('desktop_control'), module('operator_surface')
         raw = dict(version='1.0.0', running_version='1.0.0', clients={},
             routing_healthy=True, update=dict(retry_pending=True, last_error='feed_signature'))
-        installer = SimpleNamespace(_sync_seams=lambda: None,
-            _diag=SimpleNamespace(_status_document=lambda _: raw))
+        diagnostics = SimpleNamespace(_status_document=lambda _: raw)
         original = control.load
         with tempfile.TemporaryDirectory() as temporary, mock.patch.object(control,
-                'load', side_effect=lambda name: installer if name == 'install' else original(name)):
+                'load', side_effect=lambda name: diagnostics if name == 'diagnostics' else original(name)):
             facts = control.snapshot(Path(temporary))
         self.assertTrue(facts['update']['retry_pending'])
         menu = module('desktop_model').menu(facts)

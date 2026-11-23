@@ -8,7 +8,6 @@ alive -- so the machine silently loses the router and every later update run
 reports a misleading "failed health check" against a router that was never
 given the chance to answer.
 """
-import importlib.util
 import os
 import subprocess
 import sys
@@ -18,15 +17,13 @@ from pathlib import Path
 
 from tests._platform import unix_only
 from tests.fakes import LaunchdDomain
+from tests.loading import load
 
 ROOT = Path(__file__).resolve().parents[1]
 
 
 def _load(name, filename):
-    spec = importlib.util.spec_from_file_location(name, ROOT / 'packaging' / filename)
-    mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)
-    return mod
+    return load(ROOT / 'packaging' / filename, name)
 
 
 launchd = _load('router_launchd_under_test', 'launchd.py')

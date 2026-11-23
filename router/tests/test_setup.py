@@ -91,11 +91,9 @@ class SetupUnitTests(unittest.TestCase):
         body = setup_page.form('n' * 16, 'openrouter').decode()
         self.assertIn('<form method="post" action="./' + 'n' * 16 + '">', body)
         self.assertIn('type="password" name="key" autocomplete="off"', body)
-        self.assertIn('<input type="radio" name="mode" value="subscription" checked>', body)
-        self.assertIn('<input type="radio" name="mode" value="none">', body)
         self.assertIn('<button type="submit">', body)
-        self.assertIn('<input type="radio" name="profile" value="general" checked>', body)
-        self.assertIn('<input type="radio" name="profile" value="dev">', body)
+        # The page asks only for the key: no subscription or starter choice.
+        self.assertNotIn('type="radio"', body)
         # Inline style only: a loopback page must not fetch an external asset.
         self.assertIn('<style>', body)
         self.assertNotIn('<link', body)
@@ -401,13 +399,13 @@ class KeyWindowTests(unittest.TestCase):
         self.assertNotIn('post', seen)
 
 
-    def test_atomic_replace_recovers_from_stale_tmp(self):
+    def test_state_update_recovers_from_stale_tmp(self):
         home = Path(tempfile.mkdtemp())
         self.addCleanup(shutil.rmtree, home, True)
         path = home / 'mixed-router-state.json'
         path.write_text(json.dumps({'port': 1, 'token': 't'}))
         stale = path.with_name(path.name + '.setup.tmp')
         stale.write_text('crash residue')
-        setup._atomic_replace(path, {'port': 1, 'token': 't', 'setup': {'nonce': 'x', 'expires': 1}})
+        setup._update_state(home, lambda doc: doc.update(setup={'nonce': 'x', 'expires': 1}))
         self.assertEqual(json.loads(path.read_text())['setup']['nonce'], 'x')
         self.assertFalse(stale.exists())

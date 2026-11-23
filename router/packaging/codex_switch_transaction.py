@@ -1,15 +1,14 @@
 """Pending-marker transactions, proof and guarded rollback of owned Codex settings."""
-import importlib.util
 import json
+import sys
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import loader  # noqa: E402
 
 
 def _load(name):
-    spec = importlib.util.spec_from_file_location("router_codex_transaction_" + name,
-        Path(__file__).with_name(name + ".py"))
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+    return loader.load(Path(__file__).with_name(name + ".py"))
 
 
 _blocks = _load("codex_switch_config")

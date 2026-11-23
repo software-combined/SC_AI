@@ -89,9 +89,9 @@ class DesktopProfileTransitionTests(fixtures.SyncFixture):
         self.owner._desktop.attach(self.home, state, self.owner._receipts, data_dir_override=self.third)
         self.assertEqual(json.loads(self.config.read_bytes()), {'keep': 'setting'})
         control = module('desktop_control')
-        installer = mock.Mock()
-        installer._diag._status_document.return_value = dict(clients={'claude-desktop': {}})
-        owners = dict(install=installer, claude_desktop_switch=self.owner, update_status=module('update_status'),
+        diagnostics = mock.Mock()
+        diagnostics._status_document.return_value = dict(clients={'claude-desktop': {}})
+        owners = dict(diagnostics=diagnostics, claude_desktop_switch=self.owner, update_status=module('update_status'),
                       desktop_startup=SimpleNamespace(enabled=lambda home: False))
         with mock.patch.object(control, 'load', side_effect=owners.__getitem__):
             self.assertEqual(control.snapshot(self.home)['clients'][0]['selected'], 'subscription')
@@ -161,29 +161,13 @@ class NativeProfileRecoveryTests(fixtures.PairFixture):
 
 
 class SetupHandOffTests(unittest.TestCase):
-    def test_setup_reaches_openrouter_only_through_switch_claude(self):
-        setup, refused = module('native_setup'), type('SwitchError', (Exception,), {})
-        facts = dict(serving=True, update={}, onboarding=dict(ready=False, clients={'claude-desktop': dict(
-            plugins_available=True, fresh_session_confirmed=False, reply_seen=False)}))
-        for outcome, message in ((None, 'stays on your Claude subscription'),
-                                 ('1p', 'stays on your Claude subscription'),
-                                 (refused('Open a Code task in Claude, then try again.'), 'Open a Code task'),
-                                 ('3p', None)):
-            with self.subTest(outcome=outcome):
-                owner, dialog = mock.Mock(SwitchError=refused), mock.Mock()
-                owner.switch.side_effect = [outcome]
-                dialog.confirm.return_value = False
-                dialog.confirm_result.return_value = True
-                with mock.patch.object(setup, 'status', return_value=facts), \
-                        mock.patch.object(setup, '_missing_assistant', return_value=False), \
-                        mock.patch.object(setup, 'load', return_value=owner):
-                    setup._check(Path('/resources'), Path('/home'), dialog)
-                owner.switch.assert_called_once_with(Path('/home'), target='3p')
-                if message:
-                    self.assertIn(message, dialog.message.call_args.args[0])
-                    dialog.confirm.assert_not_called()
-                else:
-                    dialog.message.assert_not_called()
-                    prompt = dialog.confirm.call_args.args[0]
-                    self.assertIn('Choose Code and start a new task', prompt)
-                    self.assertNotIn('Quit and reopen', prompt)
+    def test_claude_desktop_alone_is_ready_without_a_router_reply(self):
+        # Claude desktop keeps its own sign-in, so setup never switches it.
+        readiness = module('native_readiness')
+        with mock.patch.object(readiness, 'choices_applied', return_value=True), \
+                mock.patch.object(readiness, 'successful_reply') as reply:
+            facts = readiness.check(Path('/home'), Path('/source'),
+                                    dict(serving=True, clients={'claude-desktop': {}}), {})
+        reply.assert_not_called()
+        self.assertEqual((facts['ready'], facts['clients']), (True, {}))
+        self.assertNotIn('_claude_on_openrouter', vars(module('native_setup')))

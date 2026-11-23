@@ -99,47 +99,6 @@ class WindowsNoticeTests(unittest.TestCase):
         self.assertEqual(self.read()['restart_result'], 'later')
         self.assertFalse(self.owner.offer(self.home, spawn=mock.Mock()))
 
-    def test_setup_completion_shows_unknown_freshness_once_and_reuses_attachment_event(self):
-        self.dialog.show.return_value = False
-        self.assertTrue(self.owner.show(self.home, setup_completion=True))
-        shown = self.read()
-        self.assertTrue(shown['shown'])
-        self.assertTrue(shown['restart_pending'])
-        self.assertEqual(shown['restart_result'], 'later')
-        self.assertEqual(shown['freshness'], 'unknown')
-        self.assertIn("We couldn't confirm Codex loaded the changes", self.dialog.show.call_args.args[0])
-        self.assertIn('Finish any running work first. Restarting will close and reopen Codex.',
-                      self.dialog.show.call_args.args[0])
-        self.assertIn('choose Check setup', self.dialog.show.call_args.args[0])
-        self.assertEqual(self.dialog.show.call_args.kwargs['labels'], ('Restart Codex', 'Later'))
-        self.platform.request_stop.assert_not_called()
-        self.assertTrue(self.owner.show(self.home, setup_completion=True))
-        self.assertEqual(self.dialog.show.call_count, 1)
-
-    def test_setup_completion_does_not_offer_or_launch_a_closed_codex(self):
-        self.platform.is_running.return_value = False
-        self.assertFalse(self.owner.show(self.home, setup_completion=True))
-        self.dialog.show.assert_not_called()
-        self.platform.request_stop.assert_not_called()
-        self.assertNotIn('shown', self.read())
-
-    def test_setup_completion_restart_uses_current_verified_desktop_and_records_unknown(self):
-        identity = {'package': 'current-user-codex'}
-        self.platform.app_identity.return_value = identity
-        self.assertTrue(self.owner.show(self.home, setup_completion=True))
-        self.assertEqual(self.read()['freshness'], 'unknown')
-        self.assertEqual(self.read()['restart_result'], 'done')
-        self.platform.is_running.assert_called_with('win32', app=self.platform.App.return_value)
-        self.platform.request_stop.assert_called_once_with(
-            'win32', app=self.platform.App.return_value, identity=identity)
-
-    def test_catalogue_only_change_is_a_pending_setup_restart_reason(self):
-        self.path.write_text(json.dumps(dict(version='1.0.1', clients='codex',
-                                              client_change='synthetic-change')))
-        self.assertTrue(self.owner.show(self.home, setup_completion=True))
-        self.assertEqual(self.read()['freshness'], 'unknown')
-        self.assertIn("We couldn't confirm Codex loaded the changes", self.dialog.show.call_args.args[0])
-
     def test_unconfirmed_or_unavailable_dialog_leaves_notice_unconsumed(self):
         self.dialog.show.side_effect = OSError('no presentation')
         with self.assertRaises(OSError):
@@ -179,14 +138,6 @@ class WindowsNoticeTests(unittest.TestCase):
         with mock.patch.object(self.owner, 'load',
                 side_effect=lambda name: service if name == 'service' else real(name)):
             self.owner.show(self.home)
-        self.dialog.show.assert_not_called()
-
-    def test_setup_completion_does_not_stack_on_an_active_notice(self):
-        real = self.owner.load
-        service = mock.Mock(install_lock=lambda *args: contextlib.nullcontext(False))
-        with mock.patch.object(self.owner, 'load',
-                side_effect=lambda name: service if name == 'service' else real(name)):
-            self.assertTrue(self.owner.show(self.home, setup_completion=True))
         self.dialog.show.assert_not_called()
 
     def test_launch_uses_retained_python_and_source_and_does_not_consume_the_notice(self):

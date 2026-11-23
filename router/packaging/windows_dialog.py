@@ -1,18 +1,18 @@
-"""Verified native Windows dialogs; legacy script retained for installer callers."""
-import importlib.util
+"""Verified native Windows dialogs; the dialog owner's styled form is the fallback."""
 import json
 import subprocess
+import sys
 from pathlib import Path
 
-ICON = Path(__file__).parent / 'assets/router-icon.png'
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import loader  # noqa: E402
 
 
 def _load(name):
-    spec = importlib.util.spec_from_file_location('router_windows_dialog_' + name,
-        Path(__file__).with_name(name + '.py'))
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+    return loader.load(Path(__file__).with_name(name + '.py'))
+
+
+_dialog = _load('client_dialog')
 
 
 def command(home, mode, text, labels):
@@ -65,36 +65,6 @@ def progress(home, text, button):
     return child
 
 
-def _ps(value):
-    return "'" + str(value).replace("'", "''") + "'"
-
-
 def _powershell(text, confirm, labels):
-    """The styled script form, for old packages or a helper that cannot start."""
-    return ['powershell', '-NoProfile', '-NonInteractive', '-Command',
-            script(text, confirm, labels)]
-
-
-def script(message, confirm, labels=('Continue', 'Cancel')):
-    # Match client_dialog's bitmap icon and layout containers; constrain text width.
-    return (
-        "$ErrorActionPreference='Stop';Add-Type -AssemblyName System.Windows.Forms,System.Drawing;"
-        "$f=New-Object System.Windows.Forms.Form;$f.Text='SCG Router';"
-        "$f.Icon=[System.Drawing.Icon]::FromHandle((New-Object System.Drawing.Bitmap %s).GetHicon());"
-        "$f.AutoSize=$true;$f.AutoSizeMode='GrowAndShrink';"
-        "$p=New-Object System.Windows.Forms.FlowLayoutPanel;"
-        "$p.FlowDirection='TopDown';$p.WrapContents=$false;$p.AutoSize=$true;"
-        "$p.Padding=New-Object System.Windows.Forms.Padding(12);"
-        "$l=New-Object System.Windows.Forms.Label;$l.Text=%s;"
-        "$l.MaximumSize=New-Object System.Drawing.Size(440,0);$l.AutoSize=$true;"
-        "$r=New-Object System.Windows.Forms.FlowLayoutPanel;$r.AutoSize=$true;"
-        "$r.FlowDirection='LeftToRight';$r.WrapContents=$false;"
-        "%s$c=New-Object System.Windows.Forms.Button;$c.Text=%s;"
-        "$c.AutoSize=$true;$c.DialogResult='Cancel';$r.Controls.Add($c);"
-        "$f.CancelButton=$c;$p.Controls.Add($l);$p.Controls.Add($r);$f.Controls.Add($p);"
-        "if($f.ShowDialog() -eq 'OK'){'SCG_ROUTER_DIALOG_RESULT=accept';exit 0}"
-        "else{'SCG_ROUTER_DIALOG_RESULT=cancel';exit 1}"
-        % (_ps(ICON), _ps(message), (
-            "$b=New-Object System.Windows.Forms.Button;$b.Text=%s;"
-            "$b.AutoSize=$true;$b.DialogResult='OK';$r.Controls.Add($b);$f.AcceptButton=$b;"
-        ) % _ps(labels[0]) if confirm else '', _ps(labels[-1])))
+    """The owner's styled form, for old packages or a helper that cannot start."""
+    return _dialog.powershell(_dialog.windows_form(text, confirm, labels))

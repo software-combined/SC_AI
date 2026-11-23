@@ -15,10 +15,6 @@ from ai_router import key_dialog, key_prompt, provider_defs
 KEY = 'sk-or-v1-secret'
 
 
-def kd_joined(argv):
-    return ' '.join(argv)
-
-
 def _ok(stdout):
     return subprocess.CompletedProcess([], 0, stdout=stdout, stderr='')
 
@@ -36,37 +32,37 @@ class ToolTests(unittest.TestCase):
 
 
 class DialogArgvTests(unittest.TestCase):
-    def test_macos_asks_for_key_then_choices(self):
+    def test_macos_asks_only_for_the_key(self):
         argv = key_dialog.argv('/usr/bin/osascript', 'darwin')
         script = argv[argv.index('-e') + 1]
         self.assertIn('with hidden answer', script)
         self.assertIn('buttons {"Cancel", "Continue"}', script)
-        self.assertIn('buttons {"No subscription", "I have one"}', script)
-        self.assertIn('buttons {"Coding help", "Everyday help"}', script)
-        self.assertIn('return k & line_break & a0 & line_break & a1', script)
-        self.assertIn(key_dialog.ICON.name, script)
+        self.assertEqual(script.count('display dialog'), 1)
+        self.assertIn(key_dialog.owner().ICON.name, script)
 
     def test_windows_form_masks_the_key(self):
         argv = key_dialog.argv(r'C:\powershell.exe', 'win32')
         script = argv[argv.index('-Command') + 1]
         self.assertIn('UseSystemPasswordChar = $true', script)
-        self.assertIn("'I have one', 'No subscription'", script)
-        self.assertIn("'Everyday help', 'Coding help'", script)
-        self.assertIn(key_dialog.ICON.name, script)
-        # Each answer the form writes must be a combo it actually declared.
-        for index in range(len(key_dialog.questions('codex'))):
-            name = key_dialog.combo_name(index)
-            self.assertIn(name + ' = New-Object System.Windows.Forms.ComboBox', script)
-            self.assertIn(name + '.SelectedItem', script)
+        self.assertNotIn('ComboBox', script)
+        self.assertTrue(script.endswith('[Console]::Out.Write($k.Text)'))
+        self.assertIn(key_dialog.owner().ICON.name, script)
 
     def test_linux_zenity_form_fields(self):
         argv = key_dialog.argv('/usr/bin/zenity', 'linux')
         self.assertIn('--forms', argv)
         self.assertIn('--add-password=%s key' % provider_defs.OPENROUTER.label, argv)
-        self.assertIn('--add-combo=' + key_dialog.CODEX_QUESTION, argv)
-        self.assertIn('--combo-values=I have one|No subscription', argv)
-        self.assertIn('--combo-values=Everyday help|Coding help', argv)
-        self.assertIn('--window-icon=' + str(key_dialog.ICON), argv)
+        self.assertFalse([arg for arg in argv if arg.startswith('--add-combo')])
+        self.assertIn('--window-icon=' + str(key_dialog.owner().ICON), argv)
+
+    def test_no_subscription_or_starter_question_is_asked(self):
+        for platform_name, tool_path in (('darwin', '/usr/bin/osascript'),
+                                         ('linux', '/usr/bin/zenity'),
+                                         ('win32', 'C:/powershell.exe')):
+            with self.subTest(platform_name):
+                text = ' '.join(key_dialog.argv(tool_path, platform_name)).lower()
+                for words in ('subscription', 'write for you', 'everyday help', 'coding help'):
+                    self.assertNotIn(words, text)
 
     def test_the_key_never_reaches_argv(self):
         for platform_name, tool_path in (('darwin', '/usr/bin/osascript'),
@@ -77,27 +73,18 @@ class DialogArgvTests(unittest.TestCase):
 
 
 class CollectTests(unittest.TestCase):
-    def test_darwin_choices(self):
-        run = lambda argv, **kw: _ok(KEY + '\nI have one\nCoding help')  # noqa: E731
-        fields = key_dialog.collect('/usr/bin/osascript', 'darwin', run)
-        self.assertEqual(fields, {'key': KEY, 'mode': 'subscription',
-                                  'profile': 'dev'})
+    def test_each_platform_returns_only_the_key(self):
+        for platform_name, out in (('darwin', KEY + '\n'), ('linux', KEY + '\n'),
+                                   ('win32', KEY + '\r\n')):
+            with self.subTest(platform_name):
+                run = lambda argv, out=out, **kw: _ok(out)  # noqa: E731
+                self.assertEqual(key_dialog.collect('/a', platform_name, run), {'key': KEY})
 
-    def test_darwin_blank_key_is_reprompted_not_misparsed(self):
-        run = lambda argv, **kw: _ok('')  # noqa: E731
-        with self.assertRaises(OSError):
-            key_dialog.collect('/usr/bin/osascript', 'darwin', run)
-
-    def test_linux_choices(self):
-        run = lambda argv, **kw: _ok(KEY + '\tNo subscription\tEveryday help')  # noqa: E731
-        self.assertEqual(key_dialog.collect('/usr/bin/zenity', 'linux', run),
-                         {'key': KEY, 'mode': 'none', 'profile': 'general'})
-
-    def test_win32_choices(self):
-        run = lambda argv, **kw: _ok(KEY + '\r\nI have one\r\nEveryday help')  # noqa: E731
-        self.assertEqual(key_dialog.collect('C:/powershell.exe', 'win32', run),
-                         {'key': KEY, 'mode': 'subscription',
-                          'profile': 'general'})
+    def test_blank_key_comes_back_blank_for_a_reprompt(self):
+        for out in ('', '\n'):
+            run = lambda argv, out=out, **kw: _ok(out)  # noqa: E731
+            self.assertEqual(key_dialog.collect('/usr/bin/osascript', 'darwin', run),
+                             {'key': ''})
 
     def test_cancelling_each_platform(self):
         darwin = lambda argv, **kw: subprocess.CompletedProcess(  # noqa: E731
@@ -119,47 +106,11 @@ class CollectTests(unittest.TestCase):
         with self.assertRaises(OSError):
             key_dialog.collect('/usr/bin/zenity', 'linux', headless)
 
-    def test_malformed_output_is_an_error(self):
-        run = lambda argv, **kw: _ok('only-one-field')  # noqa: E731
+    def test_failed_dialog_is_an_error(self):
+        run = lambda argv, **kw: subprocess.CompletedProcess(  # noqa: E731
+            [], 1, stdout='', stderr='synthetic failure')
         with self.assertRaises(OSError):
             key_dialog.collect('/usr/bin/osascript', 'darwin', run)
-
-    def test_unknown_choice_is_an_error(self):
-        run = lambda argv, **kw: _ok(KEY + '\nMaybe\nEveryday help')  # noqa: E731
-        with self.assertRaises(OSError):
-            key_dialog.collect('/usr/bin/osascript', 'darwin', run)
-
-    def test_claude_only_asks_about_claude(self):
-        asked = key_dialog.questions('claude')
-        self.assertEqual([field for field, _q, _a in asked], ['claude_mode'])
-        self.assertEqual(asked[0][1], key_dialog.CLAUDE_QUESTION)
-        run = lambda argv, **kw: _ok(KEY + '\nNo subscription')  # noqa: E731
-        fields = key_dialog.collect('/usr/bin/osascript', 'darwin', run,
-                                    which='claude')
-        self.assertEqual(fields, {'key': KEY, 'claude_mode': 'none'})
-
-    def test_both_clients_ask_both_subscriptions(self):
-        asked = key_dialog.questions('both')
-        self.assertEqual([field for field, _q, _a in asked],
-                         ['mode', 'claude_mode', 'profile'])
-        run = lambda argv, **kw: _ok(KEY + '\tI have one\tNo subscription\tEveryday help')  # noqa: E731
-        fields = key_dialog.collect('/usr/bin/zenity', 'linux', run, which='both')
-        self.assertEqual(fields, {'key': KEY, 'mode': 'subscription',
-                                  'claude_mode': 'none', 'profile': 'general'})
-
-    def test_service_only_asks_for_the_key_alone(self):
-        self.assertEqual(key_dialog.questions('none'), [])
-        run = lambda argv, **kw: _ok(KEY)  # noqa: E731
-        self.assertEqual(key_dialog.collect('/usr/bin/zenity', 'linux', run,
-                                            which='none'), {'key': KEY})
-
-    def test_the_client_sets_the_question_text(self):
-        self.assertIn('ChatGPT subscription',
-                      kd_joined(key_dialog.argv('/usr/bin/zenity', 'linux', 'codex')))
-        self.assertNotIn('ChatGPT subscription',
-                         kd_joined(key_dialog.argv('/usr/bin/zenity', 'linux', 'claude')))
-        self.assertIn('Claude subscription',
-                      kd_joined(key_dialog.argv('/usr/bin/zenity', 'linux', 'both')))
 
 
 class SubmitTests(unittest.TestCase):
@@ -186,7 +137,7 @@ class SubmitTests(unittest.TestCase):
 
         status, payload = key_prompt.submit(
             'http://127.0.0.1:1/t/setup/n',
-            {'key': KEY, 'mode': 'subscription', 'profile': 'general'}, opener)
+            {'key': KEY}, opener)
         self.assertEqual((status, payload['label']), (200, 'probe'))
         self.assertIn('key=sk-or-v1-secret', seen['body'])
         self.assertEqual(seen['accept'], 'application/json')
@@ -208,8 +159,7 @@ class RunWindowTests(unittest.TestCase):
         def browser_only(url, new=0, autoraise=True):
             raise AssertionError('the key POST must not use the browser opener')
         with mock.patch.object(key_dialog, 'collect',
-                               return_value={'key': KEY, 'mode': 'none',
-                                             'profile': 'general'}), \
+                               return_value={'key': KEY}), \
                 mock.patch.object(key_dialog, 'message'), \
                 mock.patch.object(key_prompt, 'submit',
                                   return_value=(200, {'ok': True})) as posted:
@@ -236,8 +186,7 @@ class RunWindowTests(unittest.TestCase):
         self.assertEqual(rc, 2)
 
     def test_empty_key_reprompts_then_stores(self):
-        replies = [{'key': '', 'mode': 'none', 'profile': 'general'},
-                   {'key': KEY, 'mode': 'none', 'profile': 'general'}]
+        replies = [{'key': ''}, {'key': KEY}]
         messages = []
         with mock.patch.object(key_dialog, 'collect', side_effect=replies), \
                 mock.patch.object(key_dialog, 'message',
@@ -249,12 +198,12 @@ class RunWindowTests(unittest.TestCase):
                                        platform_name='darwin')
         self.assertEqual(rc, 0)
         self.assertIn('Paste an OpenRouter key before saving.', messages)
-        self.assertTrue(any('Your key and choices are saved.' in m for m in messages))
+        self.assertEqual(messages[-1], 'Your key is saved on this computer.\n\n'
+                         'Key: probe\nCredit left: unlimited')
 
     def test_refused_key_reprompts_and_expired_link_stops(self):
         with mock.patch.object(key_dialog, 'collect',
-                               return_value={'key': KEY, 'mode': 'none',
-                                             'profile': 'general'}), \
+                               return_value={'key': KEY}), \
                 mock.patch.object(key_dialog, 'message'), \
                 mock.patch.object(key_prompt, 'submit',
                                   side_effect=[(422, {'ok': False, 'error': 'bad'}),
@@ -266,8 +215,7 @@ class RunWindowTests(unittest.TestCase):
 
     def test_unreachable_router_is_an_error_not_a_loop(self):
         with mock.patch.object(key_dialog, 'collect',
-                               return_value={'key': KEY, 'mode': 'none',
-                                             'profile': 'general'}), \
+                               return_value={'key': KEY}), \
                 mock.patch.object(key_dialog, 'message'), \
                 mock.patch.object(key_prompt, 'submit', side_effect=OSError('down')):
             rc = key_prompt.run_window('http://127.0.0.1:1/t/setup/n',
@@ -275,43 +223,32 @@ class RunWindowTests(unittest.TestCase):
                                        platform_name='darwin')
         self.assertEqual(rc, 1)
 
-    def test_claude_install_posts_claude_mode_and_says_so(self):
-        collected = {'key': KEY, 'claude_mode': 'none'}
-        messages, posted = [], {}
-
-        def submit(url, fields, opener=None):
-            posted.update(fields)
-            return 200, {'ok': True, 'label': 'probe', 'claude_mode': 'none',
-                         'starter': 'Starter not installed (setup continued)'}
-
-        with mock.patch.object(key_dialog, 'collect', return_value=collected), \
-                mock.patch.object(key_dialog, 'message',
-                                  side_effect=lambda *a, **k: messages.append(a[1])), \
-                mock.patch.object(key_prompt, 'submit', side_effect=submit):
+    def test_own_key_posts_only_the_key(self):
+        posted = []
+        with mock.patch.object(key_dialog, 'collect', return_value={'key': KEY}), \
+                mock.patch.object(key_dialog, 'message') as shown, \
+                mock.patch.object(key_prompt, 'submit',
+                                  side_effect=lambda url, fields, opener=None:
+                                  posted.append(fields) or (200, {'ok': True})):
             rc = key_prompt.run_window('http://127.0.0.1:1/t/setup/n',
-                                       tool_path='/usr/bin/osascript',
-                                       platform_name='darwin', clients='claude')
+                                       tool_path='/usr/bin/osascript', platform_name='darwin')
         self.assertEqual(rc, 0)
-        self.assertEqual(posted, {'key': KEY, 'claude_mode': 'none'})
-        self.assertIn('Claude Code: %s models only' % provider_defs.OPENROUTER.label, messages[-1])
-        self.assertRegex(messages[-1], r'Claude Code:[\s\S]*Check setup')
+        self.assertEqual(posted, [{'key': KEY}])
+        self.assertNotIn('subscription', shown.call_args.args[1].lower())
 
-    def test_cli_parses_the_client_set(self):
-        self.assertEqual(key_prompt._parse(['http://127.0.0.1:1/x']),
-                         ('http://127.0.0.1:1/x', 'codex'))
-        self.assertEqual(
-            key_prompt._parse(['http://127.0.0.1:1/x', '--clients', 'both']),
-            ('http://127.0.0.1:1/x', 'both'))
-        self.assertEqual(key_prompt._parse(['https://example.com/x']),
-                         (None, None))
+    def test_cli_accepts_and_ignores_the_installer_client_set(self):
+        self.assertEqual(key_prompt._parse(['http://127.0.0.1:1/x']), 'http://127.0.0.1:1/x')
+        self.assertEqual(key_prompt._parse(['http://127.0.0.1:1/x', '--clients', 'both']),
+                         'http://127.0.0.1:1/x')
+        self.assertIsNone(key_prompt._parse(['https://example.com/x']))
 
     def test_cli_reads_the_url_from_stdin(self):
         with mock.patch.object(key_prompt.sys, 'stdin',
                                io.StringIO('http://127.0.0.1:1/t/setup/n\n')):
             self.assertEqual(key_prompt._parse(['--stdin', '--clients', 'both']),
-                             ('http://127.0.0.1:1/t/setup/n', 'both'))
+                             'http://127.0.0.1:1/t/setup/n')
         with mock.patch.object(key_prompt.sys, 'stdin', io.StringIO('https://example.com/x\n')):
-            self.assertEqual(key_prompt._parse(['--stdin']), (None, None))
+            self.assertIsNone(key_prompt._parse(['--stdin']))
 
 
 class OpenWindowTests(unittest.TestCase):
@@ -361,26 +298,12 @@ class CliTests(unittest.TestCase):
     def test_real_osascript_output_parses(self):
         # The real tool ends its return value with a newline; the parser must
         # accept that shape, not just the fakes the other tests feed it.
-        script = ('set line_break to ASCII character 10\n'
-                  'return "sk-or-v1-live" & line_break & "I have one" & '
-                  'line_break & "Everyday help"')
-        result = subprocess.run(['osascript', '-e', script],
-                                capture_output=True, text=True)
-        fields = key_dialog.collect('/usr/bin/osascript', 'darwin',
-                                    lambda *a, **k: result)
-        self.assertEqual(fields, {'key': 'sk-or-v1-live', 'mode': 'subscription',
-                                  'profile': 'general'})
-
-    @unittest.skipUnless(sys.platform == 'darwin', 'runs osascript')
-    def test_real_osascript_blank_key_keeps_the_leading_field(self):
-        script = ('set line_break to ASCII character 10\n'
-                  'return "" & line_break & "No subscription" & '
-                  'line_break & "Coding help"')
-        result = subprocess.run(['osascript', '-e', script],
-                                capture_output=True, text=True)
-        fields = key_dialog.collect('/usr/bin/osascript', 'darwin',
-                                    lambda *a, **k: result)
-        self.assertEqual(fields['key'], '')
+        for value in ('sk-or-v1-live', ''):
+            result = subprocess.run(['osascript', '-e', 'return "%s"' % value],
+                                    capture_output=True, text=True)
+            fields = key_dialog.collect('/usr/bin/osascript', 'darwin',
+                                        lambda *a, **k: result)
+            self.assertEqual(fields, {'key': value})
 
 
 if __name__ == '__main__':

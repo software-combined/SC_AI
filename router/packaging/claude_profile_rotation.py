@@ -2,19 +2,18 @@
 Callers obtain consent, stop Claude, hold installer/switch/profile locks, block
 pending profiles and lock the retained original on recovery. Recheck accounts before 3p.
 """
-import importlib.util
 import json
 import os
 import re
 import stat
+import sys
 import uuid
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import loader  # noqa: E402
 def _load(name):
-    spec = importlib.util.spec_from_file_location(
-        'router_rotation_' + name, Path(__file__).with_name(name + '.py'))
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+    return loader.load(Path(__file__).with_name(name + '.py'))
 _desktop = _load('claude_desktop_config')
 _publish = _load('claude_profile_publish')
 _atomic = _desktop.atomic_write

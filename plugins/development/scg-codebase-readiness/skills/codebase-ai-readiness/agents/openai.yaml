@@ -1,0 +1,4 @@
+interface:
+  display_name: "Codebase AI readiness"
+  short_description: "Audit a repository and score how ready it is for AI agents"
+  default_prompt: "Use $codebase-ai-readiness to audit the repository at <absolute path>: map it, score it against the standard and build the report."

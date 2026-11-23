@@ -9,6 +9,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from native_payload import load
 
+_status = load('update_status')  # Bound once: a pending switch defers before any other load.
+
 
 def _notice(home, service, entry):
     event = entry.get('repair_notice')
@@ -35,50 +37,50 @@ def reconcile(home, service, *, apply=True):
     home = Path(home)
     if any(os.path.lexists(home / name) for name in (
             '.router-removed', 'codex-switch-pending.json', '.claude-profile-rotation-pending.json')):
-        return 'deferred'
+        return _status.DEFERRED
     blocks, atomic = load('codex_switch_config'), load('atomic_write')
     codex, owned = blocks._codex, blocks._codex._owned
     receipt = codex.receipt_path_for(home)
     if not receipt.exists():
-        return 'inactive'
+        return _status.INACTIVE
     receipt_before = owned.read(receipt)
     doc = json.loads(receipt_before)
     if (not isinstance(doc, dict) or doc.get('version') != codex.RECEIPT_VERSION
             or not isinstance(doc.get('clients'), dict)):
-        return 'conflict'
+        return _status.CONFLICT
     entry = doc['clients'].get('codex')
     if entry is None:
-        return 'inactive'
+        return _status.INACTIVE
     if not isinstance(entry, dict) or not isinstance(entry.get('config_path'), str):
-        return 'conflict'
+        return _status.CONFLICT
     state = service._state.read(service._state.path(home))
     if not isinstance(state, dict):
-        return 'conflict'
-    if state.get('clients', 'codex' if state.get('client', 'codex') != 'none' else 'none') not in ('codex', 'both'):
-        return 'inactive'
+        return _status.CONFLICT
+    if service._state.saved_clients(state) not in ('codex', 'both'):
+        return _status.INACTIVE
     saved, mode = entry.get('inserted_block'), entry.get('openai_mode')
     if (not isinstance(saved, str) or mode not in ('subscription', 'none')
             or not re.fullmatch('[0-9a-f]{64}', str(entry.get('previous_sha256', '')))):
-        return 'conflict'
+        return _status.CONFLICT
     owned.restore_evidence(entry, (codex.QUEUE_KEY, codex.EFFORTS_KEY))
     canonical = blocks.build(home, state, mode, 'model_catalog_json =' in saved, blocks.recorded(entry))
     without_picks = ''.join(line for line in saved.splitlines(keepends=True)
                             if codex._key(line) not in codex.PICK_KEYS)
     if without_picks.replace('\r\n', '\n') != canonical:
-        return 'conflict'
+        return _status.CONFLICT
     path = Path(entry['config_path'])
     if not path.is_absolute() or not path.parent.is_dir() or path.is_symlink() and not path.exists():
-        return 'conflict'
+        return _status.CONFLICT
     existed, before = path.exists(), codex._read_text(path)
     if codex.BEGIN in before or codex.END in before:
         owned.inspect(before, saved)
-        return 'unchanged'
+        return _status.UNCHANGED
     proof = owned.inspect(before, saved, absent=True)
     health = service.health(state, timeout=1)
     if not health or health.get('status') != 'ok' or health.get('version') != service.current_version(home):
-        return 'unhealthy'
+        return _status.UNHEALTHY
     if not apply:
-        return 'repairable'
+        return _status.REPAIRABLE
     block = ''.join(line for line in saved.splitlines(keepends=True)
                     if codex._key(line) not in proof['picks'])
     after = block + '\n' + before
@@ -103,4 +105,4 @@ def reconcile(home, service, *, apply=True):
         else:
             atomic.remove(path, expected=after)
         raise
-    return 'repaired'
+    return _status.REPAIRED

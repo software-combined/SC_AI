@@ -11,6 +11,7 @@ from ai_router.runtime import load_state
 from ai_router.retired_slugs import SUBSCRIPTION as LEAF_RETIRED_SLUGS
 from ai_router.subscription_roster import SUBSCRIPTION_SLUGS, replace_successors
 from tests.install_fixtures import install_mod
+from tests.loading import load
 
 
 class InstallStateTests(unittest.TestCase):
@@ -74,7 +75,6 @@ class InstallStateTests(unittest.TestCase):
     def test_service_roster_loads_from_home_style_layout(self):
         # Plan 123: service.py resolves the roster leaf relative to its own
         # file, so a relocated (installed) tree still seeds the roster.
-        import importlib.util
         root = Path(__file__).resolve().parents[1]
         with tempfile.TemporaryDirectory() as tmp:
             tmp = Path(tmp)
@@ -82,16 +82,12 @@ class InstallStateTests(unittest.TestCase):
             (tmp / 'ai_router').mkdir()
             for name in ('service.py', 'launchd.py', 'feed.py',
                          'feed_verify.py', 'atomic_write.py', 'notice.py',
-                         'notice_text.py', 'windows_native.py', 'download_auth.py', 'download_oauth.py',
-                         'download_session.py'):
+                         'notice_text.py', 'windows_native.py'):
                 shutil.copy(root / 'packaging' / name, tmp / 'packaging' / name)
             for name in ('subscription_roster.py', 'retired_slugs.py',
                          'atomic_write.py', 'state.py', 'winacl.py', 'winsecurity.py'):
                 shutil.copy(root / 'ai_router' / name, tmp / 'ai_router' / name)
-            spec = importlib.util.spec_from_file_location(
-                'relocated_service', tmp / 'packaging' / 'service.py')
-            svc = importlib.util.module_from_spec(spec)
-            spec.loader.exec_module(svc)
+            svc = load(tmp / 'packaging' / 'service.py', 'relocated_service')
             self.assertEqual(list(svc.DEFAULT_OPENAI_MODELS),
                              list(SUBSCRIPTION_SLUGS))
 

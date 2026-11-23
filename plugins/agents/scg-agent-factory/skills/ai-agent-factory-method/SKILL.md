@@ -24,6 +24,10 @@ only. Keep the project's existing owners and workflow.
 
 ## Set up for this project
 
+The project manager and every owner read this skill file and the roster at
+each start, resume and compaction, before any other work. A skill name in the
+catalogue, an earlier summary or a memory of the method is not a read.
+
 When asked to use Factory, first read the applicable project and repository
 instructions, such as `AGENTS.md` or the host's equivalent. Every role follows
 them. For work without a repository, use the project's existing instruction
@@ -276,9 +280,10 @@ role chats or read the team board. The project manager keeps that conversation
 reliable:
 
 - **Acknowledge each work request.** Say in a line or two what was understood,
-  who acts and what the human will get back, then proceed. Record it where the
-  work is tracked, so a restart cannot lose it. Call work started only after
-  its owner or helper accepts it.
+  who acts and what the human will get back, then proceed. Work in an owned
+  area goes to that roster owner; the project manager does not do it instead.
+  Record it where the work is tracked, so a restart cannot lose it. Call work
+  started only after its owner or helper accepts it.
 - **Ask only what the human must decide.** Use recorded decisions first. Group
   the questions, and give the options, the evidence and a recommendation.
 - **Answer from current records.** Before a status answer, read the current
@@ -374,6 +379,12 @@ execution status alone does not prove it.
 6. Record the result, useful decisions and next safe action in their owning
    sources. Follow the signal to detect regressions and use recovery when needed.
 
+Before dispatching work that needs a shared machine, browser sign-in, port,
+device or account, its owner checks that the resource is ready. Owners send
+access and device blockers to the project manager, never to the human. The
+project manager groups everything the human must do, such as unlocking a
+machine or signing in, into one request before the work starts.
+
 Infer the authorised mode from the user's request and current project authority;
 do not ask for a label or repeat an approval already given. `observe-only` ends
 with evidence and triage; `propose` adds a proposal and verification plan.
@@ -420,9 +431,23 @@ documented tools and honour explicit model and effort choices.
 
 Record accepted handles and their assignments in current state. An intended
 dispatch is not running work. Wait only for accepted, unfinished work; silence
-alone does not establish failure. When a subagent must stop, use the host's
-stop control and verify its state. If control is uncertain, hold overlapping
-work and report it. If delegation is unavailable, work locally or report the gap.
+alone does not establish failure. Pause until the owner or subagent sends its
+result, question, handover or failure, or the host signals that it ended. Set
+one long safety timeout, such as 30 minutes or the task's expected duration,
+only to catch a silent hang. When it fires, check that work's state once: wait
+again if it is progressing, or stop it and report if it is stuck. Do not poll on
+a short timer, sleep in a loop or list agents repeatedly. Tell the human only
+when something changes: a result, a blocker or a decision. "Still running" is
+not an update.
+
+When the human or project has not set effort, use the host's default or high
+effort for coordination, status and relay turns. Keep the highest settings for
+hard design, debugging or review work that needs them. The human chooses
+models; do not change a model they set.
+
+When a subagent must stop, use the host's stop control and verify its state.
+If control is uncertain, hold overlapping work and report it. If delegation is
+unavailable, work locally or report the gap.
 
 Coordinate through current state, code and check results. Avoid broadcasting
 every intended change. Each owner checks the current assignment and revision
@@ -442,6 +467,15 @@ source. Use existing tools to identify the largest demonstrated wait or source
 of incorrect work, then remove it. Common causes include humans relaying faults,
 missing evidence, slow verification, large release batches and repeated decisions.
 Keep required reviews and approvals while improving how work reaches them.
+
+Measure how the team runs, not only what it ships. In Codex, run this skill's
+bundled [evaluation script](scripts/factory_eval.py) about once a week, by its
+path in the skill folder, with `--days 7 --project <Project>`. It reads local
+run records and prints chat titles and counts, never message content. Its watch
+column flags chats that mostly wait, are dominated by review lanes, run mostly
+at maximum effort, have owners asking the human, or have a project manager with
+no record of reading this skill. Fix the
+largest flagged cause first. A recurring run needs its own authorisation.
 
 Challenge the current design as well as improving it. A simpler architecture,
 deleting obsolete scaffolding or a larger step may beat many small optimisations.

@@ -33,10 +33,9 @@ def fake_switch(installed):
         if action not in installed:
             raise error('refused')
 
-    module = SimpleNamespace(SwitchError=error, install_launcher=install,
-                             subprocess=SimpleNamespace(SubprocessError=subprocess.SubprocessError),
-                             _load=lambda _name: SimpleNamespace(install=lambda *args: None))
-    return SimpleNamespace(loader=SimpleNamespace(exec_module=lambda _module: None)), module
+    return SimpleNamespace(SwitchError=error, install_launcher=install,
+                           subprocess=SimpleNamespace(SubprocessError=subprocess.SubprocessError),
+                           _load=lambda _name: SimpleNamespace(install=lambda *args: None))
 
 
 class UpdateAndPlatformTests(unittest.TestCase):
@@ -63,14 +62,13 @@ class UpdateAndPlatformTests(unittest.TestCase):
 
     def test_windows_and_linux_install_callback_without_legacy_launchers(self):
         for name in ('win32', 'linux'):
-            spec, module = fake_switch(('switch', 'start'))
+            module = fake_switch(('switch', 'start'))
             module.install_launcher = mock.Mock()
             callback = mock.Mock()
             module._load = mock.Mock(return_value=SimpleNamespace(install=callback))
             with self.subTest(platform=name), tempfile.TemporaryDirectory() as tmp, \
                     mock.patch.object(desktop.sys, 'platform', name), \
-                    mock.patch.object(desktop._ilu, 'spec_from_file_location', return_value=spec), \
-                    mock.patch.object(desktop._ilu, 'module_from_spec', return_value=module):
+                    mock.patch.object(desktop.loader, 'load', return_value=module):
                 desktop._install_switch_launcher(tmp, '/python', env={})
                 module.install_launcher.assert_not_called()
                 callback.assert_called_once_with(tmp, '/python', {})
@@ -84,11 +82,10 @@ class UpdateAndPlatformTests(unittest.TestCase):
                                              (b'edited copy', ('switch', 'start'), True),
                                              (b'router copy', ('start',), True)):
                 shim.write_bytes(content)
-                spec, module = fake_switch(installed)
+                module = fake_switch(installed)
                 with mock.patch.object(desktop, 'OLD_SWITCH_SHIM_SHA256', own), \
                         mock.patch.object(desktop.sys, 'platform', 'darwin'), \
-                        mock.patch.object(desktop._ilu, 'spec_from_file_location', return_value=spec), \
-                        mock.patch.object(desktop._ilu, 'module_from_spec', return_value=module), \
+                        mock.patch.object(desktop.loader, 'load', return_value=module), \
                         contextlib.redirect_stdout(io.StringIO()):
                     desktop._install_switch_launcher(tmp, '/python')
                 self.assertEqual(shim.exists(), kept, (content, installed))

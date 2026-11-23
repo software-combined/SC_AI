@@ -1,5 +1,4 @@
 """Windows key ACL contracts with synthetic structured API responses."""
-import importlib.util
 import json
 import os
 import sys
@@ -9,32 +8,21 @@ from unittest import mock
 from pathlib import Path
 from types import SimpleNamespace
 
+from tests.loading import load
+
 ROOT = Path(__file__).resolve().parents[1]
 
 
 def _load_winacl():
-    spec = importlib.util.spec_from_file_location(
-        'router_winacl_under_test', ROOT / 'ai_router' / 'winacl.py')
-    mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)
-    return mod
+    return load(ROOT / 'ai_router' / 'winacl.py', 'router_winacl_under_test')
 
 
 def _load_backend():
-    spec = importlib.util.spec_from_file_location(
-        'router_windows_backend_under_test',
-        ROOT / 'packaging' / 'platforms' / 'windows.py')
-    mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)
-    return mod
+    return load(ROOT / 'packaging' / 'platforms' / 'windows.py', 'router_windows_backend_under_test')
 
 
 def _load_service():
-    spec = importlib.util.spec_from_file_location(
-        'router_service_for_windows_acl', ROOT / 'packaging' / 'service.py')
-    mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)
-    return mod
+    return load(ROOT / 'packaging' / 'service.py', 'router_service_for_windows_acl')
 
 
 winacl = _load_winacl()
@@ -187,7 +175,7 @@ class WinBackendShapeTests(unittest.TestCase):
             home = Path(tmp) / 'home'
             blob, latest = _craft_bundle('1.0.0')
 
-            class FailingBackend:
+            class FailingBackend(install_mod._platforms.NoRepair):
                 def protect_secret(self, path):
                     if Path(path).name == 'mixed-router-state.json':
                         raise SystemExit('cannot protect state')
@@ -249,7 +237,7 @@ class WinBackendShapeTests(unittest.TestCase):
         blob, latest = _craft_bundle('1.0.0')
         events = []
 
-        class StubBackend:
+        class StubBackend(install_mod._platforms.NoRepair):
             def protect_secret(self, path):
                 events.append(('protect', Path(path).name,
                                (Path(path) / 'mixed-router-state.json').exists()

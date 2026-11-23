@@ -1,5 +1,63 @@
 # Changelog
 
+## scg-subagents 0.9.2 (2026-11-24)
+
+- Point the router operations link in the tool guide at the Router diagnostics
+  page, which holds request identity and failure evidence.
+
+## scg-optimise-ci 0.1.15 (2026-11-24)
+
+- Link the complete source and layout comparison and the Windows suite split
+  to a fixed commit, so the links keep working after the Router docs drop
+  those evidence pages.
+
+## scg-codebase-readiness 0.1.0 (2026-11-23)
+
+- New plugin. The `codebase-ai-readiness` skill audits one repository against
+  the standard for an AI-optimised codebase: 21 questions in seven dimensions
+  (structure, consistency, documentation, verification, safe delivery,
+  contracts and API, and hygiene). Security is left to the dedicated security
+  review. The standard is proportionate: it rewards structure where it earns
+  its keep, not layers for their own sake.
+- A fresh subagent checks the draft scores against the evidence before the
+  report is built. The main agent decides each change and records it.
+  A second fresh subagent looks again at questioned, red and top-action
+  scores. Each role names a model for Claude Code (Opus, Sonnet, Haiku) and
+  Codex (Sol, Terra); other clients ask the user.
+- Git runs only in the user's own working copy or a fresh clone, because a
+  copied repository folder can carry settings that make Git run programs.
+- Recon maps the repository in three lanes (code, documentation, verification
+  and delivery) with a fixed return schema, so two runs split and merge the
+  same way. Small repositories need no subagents.
+- `measure.py` reads tracked files only, disables fsmonitor and optional locks,
+  and reports values it cannot measure as null, never zero.
+  It also lists lockfiles, the dependency update tool, unpinned CI actions,
+  example settings files and API schema files. Settings signals are scoped
+  to the audited unit plus files that serve every unit.
+- `build_report.py` writes one self-contained HTML report with the Software
+  Combined colours, light and dark modes, and a phone layout. The report
+  shows the score check: who checked, how many scores held, and each change.
+
+## scg-review 0.7.6 (2026-11-23)
+
+- Launch all four review lanes at once. Wait and launch a lane later only
+  when the runtime refuses another child for a concurrency limit.
+
+## scg-agent-factory 1.2.0 (2026-11-23)
+
+- Require the project manager and every owner to read this skill and the roster
+  at each start, resume and compaction. Name the acting owner in each
+  acknowledgement and route the work to it.
+- Pause until work returns a result, question, handover or failure, with one
+  long safety timeout to catch a silent hang, instead of polling. Tell the
+  human only when something changes. Use default or high effort for coordination turns when
+  none is set; the human keeps the model choice.
+- Check shared machines, sign-ins, ports and devices before dispatch. Owners
+  send access blockers to the project manager, who asks the human once.
+- Add a read-only evaluation script that summarises Factory chats from local
+  Codex run records and flags waiting, review-heavy, maximum-effort,
+  owner-asked-human and skill-not-read patterns.
+
 ## scg-review 0.7.5 and scg-subagents 0.9.1 (2026-11-14)
 
 - Explain direct native handoff discovery, expected canonical call records,

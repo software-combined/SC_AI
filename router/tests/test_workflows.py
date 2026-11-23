@@ -14,12 +14,12 @@ from types import SimpleNamespace
 from unittest import mock
 
 from tests.test_native_beta_assets import NATIVE_NAMES, publish
+from tests.loading import load
 
 ROOT = Path(__file__).resolve().parents[1]
 WORKFLOWS = ROOT.parent / '.github/workflows'
 RELEASE = (WORKFLOWS / 'release.yml').read_text()
-MAIN_ACCEPTANCE = ("(github.event_name == 'pull_request' && github.base_ref == 'main') || "
-                   "(github.event_name == 'push' && github.ref == 'refs/heads/main')")
+MAIN_ACCEPTANCE = "github.event_name == 'pull_request' && github.base_ref == 'main'"
 NOT_A_TEXT_EDIT = "(github.event.action != 'edited' || github.event.changes.base)"
 
 
@@ -130,11 +130,10 @@ class ReleaseShellTests(unittest.TestCase):
 class InstallerCiGateTests(unittest.TestCase):
     """Plan 156: scoped native installer checks behind the one Test gate."""
     CHECK = (WORKFLOWS / 'check.yml').read_text()
-    SETUP = (ROOT.parent / '.github/actions/setup/action.yml').read_text()
 
     def test_required_gate_waits_for_all_scoped_jobs(self):
         self.assertIn(
-            'needs: [changes, installer-macos, installer-windows, installer-python39, desktop-menus, plugin-schedulers, hook-adapter, unit-suite, windows-standard]',
+            'needs: [changes, installer-macos, installer-windows, desktop-menus, plugin-schedulers, hook-adapter, unit-suite, windows-standard]',
             self.CHECK)
         self.assertIn('if: ${{ !cancelled() && ' + NOT_A_TEXT_EDIT + ' }}', self.CHECK)
         self.assertIn(
@@ -161,10 +160,7 @@ class InstallerCiGateTests(unittest.TestCase):
                          'shell-script git stub; the gate itself runs on Ubuntu')
     def test_the_scope_step_fails_closed_and_writes_the_output(self):
         # A failed diff must not silently skip the native checks.
-        block = (run_block('Installer scope', self.CHECK)
-                 .replace('${{ github.base_ref }}', 'development')
-                 .replace('${{ github.event.before }}', 'before')
-                 .replace('${{ github.sha }}', 'after'))
+        block = run_block('Installer scope', self.CHECK).replace('${{ github.base_ref }}', 'main')
         with tempfile.TemporaryDirectory() as tmp:
             bin_dir = Path(tmp) / 'bin'
             bin_dir.mkdir()
@@ -172,21 +168,20 @@ class InstallerCiGateTests(unittest.TestCase):
             stub.write_text('#!/bin/sh\nprintf "%s\\n" "$GIT_STUB_OUTPUT"\n'
                             'exit "$GIT_STUB_STATUS"\n')
             stub.chmod(0o700)
-            for event in ('pull_request', 'push'):
-                out = Path(tmp) / f'{event}.out'
-                env = {**os.environ, 'PATH': f'{bin_dir}{os.pathsep}{os.environ["PATH"]}',
-                       'GITHUB_EVENT_NAME': event, 'GIT_STUB_OUTPUT': 'packaging/install.py',
-                       'GIT_STUB_STATUS': '0', 'GITHUB_OUTPUT': str(out)}
-                subprocess.run(['bash', '-e', '-c', block], cwd=ROOT, env=env,
-                               check=True, capture_output=True)
-                self.assertIn('installer=true', out.read_text())
-                env['GIT_STUB_STATUS'] = '128'
-                failed = subprocess.run(['bash', '-e', '-c', block], cwd=ROOT, env=env,
-                                        capture_output=True)
-                self.assertNotEqual(failed.returncode, 0)
+            out = Path(tmp) / 'scope.out'
+            env = {**os.environ, 'PATH': f'{bin_dir}{os.pathsep}{os.environ["PATH"]}',
+                   'GIT_STUB_OUTPUT': 'packaging/install.py',
+                   'GIT_STUB_STATUS': '0', 'GITHUB_OUTPUT': str(out)}
+            subprocess.run(['bash', '-e', '-c', block], cwd=ROOT, env=env,
+                           check=True, capture_output=True)
+            self.assertIn('installer=true', out.read_text())
+            env['GIT_STUB_STATUS'] = '128'
+            failed = subprocess.run(['bash', '-e', '-c', block], cwd=ROOT, env=env,
+                                    capture_output=True)
+            self.assertNotEqual(failed.returncode, 0)
 
     def test_installer_jobs_are_scope_selected_for_main_acceptance(self):
-        for job in ('installer-macos', 'installer-windows', 'installer-python39'):
+        for job in ('installer-macos', 'installer-windows'):
             self.assertIn(f'{job}:', self.CHECK)
         # The producer wiring too: without the step id and the job output no
         # installer job is ever selected, however correct the consumer is.
@@ -194,7 +189,7 @@ class InstallerCiGateTests(unittest.TestCase):
         self.assertIn('installer: ${{ steps.scope.outputs.installer }}', self.CHECK)
         self.assertIn(MAIN_ACCEPTANCE, self.CHECK)
         self.assertIn("if: needs.changes.outputs.installer == 'true'", self.CHECK)
-        self.assertIn('github.event.before', self.CHECK)
+        self.assertNotIn('github.event.before', self.CHECK)
         self.assertIn('tools/ci_scope.py --installer', self.CHECK)
         self.assertIn('tools/ci_scope.py --installer-tests', self.CHECK)
         self.assertIn('runs-on: macos-latest', self.CHECK)
@@ -204,39 +199,29 @@ class InstallerCiGateTests(unittest.TestCase):
         # Plan 156 guard: runtime coverage (port-hijack hardening, shutdown
         # auth, drain, containment, policy scans) must always run in the
         # default suite, never hide behind the installer opt-in.
-        import importlib.util
         tool = ROOT / 'tools' / 'ci_scope.py'
-        spec = importlib.util.spec_from_file_location('router_ci_scope', tool)
-        module = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(module)
+        module = load(tool, 'router_ci_scope')
         listed = set(module.INSTALLER_TESTS)
         for name in ('tests.test_lifecycle', 'tests.test_agent_containment',
                      'tests.test_stream_containment', 'tests.test_policy_scans'):
             with self.subTest(module=name):
                 self.assertNotIn(name, listed)
 
-    def test_the_39_check_selects_its_interpreter_through_the_composite(self):
-        # The composite owns the pin and must pass the version input through;
-        # the 3.9 job must not carry a second pin of its own (policy scan
-        # enforces that side).
-        self.assertIn('python-version: ${{ inputs.python-version }}', self.SETUP)
-        self.assertIn('python-version: "3.9"', self.CHECK)
-        self.assertIn('tools/check_installer_python39.py', self.CHECK)
-
     def test_releases_require_acceptance_before_publishing(self):
         self.assertNotIn('tools/ci_scope.py --installer-tests', RELEASE)
         self.assertNotIn('unittest discover', RELEASE)
         self.assertIn('fetch-depth: 0', RELEASE)
         self.assertIn('actions: read', RELEASE)
-        self.assertIn('actions/workflows/check.yml/runs?head_sha=$GITHUB_SHA', RELEASE)
-        self.assertIn('.event == "push"', RELEASE)
-        self.assertIn('.head_branch == "main"', RELEASE)
+        self.assertIn('actions/workflows/check.yml/runs?head_sha=$HEAD_SHA&event=pull_request', RELEASE)
+        self.assertIn('.event == "pull_request"', RELEASE)
+        self.assertIn('select(.name == "Change scope" and .conclusion == "success")', RELEASE)
         self.assertLess(RELEASE.index('name: Require an accepted commit'),
                         RELEASE.index('uses: ./.github/actions/setup'))
         self.assertLess(RELEASE.index('name: Require an accepted commit'),
                         RELEASE.index('name: Build bundle'))
 
-    def test_release_acceptance_runs_for_main_pull_requests_and_pushes(self):
+    def test_release_acceptance_runs_only_for_pull_requests_into_main(self):
+        self.assertIn('    branches: [development]\n', self.CHECK.split('  push:\n', 1)[1])
         for name in ('changes', 'plugin-schedulers', 'hook-adapter', 'unit-suite'):
             job = re.split(r'\n  \S', self.CHECK.split(f'  {name}:\n', 1)[1], maxsplit=1)[0]
             self.assertIn(f'if: {NOT_A_TEXT_EDIT} && ({MAIN_ACCEPTANCE})', job)
@@ -246,71 +231,75 @@ class InstallerCiGateTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             bin_dir = Path(tmp, 'bin'); bin_dir.mkdir()
             gh = bin_dir / 'gh'
-            # Every call leaves a marker. 'error' prints an accepting count but
-            # fails, and a non-number count must also stop the job.
-            gh.write_text('#!/bin/sh\ntouch gh-called\n'
-                          '[ "$ACCEPTANCE_COUNT" = error ] && { echo 1; exit 1; }\n'
-                          'printf "%s\\n" "$ACCEPTANCE_COUNT"\n', newline='\n'); gh.chmod(0o700)
+            # Every call leaves a marker. RUNS lists Check run ids ('old' began before
+            # main last moved), SCOPE counts successful Change scope jobs; 'error' fails.
+            gh.write_text('#!/bin/sh\ntouch gh-called\ncase "$2" in\n'
+                          '  */jobs*) [ "$SCOPE" = error ] && { echo 1; exit 1; }; echo "$SCOPE";;\n'
+                          '  *) [ "$RUNS" = error ] && { echo 7; exit 1; }; for r in $RUNS; do [ "$r" = old ] && echo "6 1" || echo "$r 9999999999"; done;;\nesac\n',
+                          newline='\n'); gh.chmod(0o700)
             env = {**os.environ, 'PATH': f'{bin_dir}{os.pathsep}{os.environ["PATH"]}',
-                   'GITHUB_REPOSITORY': 'example/router', 'GIT_AUTHOR_NAME': 'Probe',
-                   'GIT_COMMITTER_NAME': 'Probe',
-                   'GIT_AUTHOR_EMAIL': 'probe@example.invalid',
-                   'GIT_COMMITTER_EMAIL': 'probe@example.invalid'}
+                   'GITHUB_REPOSITORY': 'example/router', 'GIT_AUTHOR_NAME': 'Probe', 'GIT_COMMITTER_NAME': 'Probe',
+                   'GIT_AUTHOR_EMAIL': 'probe@example.invalid', 'GIT_COMMITTER_EMAIL': 'probe@example.invalid'}
             def git(*args, stdin=None):
                 return subprocess.run(['git', *args], cwd=tmp, env=env, input=stdin,
                                       text=True, capture_output=True, check=True).stdout.strip()
             git('init', '--quiet')
             tree = git('mktree', stdin='')
+            other = git('mktree', stdin=f"100644 blob {git('hash-object', '-w', '--stdin', stdin='x')}\tf\n")
             base = git('commit-tree', tree, '-m', 'base')
             main_only = git('commit-tree', tree, '-p', base, '-m', 'main only')
             develop_only = git('commit-tree', tree, '-p', base, '-m', 'develop only')
             feature = git('commit-tree', tree, '-p', base, '-m', 'merged feature commit')
             develop_tip = git('commit-tree', tree, '-p', develop_only, '-p', feature, '-m', 'merge')
             unmerged = git('commit-tree', tree, '-p', develop_only, '-m', 'unmerged')
-            git('update-ref', 'refs/remotes/origin/main', main_only)
+            release = git('commit-tree', tree, '-p', main_only, '-p', develop_tip, '-m', 'release')
+            drifted = git('commit-tree', other, '-p', main_only, '-p', develop_tip, '-m', 'drifted')
+            git('update-ref', 'refs/remotes/origin/main',
+                git('commit-tree', tree, '-p', release, '-p', drifted, '-m', 'main tip'))
             git('update-ref', 'refs/remotes/origin/development', develop_tip)
             beta, stable = 'v0.6.123-beta', 'v0.6.123'
-            # (tag, commit, successful main Check runs, publishes, asks gh)
-            for tag, sha, count, allowed, asks_gh in (
-                    (beta, develop_only, 0, True, False), (beta, develop_tip, 0, True, False),
-                    (beta + '-express', develop_only, 0, True, False), (beta, main_only, 0, True, False),
-                    (beta, unmerged, 1, False, False), (beta, '0' * 40, 1, False, False),
-                    (beta, feature, 0, False, False),
-                    (stable, develop_only, 1, False, False),
-                    (stable + '-express', develop_only, 1, False, False),
-                    (stable, '0' * 40, 1, False, False), (stable, main_only, 0, False, True),
-                    (stable, main_only, 'error', False, True), (stable, main_only, 'noise', False, True),
-                    (stable, main_only, 1, True, True)):
-                with self.subTest(tag=tag, sha=sha, count=count):
+            # (tag, commit, Check run ids, Change scope count, publishes, asks gh)
+            for tag, sha, runs, scope, allowed, asks_gh in (
+                    (beta, develop_only, '', 0, True, False), (beta, develop_tip, '', 0, True, False),
+                    (beta + '-express', develop_only, '', 0, True, False), (beta, main_only, '', 0, True, False),
+                    (beta, unmerged, '7', 1, False, False), (beta, '0' * 40, '7', 1, False, False),
+                    (beta, feature, '', 0, False, False), (stable, develop_only, '7', 1, False, False),
+                    (stable + '-express', develop_only, '7', 1, False, False), (stable, release, 'old', 1, False, True),
+                    (stable, '0' * 40, '7', 1, False, False), (stable, main_only, '7', 1, False, False),
+                    (stable, drifted, '7', 1, False, False), (stable, release, '', 1, False, True),
+                    (stable, release, '7', 0, False, True), (stable, release, 'error', 1, False, True),
+                    (stable, release, '7', 'error', False, True), (stable, release, '7', 'noise', False, True),
+                    (stable, release, 'old 8', 1, True, True), (stable + '-express', release, '7', 1, True, True)):
+                with self.subTest(tag=tag, sha=sha, runs=runs, scope=scope):
                     Path(tmp, 'gh-called').unlink(missing_ok=True)
                     result = subprocess.run(
                         [shutil.which('bash'), '-e', '-c', run_block('Require an accepted commit')],
                         cwd=tmp, env={**env, 'GITHUB_REF_NAME': tag, 'GITHUB_SHA': sha,
-                                     'ACCEPTANCE_COUNT': str(count)}, capture_output=True)
+                                     'RUNS': runs, 'SCOPE': str(scope)}, capture_output=True)
                     self.assertEqual(result.returncode == 0, allowed, repr((result.returncode, result.stdout, result.stderr)))
                     self.assertEqual(Path(tmp, 'gh-called').exists(), asks_gh, repr((result.returncode, result.stdout, result.stderr)))
 
-    @unittest.skipUnless(shutil.which('jq'), 'requires jq to evaluate the gh filter')
-    def test_acceptance_query_only_counts_successful_main_runs(self):
-        expression = re.search(r"--jq '([^']+)'", RELEASE).group(1)
+    @unittest.skipUnless(shutil.which('jq'), 'requires jq to evaluate the gh filters')
+    def test_acceptance_queries_only_count_successful_main_pull_request_runs(self):
+        runs_jq, jobs_jq = re.findall(r"--jq '([^']+)'", RELEASE)[:2]
         sha = 'a' * 40
-        accepted = {'head_sha': sha, 'event': 'push', 'head_branch': 'main',
-                    'status': 'completed', 'conclusion': 'success'}
-        cases = [
-            ([accepted], 1),
-            ([{**accepted, 'conclusion': 'failure'}], 0),
-            ([{**accepted, 'status': 'in_progress', 'conclusion': None}], 0),
-            ([{**accepted, 'head_branch': 'development'}], 0),
-            ([{**accepted, 'head_sha': 'b' * 40}], 0),
-        ]
-        env = {**os.environ, 'GITHUB_SHA': sha}
-        for runs, expected in cases:
-            with self.subTest(runs=runs):
+        accepted = {'id': 7, 'head_sha': sha, 'event': 'pull_request',
+                    'status': 'completed', 'conclusion': 'success', 'created_at': '1970-01-01T00:01:40Z'}
+        scope = {'name': 'Change scope', 'conclusion': 'success'}
+        cases = [(runs_jq, {'workflow_runs': [accepted]}, '7 100'),
+                 (runs_jq, {'workflow_runs': [{**accepted, 'conclusion': 'failure'}]}, ''),
+                 (runs_jq, {'workflow_runs': [{**accepted, 'status': 'in_progress'}]}, ''),
+                 (runs_jq, {'workflow_runs': [{**accepted, 'event': 'push'}]}, ''),
+                 (runs_jq, {'workflow_runs': [{**accepted, 'head_sha': 'b' * 40}]}, ''),
+                 (jobs_jq, {'jobs': [scope]}, '1'),
+                 (jobs_jq, {'jobs': [{**scope, 'conclusion': 'skipped'}]}, '0'),
+                 (jobs_jq, {'jobs': [{**scope, 'name': 'Test'}]}, '0')]
+        for expression, document, expected in cases:
+            with self.subTest(document=document):
                 result = subprocess.run(
-                    ['jq', '-c', expression], input=json.dumps({'workflow_runs': runs}),
-                    env=env, text=True, capture_output=True, check=True)
-                self.assertEqual(result.stdout.strip(), str(expected))
-
+                    ['jq', '-rc', expression], input=json.dumps(document),
+                    env={**os.environ, 'HEAD_SHA': sha}, text=True, capture_output=True, check=True)
+                self.assertEqual(result.stdout.strip(), expected)
 
 class WorkflowBoundaryTests(unittest.TestCase):
     def test_release_serializes_feed_and_checks_both_actors(self):

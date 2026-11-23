@@ -5,9 +5,9 @@ attachment behaviour is only diagnosable from those pages.
 tests/test_packaging.py derives its expected tarball from bundle_files()
 itself, so it cannot catch a dropped docs rule; the pages below are pinned
 here instead. Plan 158 adds the exact-set and index gates: every page under
-`docs/` ships, and `docs/README.md` names every one of them.
+`docs/` ships, and `docs/README.md` names every one of them. Every relative
+link in `docs/` resolves to a file and, with an anchor, to a heading.
 """
-import importlib.util
 import json
 import posixpath
 import re
@@ -16,16 +16,34 @@ import tempfile
 import unittest
 from pathlib import Path
 from types import SimpleNamespace
+from unittest import mock
 
 from tests._platform import symlink_or_skip
 from tests.install_fixtures import _patch_attrs, install_mod
+from tests.loading import load
+
+
+ROOT = Path(__file__).resolve().parents[1]
+DOCS = ROOT.parent / 'docs'
+LINK = re.compile(r'\]\(([^)\s]+)\)')
+
+
+def _prose(path):
+    """Page text without fenced code, where a bracket pair is not a link."""
+    return re.sub(r'^```.*?^```', '', path.read_text(), flags=re.S | re.M)
+
+
+def _anchors(path):
+    seen, found = {}, set()
+    for heading in re.findall(r'^#{1,6} (.+)$', _prose(path), re.M):
+        slug = re.sub(r'[^\w\- ]', '', heading.strip().lower()).replace(' ', '-')
+        found.add(slug if slug not in seen else f'{slug}-{seen[slug]}')
+        seen[slug] = seen.get(slug, 0) + 1
+    return found
 
 
 def _bundled(root):
-    spec = importlib.util.spec_from_file_location(
-        'router_release_docs', root / 'packaging' / 'release.py')
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
+    module = load(root / 'packaging' / 'release.py', 'router_release_docs')
     return module.bundle_files(root)
 
 
@@ -54,9 +72,10 @@ class BundleDocsTests(unittest.TestCase):
     def test_required_pages_are_bundled_as_markdown(self):
         root = Path(__file__).resolve().parents[1]
         names = set(_bundled(root))
-        for required in ('README.md', 'docs/README.md',
-                         'docs/operations.md', 'docs/troubleshooting.md',
-                         'docs/architecture.md'):
+        for required in ('README.md', 'docs/README.md', 'docs/troubleshooting/README.md',
+                         'docs/ARCHITECTURE.md', 'docs/RULES.md', 'docs/DESIGN.md', 'docs/DATA.md',
+                         'docs/PATTERNS.md', 'docs/TESTING.md', 'docs/GLOSSARY.md',
+                         'docs/operations/updates.md', 'docs/start/setup.md'):
             self.assertIn(required, names)
         # docs/assets holds a repository-only image, so a widened glob that
         # starts shipping non-markdown files also fails this gate.
@@ -75,11 +94,58 @@ class BundleDocsTests(unittest.TestCase):
         self.assertEqual(shipped, present)
 
     def test_the_docs_index_names_every_page(self):
-        root = Path(__file__).resolve().parents[1]
-        index = (root.parent / 'docs' / 'README.md').read_text()
-        linked = set(re.findall(r'\]\(([\w.-]+\.md)\)', index))
-        pages = {path.name for path in (root.parent / 'docs').glob('*.md')}
+        index = (DOCS / 'README.md').read_text()
+        linked = {target.split('#', 1)[0] for target in LINK.findall(index)}
+        pages = {path.relative_to(DOCS).as_posix() for path in DOCS.rglob('*.md')}
         self.assertEqual(pages - linked, {'README.md'})
+
+    def test_every_relative_docs_link_resolves(self):
+        checked = 0
+        for page in sorted(DOCS.rglob('*.md')):
+            for target in LINK.findall(_prose(page)):
+                if '://' in target or target.startswith('mailto:'):
+                    continue
+                path, _, anchor = target.partition('#')
+                resolved = (page.parent / path).resolve() if path else page
+                with self.subTest(page=page.relative_to(DOCS).as_posix(), link=target):
+                    self.assertTrue(resolved.is_file(), 'link target is missing')
+                    if anchor and resolved.suffix == '.md':
+                        self.assertIn(anchor, _anchors(resolved))
+                checked += 1
+        self.assertGreater(checked, 100)
+
+    def test_docs_pages_stay_short(self):
+        # Long pages were split by topic; a page past 200 lines needs a split, not growth.
+        for page in sorted(DOCS.rglob('*.md')):
+            with self.subTest(page=page.relative_to(DOCS).as_posix()):
+                self.assertLessEqual(len(page.read_text().splitlines()), 200)
+
+
+class HelpGuideTests(unittest.TestCase):
+    """The tray's Troubleshooting item opens the bundled troubleshooting page."""
+
+    def _opened(self, resources):
+        control = load(ROOT / 'packaging' / 'desktop_control.py', 'router_desktop_control_help')
+        calls = []
+        with mock.patch.object(control.sys, 'platform', 'linux'):
+            outcome = control.execute(resources, resources, 'help.guide',
+                                      run=lambda command, **kwargs: calls.append(command))
+        self.assertEqual(outcome, {'outcome': 'done'})
+        return Path(calls[0][1])
+
+    def test_the_guide_is_the_troubleshooting_index(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            resources = Path(tmp)
+            guide = resources / 'router/docs/troubleshooting/README.md'
+            guide.parent.mkdir(parents=True)
+            guide.write_text('# Troubleshooting\n')
+            self.assertEqual(self._opened(resources), guide)
+        self.assertIn('docs/troubleshooting/README.md', _bundled(ROOT))
+
+    def test_an_older_bundle_opens_its_flat_page(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            resources = Path(tmp)
+            self.assertEqual(self._opened(resources), resources / 'router/docs/troubleshooting.md')
 
 
 class HomeReadmeTests(unittest.TestCase):

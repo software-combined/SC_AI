@@ -45,9 +45,10 @@ class NativePackageTests(unittest.TestCase):
         capture = self.root / 'mac args.txt'
         subprocess.run([launcher, '--probe'], check=True,
                        env=dict(os.environ, CAPTURE=str(capture)))
+        # Reopening the Mac installer means install, update or repair, as on Windows.
         self.assertEqual(capture.read_text().splitlines(), [
             str(resources / 'router/packaging/native_setup.py'),
-            '--resources', str(resources), '--probe'])
+            '--resources', str(resources), '--action', 'install', '--probe'])
 
         appdir = self.root / 'SCG Router.AppDir'
         apprun = appdir / 'AppRun'
@@ -61,7 +62,7 @@ class NativePackageTests(unittest.TestCase):
                        env=dict(os.environ, CAPTURE=str(capture)))
         self.assertEqual(capture.read_text().splitlines(), [
             str(resources / 'router/packaging/native_setup.py'),
-            '--resources', str(resources), '--probe'])
+            '--resources', str(resources), '--action', 'install', '--probe'])
 
     def test_windows_installed_copy_is_its_entrypoint(self):
         script = (ROOT / 'packaging/native/windows.iss').read_text()

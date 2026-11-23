@@ -1,7 +1,7 @@
 """Check the latest acceptance run and candidate-bound route evidence.
 
-`docs/acceptance-ledger.json` holds one object per cell run (Plan 185). The
-newest clients are the highest versions `docs/compatibility.md` names in the
+`docs/release/acceptance-ledger.json` holds one object per cell run (Plan 185). The
+newest clients are the highest versions `docs/release/compatibility.md` names in the
 backticked forms Codex desktop `X` and Claude Code `X`, where AGENTS.md
 section 7 records both after every client upgrade. A cell is stale when its
 latest pass ran on an older version of either client, and missing when it has
@@ -90,8 +90,8 @@ def report(entries, clients):
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--ledger', type=Path, default=ROOT.parent / 'docs' / 'acceptance-ledger.json')
-    parser.add_argument('--compatibility', type=Path, default=ROOT.parent / 'docs' / 'compatibility.md')
+    parser.add_argument('--ledger', type=Path, default=ROOT.parent / 'docs' / 'release' / 'acceptance-ledger.json')
+    parser.add_argument('--compatibility', type=Path, default=ROOT.parent / 'docs' / 'release' / 'compatibility.md')
     parser.add_argument('--model', help='check this candidate instead of historical Plan 185 cells')
     parser.add_argument('--client-version', action='append', default=[], metavar='CLIENT=VERSION')
     args = parser.parse_args(argv)

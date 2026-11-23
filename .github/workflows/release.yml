@@ -36,9 +36,9 @@ jobs:
   release:
     name: Build and publish
     # Check both identities: reruns use the original actor's privileges.
-    # Main acceptance owns the long checks. Stable publishes only an exact main
-    # commit with a successful Check run; beta publishes a commit development or
-    # main moved to. Neither repeats that suite.
+    # Main acceptance owns the long checks. Stable publishes only a main merge
+    # commit that keeps the tree its pull request's successful Check run tested;
+    # beta publishes a commit development or main moved to. Neither repeats that suite.
     if: ${{ contains(fromJSON('["SC-Cyril", "BrentJMaxwell"]'), github.actor) && contains(fromJSON('["SC-Cyril", "BrentJMaxwell"]'), github.triggering_actor) }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -54,7 +54,7 @@ jobs:
         run: |
           for name in FEED_BUCKET FEED_ROLE FEED_SIGNING_SEED_ARN; do
             if [ -z "${!name}" ]; then
-              echo "private release configuration $name is empty; set the matching GitHub Actions secret (docs/operations.md)"; exit 1
+              echo "private release configuration $name is empty; set the matching GitHub Actions secret (docs/release/feed-publishing.md)"; exit 1
             fi
           done
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
@@ -78,10 +78,34 @@ jobs:
           git merge-base --is-ancestor "$GITHUB_SHA" origin/main || {
             echo "release commit must be merged into main before publication"; exit 1;
           }
-          ACCEPTANCE=$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/check.yml/runs?head_sha=$GITHUB_SHA&per_page=100" \
-            --jq '[.workflow_runs[] | select(.head_sha == env.GITHUB_SHA and .event == "push" and .head_branch == "main" and .status == "completed" and .conclusion == "success")] | length')
-          [ "$ACCEPTANCE" -ge 1 ] || {
-            echo "no successful Check workflow run found for $GITHUB_SHA on main"; exit 1;
+          # Main acceptance runs on the pull request into main. A stable tag
+          # names that pull request's merge commit, which must keep the head's
+          # tree, and main must not have moved after the run began, so the run
+          # tested exactly this merge and no second run on main is needed.
+          HEAD_SHA=$(git rev-parse --verify --quiet "$GITHUB_SHA^2^{commit}") || {
+            echo "stable tag must be on the merge commit of a pull request into main"; exit 1;
+          }
+          export HEAD_SHA
+          HEAD_TREE=$(git rev-parse "$HEAD_SHA^{tree}")
+          TAG_TREE=$(git rev-parse "$GITHUB_SHA^{tree}")
+          [ "$HEAD_TREE" = "$TAG_TREE" ] || {
+            echo "the merge changed the tested code; merge a pull request whose branch already holds main"; exit 1;
+          }
+          BASE_TIME=$(git log -1 --format=%ct "$GITHUB_SHA^1")
+          RUNS=$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/check.yml/runs?head_sha=$HEAD_SHA&event=pull_request&per_page=100" \
+            --jq '.workflow_runs[] | select(.head_sha == env.HEAD_SHA and .event == "pull_request" and .status == "completed" and .conclusion == "success") | "\(.id) \(.created_at | fromdateiso8601)"')
+          ACCEPTED=0
+          while read -r RUN CREATED; do
+            # A run that began before main's last move tested a different merge.
+            [ -n "$RUN" ] && [ "$BASE_TIME" -le "$CREATED" ] || continue
+            # Only main acceptance runs Change scope; a title or body edit skips every job.
+            SCOPE=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$RUN/jobs?per_page=100" \
+              --jq '[.jobs[] | select(.name == "Change scope" and .conclusion == "success")] | length')
+            [ "$SCOPE" -ge 1 ] && { ACCEPTED=1; break; }
+          done <<< "$RUNS"
+          [ "$ACCEPTED" = 1 ] || {
+            echo "no successful main acceptance run for $HEAD_SHA began after main last moved;" \
+              "re-running cannot help (it keeps the old start time); tag a new release merge whose run began after main's last change"; exit 1;
           }
       - uses: ./.github/actions/setup
       - name: Verify runtime pins

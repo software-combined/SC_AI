@@ -53,29 +53,24 @@ class NativePackageUpgradeTests(unittest.TestCase):
             dialog = mock.MagicMock()
             dialog.choose.return_value = 'resume'
             dialog.Progress.return_value.__enter__.return_value.cancelled = False
-            restart = mock.Mock()
-            # A handled optional offer may choose Later; no repair shutdown is implied.
-            restart.offer.return_value = True
             diagnostics = SimpleNamespace(_key_private=None, _provider_defs=lambda:
                 SimpleNamespace(unhandled=lambda *_: []))
-            owners = dict(native_dialog=dialog, setup_restart=restart,
-                diagnostics=diagnostics, desktop_menu=mock.Mock(),
-                claude_desktop_platform=SimpleNamespace(is_running=mock.Mock(return_value=True)),
-                codex_desktop_switch=SimpleNamespace(CODEX=object()))
+            owners = dict(native_dialog=dialog, diagnostics=diagnostics, desktop_menu=mock.Mock())
             original, invoke, key_flow = native.load, native.run_installer, native._key
             commands = []
             def child(command, **kwargs):
                 commands.append(command)
                 self.assertEqual(command[command.index('--feed') + 1],
                                  (source / 'payload/latest.json').as_uri())
-                self.assertFalse(set(command) & {'--repair', '--setup', '--choose-clients', '--clients'})
+                self.assertFalse(set(command) & {'--repair', '--setup', '--clients'})
                 args = install_mod.build_parser().parse_args(command[2:])
                 def fetch(url):
                     self.assertTrue(url.startswith('file:'), 'package attempted a remote feed')
                     return install_mod._svc.fetch(url)
-                with mock.patch.dict(os.environ, kwargs['env']):
-                    return SimpleNamespace(returncode=install_mod.do_install(args, _fetch=fetch, _run=_ok_run),
-                                           stdout='', stderr='')
+                output = io.StringIO()
+                with mock.patch.dict(os.environ, kwargs['env']), contextlib.redirect_stdout(output):
+                    code = install_mod.do_install(args, _fetch=fetch, _run=_ok_run)
+                return SimpleNamespace(returncode=code, stdout=output.getvalue(), stderr='')
             env = dict(HOME=str(user), USERPROFILE=str(user), ROUTER_NO_KEY_WINDOW='1',
                        CLAUDE_CONFIG_DIR=str(root / 'claude'), OPENROUTER_API_KEY='')
             no_prompt = mock.Mock(side_effect=AssertionError('saved key must not reopen access'))
@@ -84,8 +79,9 @@ class NativePackageUpgradeTests(unittest.TestCase):
                     mock.patch.object(native, 'load', side_effect=lambda name: owners.get(name) or original(name)), \
                     mock.patch.object(native, 'retained', return_value=source), \
                     mock.patch.object(native, 'run_installer', side_effect=lambda *args: invoke(*args, run=child)), \
-                    mock.patch.object(native, '_key', side_effect=lambda *args: key_flow(*args, run=no_prompt)), \
-                    mock.patch.object(native, '_check'), \
+                    mock.patch.object(native, '_key', side_effect=lambda *args, **kwargs:
+                                      key_flow(*args, run=no_prompt, **kwargs)), \
+                    mock.patch.object(native, 'status', return_value={'serving': True}), \
                     mock.patch.object(install_mod, 'platform_backend') as backend, \
                     mock.patch.object(install_mod._diag, '_key_private', return_value=True), \
                     mock.patch.object(install_mod._delivery, 'close_assistants') as close, \
@@ -114,21 +110,20 @@ class NativePackageUpgradeTests(unittest.TestCase):
                 config.write_bytes(restored.encode())
                 install_mod._codex_config.drop_client(home, 'codex', expected=receipt)
                 (home / 'current').unlink()
-                owners['claude_desktop_platform'].is_running.reset_mock()
                 self.assertEqual(native.main(argv), 0)
                 self.assertEqual((home / 'current').read_text().strip(), '1.0.1')
                 self.assertEqual(progress.read_bytes(), saved_progress)
                 close.assert_not_called()
                 dialog.choose.assert_not_called()
-                dialog.dialog.ask.assert_not_called()
                 dialog.Progress.assert_called_with(home=home)
-                self.assertEqual(restart.offer.call_count, 3)
-                restart.offer.assert_called_with(home, restart.target.return_value, True)
-                self.assertEqual(restart.target.call_count, 3)
+                dialog.confirm.assert_not_called()
+                dialog.confirm_result.assert_not_called()
+                # One closing notice per run; the same-version repeat is only "up to date".
+                ready = 'SCG Router is ready. Quit and reopen Codex to use it.'
+                self.assertEqual([call.args[0] for call in dialog.message.call_args_list],
+                                 [ready, 'SCG Router is up to date.', ready])
                 self.assertEqual(owners['desktop_menu'].start.call_args_list,
                                  [mock.call(home, source, after_update=True)] * 3)
-                owners['claude_desktop_platform'].is_running.assert_called_once_with(
-                    'win32', app=owners['codex_desktop_switch'].CODEX)
             self.assertEqual(len(commands), 3)
             no_prompt.assert_not_called()
             self.assertEqual(key.read_text(), 'synthetic-saved-key\n')
@@ -155,7 +150,7 @@ class NativePackageUpgradeTests(unittest.TestCase):
             dialog, original, invoke = mock.MagicMock(), native.load, native.run_installer
             child = mock.Mock(return_value=SimpleNamespace(returncode=1))
             with mock.patch.object(native, 'load', side_effect=lambda name: dialog
-                    if name in ('native_dialog', 'setup_restart') else original(name)), \
+                    if name == 'native_dialog' else original(name)), \
                     mock.patch.object(native, 'retained', return_value=source), \
                     mock.patch.object(native, 'run_installer', side_effect=lambda *args: invoke(*args, run=child)):
                 for action in ('install', 'resume'):

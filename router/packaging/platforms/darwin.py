@@ -7,17 +7,16 @@ packaging/launchd.py (Plan 103), loaded here the way linux.py loads
 systemd.py; service only supplies the patchable seams and the labels.
 """
 import os
+import sys
 from pathlib import Path
 
-import importlib.util
-
-_spec = importlib.util.spec_from_file_location(
-    'router_launchd', Path(__file__).resolve().parent.parent / 'launchd.py')
-_launchd = importlib.util.module_from_spec(_spec)
-_spec.loader.exec_module(_launchd)
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+import loader  # noqa: E402
+_launchd = loader.load(Path(__file__).resolve().parent.parent / 'launchd.py')
+_platforms = loader.load(Path(__file__).with_name('__init__.py'), 'router_platforms')
 
 
-class Backend:
+class Backend(_platforms.NoRepair):
     name = 'darwin'
 
     def __init__(self, svc, run):

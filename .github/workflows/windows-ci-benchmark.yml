@@ -205,35 +205,6 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
-  installer-python39:
-    name: Installer (Python 3.9)
-    needs: changes
-    if: needs.changes.outputs.installer == 'true'
-    # Pinned: actions/python-versions publishes no 3.9 build for Ubuntu 26.04,
-    # which ubuntu-latest now resolves to; 24.04 still has 3.9.25.
-    defaults:
-      run:
-        working-directory: ${{ inputs.arm == 'before' && '.' || 'router' }}
-    runs-on: ubuntu-24.04
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
-        with:
-          persist-credentials: false
-          ref: ${{ inputs.source_ref || github.sha }}
-          repository: ${{ inputs.source_repository || github.repository }}
-      - uses: ./.github/actions/setup
-        with:
-          python-version: "3.9.25"
-      - *source-shell
-      - *source-shell-path
-      - *source-shell-check
-      - name: Resolved runner environment
-        shell: bash
-        run: python tools/ci_environment.py
-      - name: Installer surface imports on 3.9
-        run: python tools/check_installer_python39.py
-
   windows-standard:
     name: Windows standard user (${{ matrix.suite }})
     needs: changes
@@ -416,7 +387,7 @@ jobs:
     # A diagnostic branch must never emit the release gate's Test name.
     name: Diagnostic acceptance (control)
     # Legacy experiments share common results. Source comparisons run independent paths.
-    needs: [changes, installer-macos, installer-windows, installer-python39, desktop-menus, plugin-schedulers, hook-adapter, unit-suite, windows-standard, windows-control-native]
+    needs: [changes, installer-macos, installer-windows, desktop-menus, plugin-schedulers, hook-adapter, unit-suite, windows-standard, windows-control-native]
     if: ${{ !cancelled() && (!inputs.source_ref || inputs.layout == 'combined') }}
     defaults:
       run:
@@ -434,9 +405,8 @@ jobs:
           python3 - <<'PY'
           import json, os
           needs = json.loads(os.environ['NEEDS'])
-          required = {'changes', 'installer-macos', 'installer-windows', 'installer-python39',
-                      'desktop-menus', 'plugin-schedulers', 'hook-adapter', 'unit-suite',
-                      'windows-standard'}
+          required = {'changes', 'installer-macos', 'installer-windows', 'desktop-menus',
+                      'plugin-schedulers', 'hook-adapter', 'unit-suite', 'windows-standard'}
           required |= {'control': {'windows-control-native'},
                        'candidate': {'windows-native', 'windows-native-aggregate'}}[os.environ['ARM']]
           if set(needs) != required:
@@ -528,7 +498,7 @@ jobs:
 
   candidate-test:
     name: Diagnostic acceptance (candidate)
-    needs: [changes, installer-macos, installer-windows, installer-python39, desktop-menus, plugin-schedulers, hook-adapter, unit-suite, windows-standard, windows-native, windows-native-aggregate]
+    needs: [changes, installer-macos, installer-windows, desktop-menus, plugin-schedulers, hook-adapter, unit-suite, windows-standard, windows-native, windows-native-aggregate]
     if: ${{ !cancelled() && (!inputs.source_ref || inputs.layout == 'partitioned') }}
     defaults:
       run:

@@ -176,7 +176,7 @@ class NativeReleaseWorkflowTests(unittest.TestCase):
         command = release.split('      - name: Native packaging contracts\n', 1)[1]
         command = command.split('        run: ', 1)[1].splitlines()[0]
         check = WORKFLOW.with_name('check.yml').read_text()
-        windows = check.split('  installer-windows:\n', 1)[1].split('  installer-python39:\n', 1)[0]
+        windows = check.split('  installer-windows:\n', 1)[1].split('  windows-standard:\n', 1)[0]
         steps = {block.splitlines()[0]: block.rstrip().splitlines()[1:]
                  for block in windows.split('      - name: ')[1:]}
         for name, run in (

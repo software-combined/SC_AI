@@ -4,4 +4,4 @@ appdir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 resources="$appdir/Resources"
 export PATH="$resources/gui/bin:$PATH"
 exec "$resources/runtime/python/bin/python3.14" \
-  "$resources/router/packaging/native_setup.py" --resources "$resources" "$@"
+  "$resources/router/packaging/native_setup.py" --resources "$resources" --action install "$@"

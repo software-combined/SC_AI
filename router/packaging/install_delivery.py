@@ -1,5 +1,4 @@
 """One post-install delivery step, including same-version and desktop attaches."""
-import importlib.util
 import json
 import os
 import shutil
@@ -9,16 +8,18 @@ import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from native_payload import Deferred  # noqa: E402,F401 (install.main converts it to exit code 0)
+import loader  # noqa: E402
+
 
 def _load(name):
-    spec = importlib.util.spec_from_file_location(
-        'router_delivery_' + name, Path(__file__).with_name(name + '.py'))
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+    return loader.load(Path(__file__).with_name(name + '.py'))
 
 
-close_assistants = _load('repair_ui').close_assistants
+def _host():
+    platforms = loader.load(Path(__file__).parent / 'platforms' / '__init__.py', 'router_platforms')
+    return platforms.host(_load('service'))
 
 
 def run_logged(home, origin, task, launch):
@@ -68,29 +69,40 @@ def result(home, delivery, successful, cancelled=False):
     state = service._state.read(service._state.path(home))
     if not isinstance(state, dict):
         return
-    components = state.get('component_repairs')
-    if not isinstance(components, dict):
-        components = state['component_repairs'] = {}
-    components['assistants'] = assistant_status(home, state, delivery.get('python'))
-    if delivery.get('maintenance_done'):
-        status.verified(state, delivery['latest'], delivery['feed'], status.channel(home), None)
+    assistants = assistant_status(home, state, delivery.get('python'))
     current = service.current_version(home)
-    repaired = successful and components.get('assistants') == 'ready' and 'failed' not in components.values()
-    status.record(state, error=None if cancelled else '' if successful else 'installer_failed',
-                  applied=current if successful else None, repaired=repaired)
-    service._write_state(home, state)
+
+    def record(state):
+        components = status.set_components(state, assistants=assistants)
+        if delivery.get('maintenance_done'):
+            status.verified(state, delivery['latest'], delivery['feed'], status.channel(home), None)
+        repaired = successful and assistants == status.READY and status.FAILED not in components.values()
+        status.record(state, error=None if cancelled else '' if successful else 'installer_failed',
+                      applied=current if successful else None, repaired=repaired)
+    service._state.update(home, record, service._atomic_write)
 
 
 def assistant_status(home, state, python=None):
+    status = _load('update_status')
     report = _load('service').load('router_delivery_classification',
         Path(__file__).resolve().parents[1] / 'tools/classify_attachments.py').classify(home, python=python)
     entries = report.get('clients', {})
     if report.get('receipt') == 'readable' and entries:
         owned = all(row.get('classification') == 'owned' for row in entries.values())
-        return 'ready' if owned else 'failed'
-    elif report.get('receipt') == 'missing' and state.get('clients') == 'none':
-        return 'ready'
-    return 'failed' if report.get('receipt') == 'conflict' else 'unknown'
+        return status.READY if owned else status.FAILED
+    elif report.get('receipt') == 'missing' and _load('client_choice').saved_clients(
+            home, state, _load('codex_config')) == 'none':
+        return status.READY  # Nothing is attached and none is wanted: nothing to verify.
+    return status.FAILED if report.get('receipt') == 'conflict' else status.UNKNOWN
+
+
+def close_assistants(home):
+    """Repair asks to close assistants only when an attachment needs rewriting."""
+    try:
+        owned = assistant_status(home, {}) == _load('update_status').READY
+    except (OSError, ValueError):
+        owned = False  # An unknown classification keeps the close question.
+    return _load('repair_ui').close_assistants(home, owned=owned)
 
 
 def clients(home, state):
@@ -109,81 +121,67 @@ def clients(home, state):
 def _management(source, skills, state, attached, run):
     if not (source / '.codex-plugin/plugin.json').is_file():
         return
-    # The router management plugin intentionally has its own marketplace.
-    # It must not join or rename the existing SCG plugins marketplace.
-    skills.MARKETPLACE = 'scg-router-management'
     with tempfile.TemporaryDirectory() as temporary:
         plugin = Path(temporary) / 'scg-openrouter'
         plugin.mkdir()
         for name in ('.codex-plugin', '.claude-plugin', 'skills'):
             shutil.copytree(source / name, plugin / name)
+        # The router management plugin intentionally has its own marketplace.
+        # It must not join or rename the existing SCG plugins marketplace.
         skills.sync(state, plugin.parent, base=skills.shared_base() / 'router-management',
-                    clients=attached, run=run)
+                    clients=attached, run=run, marketplace='scg-router-management')
 
 
 def maintain(home, source, state, python=None, backend=None):
     """Maintenance does not read or change any assistant attachment."""
     if not (source / 'packaging/native_controller.py').is_file():
         return None  # Older bundles and the small installer fixtures have no controller.
-    components = state.get('component_repairs')
-    if not isinstance(components, dict):
-        components = state['component_repairs'] = {}
-    service = _load('service')
+    service, status, results = _load('service'), _load('update_status'), {}
     step = 'controller'
     selected = None
     try:
         selected = _load('native_controller').install(home, source).parent.parent
-        components[step] = 'ready'
+        results[step] = status.READY
         step = 'updater_launcher'
         service.install_launcher(home, selected)
         if (selected / 'packaging/task_launch.py').is_file():
             service.install_task_launcher(home, selected)
-        components[step] = 'ready'
+        results[step] = status.READY
         step = 'controls_launchers'
         copied = 0
         for name in ('native_launch.py', 'desktop_launch.py'):
             if (selected / 'packaging' / name).is_file():
                 service._install_home_file(home, selected, name)
                 copied += 1
-        components[step] = 'ready' if copied == 2 else 'unknown'
+        results[step] = status.READY if copied == 2 else status.UNKNOWN
         repair = getattr(backend, 'repair_updates', None)
         if repair is not None and (home / 'current').exists():
             step = 'scheduler'
             repair(python, home)
-            components[step] = 'ready'
+            results[step] = status.READY
     except (OSError, ValueError, KeyError, TypeError, SystemExit, subprocess.SubprocessError):
-        components[step] = 'failed'
+        results[step] = status.FAILED
         print('Automatic updates need repair; run the current public setup again.')
+    status.set_components(state, **results)  # The caller's copy stays current for its later writes.
     try:
-        service._write_state(home, state)
+        service._state.update(home, lambda saved: status.set_components(saved, **results), service._atomic_write)
     except OSError:
         print('The maintenance result could not be saved; run setup again.')
     return selected
 
 
 def prepare(home, tarball, latest, manifest, state, python, backend, delivery=None):
-    """Verify maintenance before client discovery; Windows activation waits."""
+    """Verify maintenance before client discovery; a backend may stage it for later activation."""
     if 'packaging/native_controller.py' not in manifest.get('files', {}):
         return None
     with tempfile.TemporaryDirectory(prefix='scg-maintenance-') as temporary:
         source = Path(temporary)
         _load('service').safe_extract(tarball, source)
         _load('bundle').check_identity(latest['version'], manifest, source)
-        if delivery is not None and delivery.get('platform') == 'win32':
-            owner = _load('windows_installation')
-            try:
-                resources = None
-                if delivery.get('repair_version') and _load('bundle').newer(delivery['repair_version'], latest['version']):
-                    resources = _load('native_resources').for_version(home, delivery['repair_version'])
-                    doc = _load('native_payload').metadata(resources)
-                    if doc['version'] != delivery['repair_version']:
-                        raise ValueError('Retained repair resources do not match')
-                    source = _load('service').current_release_dir(home)
-                    latest = dict(version=doc['version'], sha256=doc['sha256'])
-                delivery['cohort'] = owner.prepare(home, source, latest, delivery['feed'], delivery.get('fetch'), resources=resources)
-            except (OSError, ValueError):
-                owner.defer(home, latest['version'], 'bundle_invalid')
-            return delivery['cohort']['source']
+        if delivery is not None:
+            staged = backend.prepare_maintenance(home, source, latest, delivery)
+            if staged is not None:
+                return staged
         return maintain(home, source, state, python, backend)
 
 
@@ -199,15 +197,14 @@ def recover(home, delivery):
     if delivery.get('automatic') and (Path(home) / '.router-removed').exists():
         print('deferred: SCG Router was removed; open setup to install it again')
         raise SystemExit(0)
-    if delivery.get('platform') == 'win32' and not delivery.get('dry_run'):
-        owner = _load('windows_installation')
-        if owner.pending(home) and owner.restore(home, delivery['backend']) == 'failed':
-            raise SystemExit('Installation recovery needs repair. Open SCG Router to retry.')
+    backend = delivery.get('backend')
+    if backend and not delivery.get('dry_run') and backend.recover_interrupted(home) == _load('update_status').FAILED:
+        raise SystemExit('Installation recovery needs repair. Open SCG Router to retry.')
 
 
 def recover_current(home, delivery, python, version):
     """Retain the pending-task protocol for legacy runtime-only installations."""
-    if (delivery and delivery.get('platform') == 'win32' and not delivery.get('dry_run')
+    if (delivery and not delivery.get('dry_run')
             and not delivery['latest'].get('native_resources') and not os.environ.get('SCG_NATIVE_RESOURCES')
             and not any((Path(home) / name).exists() for name in ('setup-current', 'control-version'))):
         delivery['backend'].recover_pending(python, home,
@@ -232,7 +229,8 @@ def _finalize(home, delivery):
             pass
     delivery.pop('installed_version', None)
     delivery['maintenance_done'] = False
-    if owner.restore(home, delivery['backend']) == 'restored' and _load('service').current_version(home) != '0.0.0':
+    restored = owner.restore(home, delivery['backend']) == _load('update_status').RESTORED
+    if restored and _load('service').current_version(home) != '0.0.0':
         owner.defer(home, prepared['version'])
     raise SystemExit('SCG Router installation did not finish. Updates will retry; open SCG Router if repair is needed.')
 
@@ -241,16 +239,18 @@ def finish(home, run=subprocess.run, native=None, fetch=None, *,
            maintenance_done=False, controller_source=None, python=None, backend=None):
     """Delivery failures stay separate from router health and are retryable."""
     home = Path(home)
-    if sys.platform == 'win32':
-        if native and 'latest' in native and not _load('native_resources').deliver(home, native['latest'], native['feed'], fetch):
-            return
+    finished = (backend or _host()).finish_maintenance(home, native, fetch)
+    if finished is False:
+        return
+    if finished:
         maintenance_done, native = True, None
     try:
         version = (home / 'current').read_text().strip()
         if Path(version).name != version:
             raise ValueError('invalid release pointer')
         source = home / 'releases' / version
-        state = json.loads((home / 'mixed-router-state.json').read_text())
+        state_mod = _load('service')._state
+        state = state_mod.read_strict(state_mod.path(home))
         if not maintenance_done:
             controller_source = maintain(home, source, state, python, backend)
         source = controller_source or source
@@ -266,7 +266,14 @@ def finish(home, run=subprocess.run, native=None, fetch=None, *,
 
 
 def run_install(args, install, *, run, fetch):
-    """A refused attachment cannot suppress independent maintenance delivery."""
+    """A refused attachment cannot suppress independent maintenance delivery.
+
+    `delivery` is the one record shared by this run's steps. Created here:
+    `fetch`, `dry_run`, `automatic`. The installer adds `python`, `backend`,
+    `latest`, `feed`, `repair_version`, `controller_source`, `maintenance_done`
+    and, once health is verified, `installed_version`. A backend that stages
+    maintenance adds `cohort`; `_finalize` completes or restores it.
+    """
     automatic = os.environ.pop('ROUTER_AUTOMATIC_UPDATE', None) == '1'
     delivery, rc = dict(fetch=fetch, dry_run=args.dry_run, automatic=automatic), None
     try:

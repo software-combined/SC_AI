@@ -95,10 +95,11 @@ class DesktopDeliveryTests(unittest.TestCase):
                               if url.endswith('latest.json') else data)
             real = installer._delivery._load
             owner = self.resources
+            backend = mock.Mock()
+            backend.finish_maintenance.return_value = None  # The shared finish delivers the menu.
             with self.shortcuts(owner), mock.patch.object(installer._delivery, '_load',
                     side_effect=lambda name: owner if name == 'native_resources' else real(name)), \
-                    mock.patch.object(installer, 'platform_backend', return_value=mock.Mock()), \
-                    mock.patch.object(installer._delivery, 'sys', SimpleNamespace(platform='linux')), \
+                    mock.patch.object(installer, 'platform_backend', return_value=backend), \
                     contextlib.redirect_stdout(io.StringIO()):
                 self.assertEqual(installer.do_install(args, _fetch=fetch), 0)
             self.assertTrue(owner.ready(home))
@@ -125,3 +126,15 @@ class DesktopDeliveryTests(unittest.TestCase):
             fetch.assert_not_called()
             self.assertEqual((home / 'setup-current').read_bytes(), pointer)
             self.assertEqual((home / 'desktop-delivery.json').read_bytes(), record)
+
+    def test_management_plugin_keeps_its_own_marketplace(self):
+        delivery, skills = module('install_delivery'), module('agent_skills')
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary)
+            for name in ('.codex-plugin', '.claude-plugin', 'skills'):
+                (source / name).mkdir()
+            (source / '.codex-plugin/plugin.json').write_text('{}')
+            with mock.patch.object(skills, 'sync') as sync:
+                delivery._management(source, skills, {}, ['codex'], run=None)
+        self.assertEqual(sync.call_args.kwargs['marketplace'], 'scg-router-management')
+        self.assertEqual(skills.MARKETPLACE, 'scg-agent-plugins')

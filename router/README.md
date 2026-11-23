@@ -5,12 +5,11 @@ Switch models mid-thread from the picker. Keep the same task and its history.
 It also delivers the [SCG agent plugins](../plugins/README.md).
 
 Install through the [staff download page](https://hub.softwarecombined.com/install).
-See [setup](../docs/setup.md), [desktop controls](../docs/desktop-menu.md),
-[compatibility](../docs/compatibility.md), and [operations](../docs/operations.md).
+See [setup](../docs/start/setup.md), [desktop controls](../docs/start/desktop-menu.md),
+[compatibility](../docs/release/compatibility.md), and [operations](../docs/README.md#operations).
 
-Source commands run from this directory. Python 3.14 or later is required;
-the runtime uses the standard library only. Installer entrypoints remain
-compatible with Python 3.9.
+Source commands run from this directory. Python 3.14 or later is required
+for the runtime and the installer; both use the standard library only.
 
 ```sh
 python3.14 tools/plugin_verification.py --base origin/development --run
@@ -24,7 +23,7 @@ This creates an artifact and does not install or publish it.
 The source layout differs from the installed layout: release bundles retain
 `ai_router/`, `packaging/`, `tools/`, and `plugins/` at their top level.
 Existing runtime names, user state, feed signing trust, and desktop controls
-remain compatible. See [repository transition](../docs/repository-transition.md).
+remain compatible. See [architecture](../docs/ARCHITECTURE.md).
 
 Contribute through [the repository rules](../CONTRIBUTING.md).
 Router changes follow [the Router changelog](CHANGELOG.md) and version marker

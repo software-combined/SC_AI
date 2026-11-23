@@ -66,9 +66,10 @@ def plugins_available(client, names, run=subprocess.run, which=shutil.which, rea
 def choices_applied(home):
     """Saved answers need matching receipts before setup can be Ready."""
     try:
-        state = json.loads((Path(home) / 'mixed-router-state.json').read_text())
+        state_mod = load('service')._state
+        state = state_mod.read_strict(state_mod.path(home))
         attached = load('codex_config').read_receipt(home).get('clients', {})
-        return (not load('service')._state.setup_pending(state)
+        return (not state_mod.setup_pending(state)
                 and not load('client_choice').mode_flags(state, attached))
     except (OSError, ValueError, TypeError, AttributeError):
         return False
@@ -81,16 +82,15 @@ def check(home, source, status, progress, run=subprocess.run):
     checks = {}
     reasons = {}
     for client in clients:
-        cli = 'claude' if client == 'claude-desktop' else client
-        if cli not in ('codex', 'claude'):
-            continue
+        if client not in ('codex', 'claude'):
+            continue  # Claude desktop keeps its own sign-in, so no reply reaches the router.
         checks[client] = {
-            'reply_seen': successful_reply(home, progress.get('started', float('inf')), cli),
-            'plugins_available': bool(names) and plugins_available(cli, names, run=run, reasons=reasons),
+            'reply_seen': successful_reply(home, progress.get('started', float('inf')), client),
+            'plugins_available': bool(names) and plugins_available(client, names, run=run, reasons=reasons),
             'fresh_session_confirmed': client in progress.get('confirmed_clients', []),
         }
     applied = choices_applied(home)
-    ready = (applied and bool(checks) and status.get('serving') is True
+    ready = (applied and bool(clients) and status.get('serving') is True
              and status.get('service_key_usable') is not False) and all(
         all(facts.values()) for facts in checks.values())
     return {'ready': ready, 'clients': checks, 'discovery': reasons, 'choices_applied': applied}

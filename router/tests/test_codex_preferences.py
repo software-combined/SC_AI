@@ -4,7 +4,6 @@ The served catalogue never carries Ultra, no-subscription installs seed the
 startup model, all installs manage [desktop], and a detach puts the prior
 desktop values back.
 """
-import importlib.util as _ilu
 import json
 import os
 import subprocess
@@ -21,12 +20,10 @@ from tests.install_fixtures import (
     run_install,
     static_fetch,
 )
+from tests.loading import load
 
 _ROOT = Path(__file__).resolve().parents[1]
-_spec = _ilu.spec_from_file_location('codex_config_under_test',
-                                     _ROOT / 'packaging' / 'codex_config.py')
-codex_config = _ilu.module_from_spec(_spec)
-_spec.loader.exec_module(codex_config)
+codex_config = load(_ROOT / 'packaging' / 'codex_config.py', 'codex_config_under_test')
 
 BLOCK = ('# BEGIN local mixed model picker\n'
          'model_catalog_json = "/tmp/x/mixed-models.json"\n'

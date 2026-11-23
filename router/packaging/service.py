@@ -31,21 +31,17 @@ except ImportError:       # pragma: no cover - POSIX
 
 import sys
 
-import importlib.util  # noqa: E402
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import loader  # noqa: E402
 
 
 def load(name, filename):
-    """Load one sibling module from its file path (Plan 123).
+    """Return the shared module for `filename`, executing it on first use.
 
-    The single 3.9-safe loader for every packaging module: the
-    spec-from-file + module_from_spec + exec_module sequence.
     Callers resolve `filename` against their own __file__ so relocated
     (installed) trees keep working.
     """
-    spec = importlib.util.spec_from_file_location(name, filename)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+    return loader.load(filename, name)
 
 
 _launchd = load('router_launchd', Path(__file__).resolve().parent / 'launchd.py')
@@ -338,17 +334,17 @@ def _updater():
 
 
 def _read_failures(home):
-    """Update-failure state (Plan 131: owned by updater.py)."""
+    """Update-failure state, read through the updater."""
     return _updater()._read_failures(home)
 
 
 def update_failures(home):
-    """Failed attempts per version (Plan 131: owned by updater.py)."""
+    """Failed attempts per version."""
     return _updater().update_failures(home)
 
 
 def record_update_failure(home, version):
-    """Count a failed attempt (Plan 131: owned by updater.py)."""
+    """Count a failed attempt; update_status owns the record."""
     return _updater().record_update_failure(home, version)
 
 

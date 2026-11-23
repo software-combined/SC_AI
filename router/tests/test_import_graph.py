@@ -29,6 +29,19 @@ LAZY_IMPORT_CEILING = 29
 RUNTIME_IMPORTERS = {'ai_router/router.py', 'ai_router/ingress.py',
                      'ai_router/__main__.py'}
 
+# The runtime may not reach into its installer: packaging loads ai_router
+# files by path, never the reverse. These are the known exceptions, pinned so
+# a new path into packaging/ fails. `*` is a segment computed at run time; a
+# local loader's constant arguments fill it in.
+PACKAGING_PATHS = {
+    ('ai_router/candidate_evidence.py', 'packaging/VERSION'),
+    ('ai_router/key_dialog.py', 'packaging/client_dialog.py'),
+    ('ai_router/runtime.py', 'packaging/VERSION'),
+    ('ai_router/work_account.py', 'packaging/client_dialog'),
+    ('ai_router/work_account.py', 'packaging/download_oauth'),
+    ('ai_router/work_account.py', 'packaging/native_dialog'),
+}
+
 
 def _modules():
     found = {}
@@ -94,6 +107,51 @@ def _graph():
     return known, graph, eager, lazy_all, lazy_by_module
 
 
+def _path_segments(node):
+    """Segments of a `a / 'b' / c` chain; computed ones read `*`."""
+    if isinstance(node, ast.BinOp) and isinstance(node.op, ast.Div):
+        return _path_segments(node.left) + _path_segments(node.right)
+    if isinstance(node, ast.Constant) and isinstance(node.value, str):
+        return node.value.split('/')
+    return ['*']
+
+
+def _packaging_paths():
+    """(ai_router file, packaging path) for every path built into packaging/."""
+    # ponytail: sees `/` path chains (including 'a/b' literals) only; add
+    # joinpath, os.path.join or Path('packaging', ...) forms when one appears.
+    found = set()
+    for path in sorted((ROOT / 'ai_router').rglob('*.py')):
+        rel = path.relative_to(ROOT).as_posix()
+        tree = ast.parse(path.read_text())
+        parents = {child: node for node in ast.walk(tree) for child in ast.iter_child_nodes(node)}
+        loaders = {}
+        for node in ast.walk(tree):
+            chain = isinstance(node, ast.BinOp) and isinstance(node.op, ast.Div)
+            if not chain or isinstance(getattr(parents.get(node), 'op', None), ast.Div):
+                continue
+            segments = _path_segments(node)
+            if 'packaging' not in segments:
+                continue
+            target = '/'.join(segments[segments.index('packaging'):])
+            owner = parents.get(node)
+            while owner is not None and not isinstance(owner, ast.FunctionDef):
+                owner = parents.get(owner)
+            if '*' in target and owner is not None:
+                loaders.setdefault(owner.name, set()).add(target)
+            else:
+                found.add((rel, target))
+        calls = [node for node in ast.walk(tree)
+                 if isinstance(node, ast.Call) and getattr(node.func, 'id', None) in loaders]
+        for name, targets in loaders.items():
+            # A computed argument could name any file, so it pins the wildcard too.
+            args = {call.args[0].value if isinstance(call.args[0], ast.Constant)
+                    and isinstance(call.args[0].value, str) else '*'
+                    for call in calls if call.func.id == name and call.args}
+            found |= {(rel, target.replace('*', arg, 1)) for target in targets for arg in args or {'*'}}
+    return found
+
+
 def _cycles(graph):
     """Strongly connected components with more than one module."""
     index, low, on_stack, stack, comps, counter = {}, {}, {}, [], [], [0]
@@ -155,6 +213,9 @@ class ImportGraphTests(unittest.TestCase):
         self.assertLessEqual(
             len(lazy_all), LAZY_IMPORT_CEILING,
             'function-local ai_router imports grew: ' + repr(sorted(lazy_all)))
+
+    def test_ai_router_paths_into_packaging_are_pinned(self):
+        self.assertEqual(_packaging_paths(), PACKAGING_PATHS)
 
 
 if __name__ == '__main__':

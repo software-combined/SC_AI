@@ -1,4 +1,4 @@
-"""Bind owned Windows tasks to verified, retained native resources after delivery."""
+"""Bind owned scheduled tasks to verified, retained native resources after delivery."""
 import sys
 from pathlib import Path
 
@@ -8,35 +8,29 @@ from native_payload import load
 
 def reconcile(home, *, apply=True):
     """Read-only checks run unlocked; applying repeats checks under install.lock."""
-    if sys.platform != 'win32':
-        return 'inactive'
-    home, service = Path(home), load('service')
-    outcome = 'failed'
+    home, service, status = Path(home), load('service'), load('update_status')
+    platforms = service.load('router_platforms', Path(__file__).parent / 'platforms' / '__init__.py')
+    backend = platforms.host(service)
+    if not hasattr(backend, 'rebind_runtime'):
+        return status.INACTIVE  # Only a backend whose tasks run a retained runtime rebinds them.
+    outcome = status.FAILED
     try:
         resources = load('native_resources').current(home)
         doc = load('native_payload').metadata(resources)
         if doc['version'] != service.current_version(home) or not doc.get('menu_sha256'):
-            return 'deferred'
+            return status.DEFERRED
         python = str(resources / 'runtime' / doc['runtime_exec'])
-        platforms = service.load('router_rebind_platforms',
-            Path(__file__).parent / 'platforms' / '__init__.py')
-        backend = platforms.select('win32', service, service.run)
         if not apply:
-            return 'ready' if backend.runtime_matches(python, home) else 'repairable'
+            return status.READY if backend.runtime_matches(python, home) else status.REPAIRABLE
         backend.rebind_runtime(python, home)
-        outcome = 'ready'
+        outcome = status.READY
     except (Exception, SystemExit):
         pass  # Old definitions and runtimes are retained; the next check retries.
     if not apply:
         return outcome
     try:
-        state = service._state.read(service._state.path(home))
-        if isinstance(state, dict):
-            components = state.get('component_repairs')
-            if not isinstance(components, dict):
-                components = state['component_repairs'] = {}
-            components['scheduler'] = outcome
-            service._write_state(home, state)
+        service._state.update(home, lambda state: status.set_components(state, scheduler=outcome),
+                              service._atomic_write)
     except (OSError, ValueError, TypeError):
         pass
     return outcome

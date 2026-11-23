@@ -147,7 +147,7 @@ class DesktopSetupTests(unittest.TestCase):
                     mock.patch.object(desktop, '_install_switch_launcher', side_effect=installed), \
                     contextlib.redirect_stdout(io.StringIO()):
                 install_mod.do_install(args, _fetch=lambda _: b'{"version":"1.0.0"}')
-            self.assertEqual(calls, [(home, '/python3.14')])
+            self.assertEqual(calls, [(home.resolve(), '/python3.14')])
 
     def test_launcher_failures_name_the_action_and_keep_installing(self):
         desktop = install_mod._desktop_config
@@ -156,25 +156,18 @@ class DesktopSetupTests(unittest.TestCase):
         class FakeSwitchError(Exception):
             pass
 
-        def exec_module(module):
-            module.SwitchError = FakeSwitchError
-            module.subprocess = SimpleNamespace(
-                SubprocessError=subprocess.SubprocessError)
+        def install(_home, _python, action):
+            calls.append(action)
+            if action == 'start':
+                raise FakeSwitchError('already exists')
 
-            def install(_home, _python, action):
-                calls.append(action)
-                if action == 'start':
-                    raise FakeSwitchError('already exists')
-            module.install_launcher = install
-            module._load = lambda _name: SimpleNamespace(install=lambda *args: None)
-
-        spec = SimpleNamespace(loader=SimpleNamespace(exec_module=exec_module))
+        switch = SimpleNamespace(
+            SwitchError=FakeSwitchError, install_launcher=install,
+            subprocess=SimpleNamespace(SubprocessError=subprocess.SubprocessError),
+            _load=lambda _name: SimpleNamespace(install=lambda *args: None))
         output = io.StringIO()
         with mock.patch.object(desktop.sys, 'platform', 'darwin'), \
-                mock.patch.object(desktop._ilu, 'spec_from_file_location',
-                                  return_value=spec), \
-                mock.patch.object(desktop._ilu, 'module_from_spec',
-                                  return_value=SimpleNamespace()), \
+                mock.patch.object(desktop.loader, 'load', return_value=switch), \
                 contextlib.redirect_stdout(output):
             self.real_install_launcher('/router', '/python')
         self.assertEqual(calls, ['switch', 'start'])
@@ -207,8 +200,7 @@ class DesktopSetupTests(unittest.TestCase):
             desktop = install_mod._desktop_config
             with mock.patch.object(desktop, '_install_switch_launcher') as launcher, \
                     contextlib.redirect_stdout(io.StringIO()):
-                desktop.attach_current(args, install_mod._codex_config,
-                                       install_mod._write_state, python='/python3.14')
+                install_mod._attach_current(args, home, '/python3.14')
             launcher.assert_not_called()
             self.assertFalse(home.exists())
 

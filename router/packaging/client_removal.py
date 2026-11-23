@@ -4,17 +4,16 @@ No cross-client rollback: completed restores remain complete. A later failure
 keeps the service running and leaves each remaining attachment's receipt.
 """
 import hashlib
-import importlib.util
 import os
+import sys
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import loader  # noqa: E402
 
 
 def _load(name):
-    spec = importlib.util.spec_from_file_location('router_remove_' + name,
-                                                Path(__file__).with_name(name + '.py'))
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+    return loader.load(Path(__file__).with_name(name + '.py'))
 
 
 _json = _load('owned_json')
@@ -179,7 +178,7 @@ def detach_json(home, client, receipts, entry=None):
     receipts.drop_client(home, client, expected=current)
 
 
-def preflight(home, receipts):
+def preflight(home, receipts, python=None):
     if os.path.lexists(Path(home) / '.claude-profile-rotation-pending.json'):
         raise SystemExit('Choose Claude in SCG Router to recover the saved profile before removal.')
     path = receipts.receipt_path_for(home)
@@ -198,7 +197,7 @@ def preflight(home, receipts):
     for client, entry in entries.items():
         try:
             if client == 'codex':
-                before, after = receipts.removal_plan(entry_path(entry), entry)
+                before, after = receipts.removal_plan(entry_path(entry), entry, python)
                 files = [(entry_path(entry), before, after)]
             else:
                 files = json_plan(home, client, entry, receipts)
@@ -215,9 +214,9 @@ def preflight(home, receipts):
     return plans
 
 
-def remove_all(home, receipts, restore_codex):
+def remove_all(home, receipts, restore_codex, python=None):
     """All ownership checks precede every detach; service lifetime stays outside."""
-    plans = preflight(home, receipts)
+    plans = preflight(home, receipts, python)
     removed = []
     for client, entry, files in plans:
         try:

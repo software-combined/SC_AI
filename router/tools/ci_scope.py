@@ -6,39 +6,26 @@ Usage:
 
 `--installer` prints `installer=true|false`, whether a pull request can reach
 the installer, its platform backends or its tests. Only then do the macOS and
-Windows runners and the Python 3.9 import check run. `--installer-tests`
-prints the module list those runners execute, so the workflows and this file
-have one owner instead of two copies.
+Windows runners run. `--installer-tests` prints the module list those runners
+execute, so the workflows and this file have one owner instead of two copies.
 
-The path list also answers to config/installer-python-surface.txt: every file
-the installer loads or runs on its own interpreter is installer scope, so a
+Every file the installer loads or runs outside `packaging/` is listed too, so a
 change to `ai_router/winacl.py` or `tools/disable.py` cannot skip the native
 checks.
 """
 import os
 import sys
-from pathlib import Path
-
-ROOT = Path(__file__).resolve().parents[1]
-SURFACE = ROOT / 'config' / 'installer-python-surface.txt'
-
-
-def surface_paths(surface=SURFACE):
-    """Every `<mode> <path>` entry in the installer surface file."""
-    return tuple(line.split()[1] for line in surface.read_text().splitlines()
-                 if line.strip() and not line.startswith('#'))
-
 
 INSTALLER_PATHS = (
     'packaging/',
     '.github/actions/setup/',
     '.github/workflows/check.yml',
     '.github/workflows/release.yml',
-    'config/installer-python-surface.txt',
     'tests/_platform.py',
     'tests/fakes.py',
     'tests/harness.py',
     'tests/install_fixtures.py',
+    'tests/loading.py',
     'tests/windows_native_fixture.py',
     'tests/windows_shutdown_fixture.py',
     'tests/test_bootstrap.py',
@@ -106,7 +93,6 @@ INSTALLER_PATHS = (
     'tests/test_claude_profile_repair_resume.py',
     'tests/test_claude_desktop_upgrade_paths.py',
     'tests/test_install',
-    'tests/test_installer_python39.py',
     'tests/test_interpreter_resolution.py',
     'tests/test_key_prompt.py',
     'tests/test_launchd',
@@ -128,12 +114,24 @@ INSTALLER_PATHS = (
     'tests/test_windows_',
     'ai_router/key_dialog.py',
     'ai_router/key_prompt.py',
-    'tools/check_installer_python39.py',
+    # Router files the installer loads or runs.
+    'ai_router/atomic_write.py',
+    'ai_router/dialog_tool.py',
+    'ai_router/provider_defs.py',
+    'ai_router/retired_slugs.py',
+    'ai_router/state.py',
+    'ai_router/subscription_roster.py',
+    'ai_router/clients/roster.py',
+    'ai_router/winacl.py',
+    'ai_router/winsecurity.py',
+    'tools/classify_attachments.py',
+    'tools/disable.py',
+    'tools/global_instructions.py',
     'tools/ci_scope.py',
     'tools/verify_runtime_pins.py',
     'tools/run_windows_standard.ps1',
     'tools/windows_standard.py',
-) + surface_paths()
+)
 
 INSTALLER_TESTS = (
     'tests.test_update_status',
@@ -208,6 +206,7 @@ INSTALLER_TESTS = (
     'tests.test_windows_native',
     'tests.test_windows_codex',
     'tests.test_windows_dialog',
+    'tests.test_windows_shell',
     'tests.test_windows_switch_transaction',
     'tests.test_windows_native_lifecycle',
     'tests.test_windows_process_generation',
@@ -239,7 +238,6 @@ INSTALLER_TESTS = (
     'tests.test_claude_profile_workspace_names',
     'tests.test_claude_profile_repair_resume',
     'tests.test_claude_desktop_upgrade_paths',
-    'tests.test_installer_python39',
     'tests.test_interpreter_resolution',
     'tests.test_key_prompt',
     'tests.test_launchd',

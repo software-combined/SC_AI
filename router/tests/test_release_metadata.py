@@ -11,7 +11,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 class ReleaseMetadataTests(unittest.TestCase):
     def test_runtime_file_list_matches_files(self):
-        doc = (ROOT.parent / 'docs' / 'runtime-files.md').read_text()
+        doc = (ROOT.parent / 'docs' / 'release' / 'runtime-files.md').read_text()
         listed = set(re.findall(r'`((?:ai_router|tools)/[^`]+)`', doc))
         bundled = set(_release_module().bundle_files(ROOT))
         # The page names modules, while the bundle also includes data files.

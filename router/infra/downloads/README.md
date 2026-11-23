@@ -6,9 +6,8 @@ access token. The handler requires the resource tenant's `Download` app role.
 Approved portfolio guests use the same explicit role assignment as other staff.
 
 The template creates a separate API and a CloudFront key group. It does not
-change `infra/feed.yaml` or restrict any existing download. Keep anonymous
-updates available until installed beta and stable clients can sign in, refresh
-access, update, and recover from rollback.
+change `infra/feed.yaml` or restrict any existing download. Router updates
+stay anonymous.
 
 ## Deployment prerequisites
 
@@ -43,9 +42,8 @@ returns public verification material only.
 7. Validate the exact template and artifact. Before approved deployment, inspect
    the account, region, effective identity, permissions and proposed changes.
    Use CloudFormation change-set pre-deployment validation and read its results.
-8. Read the deployed `ClientConfiguration` output. Include that public JSON as
-   `download-auth.json` in the installer and persistent controller home. Read back
-   the deployed API route, authorizer, Lambda permission, and key relationship.
+8. Read back the deployed `ClientConfiguration` output, API route, authorizer,
+   Lambda permission, and key relationship.
 
 CloudFront accepts ECDSA-256 signatures. Its SHA-256 cookie format requires
 `CloudFront-Hash-Algorithm=SHA256` alongside the policy, signature and public-key
@@ -68,46 +66,19 @@ user ID and `Download` role. A matching email address, guest status, or raw
 `Authorization` header alone grants nothing.
 See [API Gateway JWT authorization](https://docs.aws.amazon.com/apigateway/latest/developerguide/http-api-jwt-authorizer.html).
 
-## Native-client contract
+## Client
 
-`packaging/download_auth.py` exposes these calls:
+Router downloads are public, so installers and updates fetch them without
+sign-in. `packaging/download_oauth.py` provides the browser sign-in that
+work-account model access uses.
 
-| Call | Result |
-| --- | --- |
-| `configure(home)` | Validated public deployment settings from `download-auth.json`. |
-| `ensure_access(home, interactive=False)` | A `Cookie` header, or a fixed-message `SignInRequired` exception. |
-| `signin(home)` | Explicit browser sign-in, followed by the same cookie exchange. |
-| `status(home)` | Local `configured`, `signed_in`, and `access_ready` flags; expiry or a safe reason code. |
-
-The public configuration requires `version: 1`, `distribution_origin`,
-`tenant_id`, `client_id`, `scope`, and `exchange_url`. The distribution origin is
-fixed. The scope must be `api://<API application UUID>/Download.Read`. The exchange
-URL must be the deployed HTTPS API Gateway `/download-access` endpoint.
-
-The client binds IPv4 loopback on an available random port before opening the
+The sign-in binds IPv4 loopback on an available random port before opening the
 system browser. It uses authorization-code Proof Key for Code Exchange (PKCE)
 with `S256` and validates the random state before accepting the callback.
 The redirect hostname is `localhost`: Microsoft documents dynamic-port matching
 for this hostname. The listener still binds only `127.0.0.1` and checks the Host
 header. See [Microsoft redirect URI rules](https://learn.microsoft.com/en-us/entra/identity-platform/reply-url)
 and [authorization-code flow](https://learn.microsoft.com/en-us/entra/identity-platform/v2-oauth2-auth-code-flow).
-
-Refresh tokens and cookies are written atomically to `download-session.json`.
-The existing permission helpers restrict this file to the installing user.
-The Windows directory is protected before any temporary secret file is created.
-Access tokens remain in memory. Tokens and cookies never enter command arguments,
-exception text, callback logs, or status output.
-
-Persist the auth modules and their existing atomic-write and platform permission
-dependencies outside the rollback-selected release. Bind the saved session to
-the complete public configuration so a tenant or application change requires
-fresh sign-in. Background callers never open a browser. A failed refresh keeps
-the running router and its last working catalogue intact.
-
-Only attach the returned header to the exact HTTPS distribution origin. Do not
-send it to a custom feed, local file, another host, or redirected destination.
-Authentication requests reject redirects. Missing configuration and denied
-access are typed failures; neither returns an anonymous success.
 
 API Gateway renders role arrays as bracketed text. The handler still matches
 `Download` as one exact role after normalisation.
@@ -130,7 +101,7 @@ does not create the proxy or alter existing distribution behavior.
 Run the offline contract tests and template checks:
 
 ```sh
-python3.14 -m unittest tests.test_download_auth tests.test_download_oauth tests.test_download_exchange
+python3.14 -m unittest tests.test_download_oauth tests.test_download_exchange
 cfn-lint --format json infra/downloads/template.yaml
 cfn-guard validate --rules infra/downloads/access.guard --data infra/downloads/template.yaml --output-format json
 ```

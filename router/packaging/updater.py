@@ -5,6 +5,7 @@ file-based import pattern, never `import packaging.updater`. The installer
 injects its own seams after load (`bind(newer=..., verify_sha256=...,
 sync_seams=...)`); until bound, the module defaults behave the same.
 """
+import contextlib
 import hashlib
 import json
 import os
@@ -18,20 +19,17 @@ import urllib.request
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-import importlib.util
-# Bootstrap loader (Plan 123 exception): service must be spec-loaded before
-# service.load() exists, and this module stays usable when loaded directly.
-_spec = importlib.util.spec_from_file_location(
-    'packaging.service',
-    Path(__file__).resolve().parent / 'service.py')
-_svc = importlib.util.module_from_spec(_spec)
-_spec.loader.exec_module(_svc)
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import loader  # noqa: E402
+_svc = loader.load(Path(__file__).resolve().parent / 'service.py', 'packaging.service')
 _models = _svc.load('router_control_models', Path(__file__).with_name('control_models.py'))
 _resources = _svc.load('router_native_resources', Path(__file__).with_name('native_resources.py'))
 _status = _svc.load('router_update_status', Path(__file__).with_name('update_status.py'))
 _reconcile = _svc.load('router_update_reconcile', Path(__file__).with_name('update_reconcile.py'))
+_platforms = _svc.load('router_platforms', Path(__file__).with_name('platforms') / '__init__.py')
 
-MAX_VERSION_FAILURES = 3
+# install.py and diagnostics.py read this name; update_status owns the value.
+MAX_VERSION_FAILURES = _status.MAX_VERSION_FAILURES
 ANNOUNCE_TIMEOUT_S = 5
 REPLY_LIMIT = 1 << 20
 
@@ -66,22 +64,18 @@ def _record_pass(home, error=_KEEP, applied=None, latest=None, feed=None, etag=N
 
     `error` is a code from ERROR_CODES, or '' to clear the previous one;
     omitted leaves the stored value alone. The read-modify-write goes through
-    the single state writer (Plan 131): counter and pass record stay together.
+    the single state update path: counter and pass record stay together.
     """
     _svc.prune_logs(home / 'logs')
+
+    def record(state):
+        if latest is not None:
+            _status.verified(state, latest, feed, channel or _status.channel(home), etag)
+        _status.record(state, error=None if error is _KEEP else error,
+                       applied=applied, repaired=bool(applied and error == ''))
     try:
-        state = _svc._state.read(_svc._state.path(home))
+        _svc._state.update(home, record, _svc._atomic_write)
     except (AttributeError, OSError, ValueError):
-        return
-    if not isinstance(state, dict):
-        return
-    if latest is not None:
-        _status.verified(state, latest, feed, channel or _status.channel(home), etag)
-    _status.record(state, error=None if error is _KEEP else error,
-                   applied=applied, repaired=bool(applied and error == ''))
-    try:
-        _svc._write_state(home, state)
-    except OSError:
         return
 
 
@@ -95,8 +89,12 @@ def _default_verify(data, want):
     return True
 
 
-def _noop_sync():
-    return None
+def _remove_retired_session(home):
+    """Best effort: delete the refresh token an earlier download sign-in kept."""
+    path = home / 'download-session.json'
+    with contextlib.suppress(OSError):
+        if path.is_file() and not path.is_symlink():
+            path.unlink()
 
 
 def _pending_reply(state, _urlopen=None):
@@ -115,16 +113,15 @@ def _pending_reply(state, _urlopen=None):
         return json.loads(response.read(REPLY_LIMIT).decode())
 
 
-def _codex_attached(state):
+def _codex_attached(home, state):
     """True when this install serves Codex, so the offer is not a dead end.
 
-    `--clients` records the attachments; legacy state carries only `client`
-    (absence means Codex). Claude-only and service-only installs are skipped.
+    The saved choice, else the receipts, name the attachments; a missing
+    choice is not Codex. Claude-only and service-only installs are skipped.
     """
-    clients = state.get('clients')
-    if clients is not None:
-        return clients in ('codex', 'both')
-    return state.get('client', 'codex') != 'none'
+    choice = _svc.load('router_client_choice', Path(__file__).with_name('client_choice.py'))
+    codex = _svc.load('router_codex_config', Path(__file__).with_name('codex_config.py'))
+    return choice.saved_clients(home, state, codex) in ('codex', 'both')
 
 
 def _announce_new_models(home, state, _urlopen=None):
@@ -132,7 +129,7 @@ def _announce_new_models(home, state, _urlopen=None):
     try:
         if os.environ.get('ROUTER_NO_NOTICE') == '1':
             return
-        if not _codex_attached(state):
+        if not _codex_attached(home, state):
             return
         reply = _pending_reply(state, _urlopen)
         rows = reply.get('pending') or []
@@ -159,7 +156,7 @@ def _offer_notices(home):
 # Installer-owned seams; rebound via bind() after file-based load.
 newer = _default_newer
 verify_sha256 = _default_verify
-sync_seams = _noop_sync
+sync_seams = lambda: None
 
 
 def bind(**overrides):
@@ -172,15 +169,11 @@ def bind(**overrides):
 def _read_failures(home):
     """State document plus its failure map; (None, {}) when unreadable.
 
-    Update-failure owner (Plan 131), moved out of service.py. Always read
-    fresh: the child installer writes the same file, and merging onto a
-    stale copy would drop its changes.
+    Always read fresh: the child installer writes the same file, and merging
+    onto a stale copy would drop its changes.
     """
     state = _svc._state.read(_svc._state.path(home))
-    if state is None:
-        return None, {}
-    failures = state.get('update_failures')
-    return state, dict(failures) if isinstance(failures, dict) else {}
+    return (None, {}) if state is None else (state, _status.failure_counts(state))
 
 
 def update_failures(home):
@@ -190,29 +183,12 @@ def update_failures(home):
 
 def record_update_failure(home, version):
     """Count a failed attempt at one version; returns the new count."""
-    state, failures = _read_failures(home)
-    if state is None:
-        return 0
-    verified = state.get('latest_verified', {})
-    contexts = state.setdefault('update_failure_context', {})
-    if isinstance(verified, dict) and verified.get('version') == version and isinstance(contexts, dict):
-        context = {key: verified.get(key) for key in ('channel', 'source')}
-        if version in contexts and contexts[version] != context:
-            failures.pop(version, None)
-        contexts[version] = context
-    failures[version] = failures.get(version, 0) + 1
-    state['update_failures'] = failures
-    _svc._write_state(home, state)
-    return failures[version]
+    state = _svc._state.update(home, lambda doc: _status.count_failure(doc, version), _svc._atomic_write)
+    return 0 if state is None else state['update_failures'][version]
 
 
 def clear_update_failures(home, version):
-    state, failures = _read_failures(home)
-    if state is None or version not in failures:
-        return
-    del failures[version]
-    state['update_failures'] = failures
-    _svc._write_state(home, state)
+    _svc._state.update(home, lambda doc: _status.clear_failures(doc, version), _svc._atomic_write)
 
 
 def _park(home, etag, etag_path, version):
@@ -270,19 +246,8 @@ def _verified_feed(feed, body, _fetch):
     `UpdateError('feed_signature', ...)`. A `file://` feed stays
     operator-trusted without a sidecar, and must verify with one.
     """
-    import importlib.util as _ilu
-    spec = _ilu.spec_from_file_location(
-        'router_feed_verify_upd',
-        Path(__file__).resolve().parent / 'feed_verify.py')
-    fv = _ilu.module_from_spec(spec)
-    spec.loader.exec_module(fv)
-    if _FEED_VERIFY_KEY is not None:
-        fv.FEED_PUBLIC_KEY = _FEED_VERIFY_KEY
-    _fspec = _ilu.spec_from_file_location(
-        'router_feed_sig',
-        Path(__file__).resolve().parent / 'feed.py')
-    _fmod = _ilu.module_from_spec(_fspec)
-    _fspec.loader.exec_module(_fmod)
+    fv = loader.load(Path(__file__).resolve().parent / 'feed_verify.py')
+    _fmod = loader.load(Path(__file__).resolve().parent / 'feed.py')
     if feed.startswith('file://') and _FEED_VERIFY_KEY is None:
         try:
             return json.loads(body.decode())
@@ -299,13 +264,13 @@ def _verified_feed(feed, body, _fetch):
             except ValueError:
                 raise UpdateError('feed_invalid', 'feed document is not JSON')
         try:
-            return fv.checked_feed(body, sig)
+            return fv.checked_feed(body, sig, _FEED_VERIFY_KEY)
         except SystemExit as exc:
             raise UpdateError('feed_signature', str(exc) or 'feed signature rejected')
     if sig is None:
         raise UpdateError('feed_signature', 'feed signature missing')
     try:
-        return fv.checked_feed(body, sig)
+        return fv.checked_feed(body, sig, _FEED_VERIFY_KEY)
     except SystemExit as exc:
         raise UpdateError('feed_signature', str(exc) or 'feed signature rejected')
 
@@ -320,7 +285,7 @@ def _up_to_date(home, announce, etag_path=None, etag=None, feed=None):
     prefix = {'repair': 'update needs repair; current ', 'update': 'update available; current '}
     print(prefix.get(facts['required_action'], 'up to date ') + _svc.current_version(home))
     try:
-        state = json.loads((home / 'mixed-router-state.json').read_text())
+        state = _svc._state.read_strict(_svc._state.path(home))
         (announce or _announce_new_models)(home, state)
     except Exception:
         pass
@@ -410,8 +375,8 @@ def _apply_update(args, home, sleep, _fetch, _read_feed, _announce):
               f"run the installer by hand to retry")
         return 0
     try:
-        state = json.loads((home / 'mixed-router-state.json').read_text())
-    except (OSError, ValueError):
+        state = _svc._state.read_strict(_svc._state.path(home))
+    except _svc._state.StateUnreadable:
         raise UpdateError('update_failed', 'router state is missing or unreadable')
     want = _required_sha256(latest)
     try:
@@ -439,12 +404,13 @@ def _apply_update(args, home, sleep, _fetch, _read_feed, _announce):
         cmd = [sys.executable, str(installer), '--home', str(home), '--python', sys.executable]
         if args.feed:
             cmd += ['--feed', feed]
+        backend = _platforms.host(_svc)
         try:
             result = _svc.run(cmd, capture_output=True, text=True, timeout=900,
                               env=dict(os.environ, ROUTER_NO_KEY_WINDOW='1', ROUTER_AUTOMATIC_UPDATE='1'))
         except subprocess.SubprocessError as exc:
-            if (sys.platform == 'win32' and isinstance(exc, subprocess.TimeoutExpired)
-                    and _reconcile.verified_timeout(home, latest, _svc)):
+            if (isinstance(exc, subprocess.TimeoutExpired)
+                    and backend.verified_after_timeout(home, latest, _svc)):
                 _reconcile.log(home, 'install', 'timeout_verified', version=latest['version'], error='TimeoutExpired')
                 result = subprocess.CompletedProcess(cmd, 0)
             else:
@@ -460,7 +426,7 @@ def _apply_update(args, home, sleep, _fetch, _read_feed, _announce):
             # without a serving router is a release to retry and park.
             landed = (_svc.current_version(home) == latest['version']
                       and _svc.wait_version(state, latest['version'])
-                      and (sys.platform != 'win32' or _resources.ready(home)))
+                      and backend.controls_ready(home))
             if not landed:
                 _park(home, etag, etag_path, latest['version'])
                 _record_pass(home, error='installer_failed')
@@ -469,8 +435,7 @@ def _apply_update(args, home, sleep, _fetch, _read_feed, _announce):
             failure = result.returncode
         else:
             failure = 0
-    if (_svc.current_version(home) != latest['version'] or
-            sys.platform == 'win32' and not _resources.ready(home)):
+    if _svc.current_version(home) != latest['version'] or not backend.controls_ready(home):
         print('deferred: installer did not activate the requested version')
         _record_pass(home)
         return failure
@@ -496,7 +461,6 @@ def do_update(args, _fetch=None, _read_feed=None, _sleep=None, _announce=None):
     """Apply updates, reconcile attachments, and record closed-set outcomes."""
     import random
     home = Path(args.home).expanduser()
-    _svc._feed.configure_home(home)
     sleep = _sleep or time.sleep
     sleep(random.uniform(0, 10 if getattr(args, 'express_only', False) else 120))
     task, result = ('express' if getattr(args, 'express_only', False) else 'regular'), 0
@@ -506,16 +470,13 @@ def do_update(args, _fetch=None, _read_feed=None, _sleep=None, _announce=None):
             _reconcile.log(home, task, 'completed', outcome='deferred')
             print('deferred: another update check is in progress')
             return 0
+        _remove_retired_session(home)
         try:
             result = _apply_update(args, home, sleep, _fetch, _read_feed, _announce)
             return result
         except UpdateError as exc:
             _record_pass(home, error=exc.error_code)
             raise
-        except _svc._feed.SignInRequired:
-            _record_pass(home, error='download_signin_required')
-            _svc.load('router_download_notice', Path(__file__).with_name('download_notice.py')).show(home)
-            raise SystemExit('Sign in through SCG Router to download updates.') from None
         except OSError:
             _record_pass(home, error='feed_unreachable')
             raise
@@ -538,7 +499,6 @@ def do_check_update(args, _fetch=None, _read_feed=None, _sleep=None):
     document; the applying verb is `do_update`.
     """
     home = Path(args.home).expanduser()
-    _svc._feed.configure_home(home)
     feed = args.feed or _svc.channel_feed(home)
     injected = _fetch
     read_feed = _read_feed or (lambda url, etag: _svc.fetch_feed(url, etag, injected))

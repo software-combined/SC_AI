@@ -3,7 +3,6 @@
 Reuses the tests.install_fixtures rig, so test_install.py keeps tests only.
 """
 import hashlib
-import importlib.util
 import json
 import os
 import subprocess
@@ -19,6 +18,7 @@ from ai_router.catalogue import check, read_openai_mode
 from ai_router.clients import models_for
 from ai_router.registry import MODELS
 from tests.install_fixtures import _ok_run, _patch_attrs, _static_fetch, install_mod
+from tests.loading import load
 
 _ROOT = Path(__file__).resolve().parents[1]
 
@@ -26,10 +26,7 @@ _ROOT = Path(__file__).resolve().parents[1]
 def _release_bundle(tmp):
     feeddir = Path(tmp) / 'feed'
     feeddir.mkdir()
-    spec = importlib.util.spec_from_file_location(
-        'router_release', _ROOT / 'packaging' / 'release.py')
-    release_mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(release_mod)
+    release_mod = load(_ROOT / 'packaging' / 'release.py', 'router_release')
     release_mod.main(['--out', str(feeddir)])
     tarball = next(iter(feeddir.glob('*.tar.gz')))
     blob = tarball.read_bytes()
@@ -159,7 +156,7 @@ class InstallCatalogueTests(unittest.TestCase):
                                            _run=_recording_run([], fail_catalogue=True))
             self.assertFalse((home / 'releases' / version).exists())
 
-    def test_a_client_with_no_chatgpt_login_installs_without_subscription(self):
+    def test_a_client_with_no_chatgpt_login_still_installs_on_the_subscription(self):
         with tempfile.TemporaryDirectory() as tmp:
             home, _, fake_fetch = _setup(self, tmp)[:3]
             codex_home = Path(tmp) / 'fakehome' / '.codex'
@@ -168,50 +165,8 @@ class InstallCatalogueTests(unittest.TestCase):
                 {'auth_mode': 'apikey', 'OPENAI_API_KEY': 'sk-not-a-subscription'}))
             config = _install(self, tmp, home, fake_fetch, _recording_run([]))
             state = json.loads((home / 'mixed-router-state.json').read_text())
-            self.assertEqual(state.get('openai_mode'), 'none')
-            self.assertIn('model_provider = "scg_router"', config.read_text())
-            catalog = json.loads((home / 'mixed-models.json').read_text())
-            slugs = {m['slug'] for m in catalog['models']}
-            self.assertNotIn('gpt-6-luna', slugs)
-            self.assertIn('openai/gpt-6-luna', slugs)
-
-
-class DefaultModeTests(unittest.TestCase):
-    """The install-time default reads Codex's own login store, never a token."""
-    def _mode(self, document, name='auth.json'):
-        with tempfile.TemporaryDirectory() as tmp:
-            config = Path(tmp) / '.codex' / 'config.toml'
-            config.parent.mkdir(parents=True)
-            if document is not None:
-                (config.parent / name).write_text(document)
-            return install_mod._codex_config.default_mode(config)
-
-    def test_a_chatgpt_login_keeps_the_subscription_default(self):
-        self.assertEqual(self._mode(json.dumps(
-            {'auth_mode': 'chatgpt', 'tokens': {'access_token': 'x'}})),
-            'subscription')
-
-    def test_a_readable_store_without_tokens_is_no_subscription(self):
-        for document in ({'auth_mode': 'apikey', 'OPENAI_API_KEY': 'k'},
-                         {'tokens': {}},
-                         {'auth_mode': 'chatgpt', 'tokens': None},
-                         {}):
-            with self.subTest(document=document):
-                self.assertEqual(self._mode(json.dumps(document)), 'none')
-
-    def test_an_unknown_client_keeps_the_historical_default(self):
-        for document in (None, 'not json', '[]', '"text"'):
-            with self.subTest(document=document):
-                self.assertEqual(self._mode(document), 'subscription')
-
-    def test_the_default_path_is_the_codex_home_beside_the_config(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            codex_home = Path(tmp) / '.codex'
-            codex_home.mkdir()
-            (codex_home / 'auth.json').write_text(json.dumps({'tokens': {}}))
-            with mock.patch.object(Path, 'home', return_value=Path(tmp)):
-                self.assertEqual(install_mod._codex_config.default_mode(), 'none')
-
+            self.assertEqual(state.get('openai_mode'), 'subscription')
+            self.assertNotIn('model_provider = "scg_router"', config.read_text())
 
 if __name__ == '__main__':
     unittest.main()

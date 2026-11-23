@@ -3,7 +3,6 @@
 Cover old Git registration, hidden CLI paths, incomplete copies, and disabled
 choices. Keep a Git updater while Codex still uses its marketplace.
 """
-import importlib.util
 import json
 import os
 import shutil
@@ -13,15 +12,14 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
 
+from tests.loading import load
+
 ROOT = Path(__file__).resolve().parents[1]
 RUNNER = ROOT.parent / 'plugins' / 'development' / 'scg-review' / 'scripts' / 'updater.py'
 
 
 def _load(name, path):
-    spec = importlib.util.spec_from_file_location(name, path)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+    return load(path, name)
 
 
 skills = _load('router_agent_skills_delivery', ROOT / 'packaging' / 'agent_skills.py')

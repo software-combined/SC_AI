@@ -88,8 +88,8 @@ def provision(config=None, authorize=None, post=None, *, cancelled=None):
 
 def _ask(dialog, tool_path, platform_name, question, items, run):
     result = run(dialog.argv(tool_path, platform_name, question, items),
-                 stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                 text=True, timeout=key_dialog.TIMEOUT_S)
+                 stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=key_dialog.TIMEOUT_S,
+                 creationflags=getattr(subprocess, 'CREATE_NO_WINDOW', 0))
     if (platform_name.startswith('linux') and result.returncode == 1
             and 'cannot open display' in (result.stderr or '').lower()):
         raise OSError('The setup window has no display.')
@@ -154,8 +154,8 @@ def _waiting(issue=None):
         cancelled.set()
 
 
-def collect(tool_path, platform_name, clients, run=None, issue=None):
-    """Use the shared two-action chooser for sign-in and assistant choices."""
+def collect(tool_path, platform_name, run=None, issue=None):
+    """Ask the one access question with the shared two-action chooser."""
     run = run or subprocess.run
     dialog = _load('client_dialog')
     method = _ask(dialog, tool_path, platform_name, 'How do you want to connect?', CHOICES, run)
@@ -166,12 +166,4 @@ def collect(tool_path, platform_name, clients, run=None, issue=None):
     key = _waiting(issue)
     if key is CANCELLED:
         return CANCELLED
-    fields = {'key': key}
-    for field, question, answers in key_dialog.questions(clients):
-        table = key_dialog.STARTERS if field == 'profile' else key_dialog.MODES
-        items = tuple((table[label], label) for label in answers)
-        value = _ask(dialog, tool_path, platform_name, question, items, run)
-        if value is CANCELLED:
-            return CANCELLED
-        fields[field] = value
-    return fields
+    return {'key': key}

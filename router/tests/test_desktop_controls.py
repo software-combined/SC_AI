@@ -40,8 +40,8 @@ class DesktopControlsTests(unittest.TestCase):
 
     def test_snapshot_redacts_owner_status_and_keeps_health_separate(self):
         control = module('desktop_control')
-        installer = mock.Mock()
-        installer._diag._status_document.return_value = dict(
+        diagnostics = mock.Mock()
+        diagnostics._status_document.return_value = dict(
             serving=False, routing_healthy=True, version='1.3.0.7',
             running_version='1.3.0.6', clients={'codex': {'config_path': '/private'}},
             token='private-token', key='private-key', feed='/private')
@@ -50,7 +50,7 @@ class DesktopControlsTests(unittest.TestCase):
                            ROUTED_VARIANTS=('switched', 'switched_signed_in', 'openrouter'))
         config.current.return_value = 'switched_signed_in'
         config._codex.codex_attachment.return_value = {'openai_mode': 'subscription'}
-        modules = dict(install=installer, codex_switch_config=config, update_status=module('update_status'),
+        modules = dict(diagnostics=diagnostics, codex_switch_config=config, update_status=module('update_status'),
                        desktop_startup=SimpleNamespace(enabled=lambda home: False))
         with mock.patch.object(control, 'load', side_effect=modules.__getitem__):
             facts = control.snapshot(Path('/unused'))
@@ -63,13 +63,13 @@ class DesktopControlsTests(unittest.TestCase):
     def test_each_openrouter_variant_uses_the_same_selected_destination(self):
         control = module('desktop_control')
         model = module('desktop_model')
-        installer = mock.Mock()
-        installer._diag._status_document.return_value = dict(clients={'codex': {}})
+        diagnostics = mock.Mock()
+        diagnostics._status_document.return_value = dict(clients={'codex': {}})
         config = mock.Mock(SWITCHED='switched', SWITCHED_SIGNED_IN='switched_signed_in',
                            OPENROUTER='openrouter',
                            ROUTED_VARIANTS=('switched', 'switched_signed_in', 'openrouter'))
         config._codex.codex_attachment.return_value = {'openai_mode': 'subscription'}
-        modules = dict(install=installer, codex_switch_config=config,
+        modules = dict(diagnostics=diagnostics, codex_switch_config=config,
                        update_status=module('update_status'),
                        desktop_startup=SimpleNamespace(enabled=lambda home: False))
         for variant in ('switched', 'switched_signed_in', 'openrouter'):
@@ -84,14 +84,14 @@ class DesktopControlsTests(unittest.TestCase):
 
     def test_no_subscription_disables_the_usage_limit_fallback(self):
         control = module('desktop_control')
-        installer = mock.Mock()
-        installer._diag._status_document.return_value = dict(clients={'codex': {}})
+        diagnostics = mock.Mock()
+        diagnostics._status_document.return_value = dict(clients={'codex': {}})
         config = mock.Mock(SWITCHED='switched', SWITCHED_SIGNED_IN='switched_signed_in',
                            OPENROUTER='openrouter',
                            ROUTED_VARIANTS=('switched', 'switched_signed_in', 'openrouter'))
         config.current.return_value = 'switched'
         config._codex.codex_attachment.return_value = {'openai_mode': 'none'}
-        modules = dict(install=installer, codex_switch_config=config,
+        modules = dict(diagnostics=diagnostics, codex_switch_config=config,
                        update_status=module('update_status'),
                        desktop_startup=SimpleNamespace(enabled=lambda home: False))
         with mock.patch.object(control, 'load', side_effect=modules.__getitem__):

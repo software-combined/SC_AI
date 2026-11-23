@@ -1,0 +1,123 @@
+# Installed runtime files
+
+An install unpacks the release bundle into its release directory. This page
+lists the runtime modules in that bundle; the bundle also carries the
+packaging modules that install and update the router, the licence and notice
+files, and the markdown documentation (`README.md` and `docs/*.md`) so an
+installed host can read the same pages the repository shows.
+`packaging/release.py` holds the full bundle inventory. State, activation
+receipts, catalogues, backups and logs are never part of a release bundle and
+are never copied between machines.
+
+`ai_router/router.py`, `ai_router/providers.py`, `ai_router/claude.py`,
+`ai_router/media.py`, `ai_router/video_provider.py`,
+`ai_router/media_origin.py`, `ai_router/media_cli.py`,
+`ai_router/external_provider.py`,
+`ai_router/image_provider.py`, `ai_router/protocols/images.py`,
+`ai_router/claude_compat.py`,
+`ai_router/availability.py`, `ai_router/snapshot_store.py`,
+`ai_router/registry.py`, `ai_router/credentials.py`,
+`ai_router/request_context.py`, `ai_router/request_lease.py`, `ai_router/outbound.py`,
+`ai_router/tool_adapter.py`, `ai_router/tool_history.py`, `ai_router/tool_aliases.py`,
+`ai_router/agent_handoffs.py`, `ai_router/handoff_history.py`, `ai_router/handoff_response.py`,
+`ai_router/sse.py`, `ai_router/outcome.py`,
+`ai_router/attempt_policy.py`, `ai_router/stream_errors.py`,
+`ai_router/capabilities.py`, `ai_router/compaction.py`,
+`ai_router/compaction_summary.py`,
+`ai_router/jev_compaction.py`, `ai_router/decisions.py`,
+`ai_router/compaction_result.py`, `ai_router/history_portability.py`,
+`ai_router/history_items.py`, `ai_router/tool_runs.py`,
+`ai_router/external_history.py`,
+`ai_router/standalone_outputs.py`, `ai_router/discovered.py`,
+`ai_router/errors.py`, `ai_router/redaction.py`, `ai_router/candidate.py`,
+`ai_router/candidate_evidence.py`, `ai_router/auto_routing.py`,
+`ai_router/setup.py`, `ai_router/setup_page.py`, `ai_router/key_store.py`,
+`ai_router/key_dialog.py`, `ai_router/key_prompt.py`, `ai_router/work_account.py`,
+`ai_router/runtime.py`,
+`ai_router/dialog_tool.py`,
+`ai_router/catalogue.py`, `ai_router/local_services.py`,
+`ai_router/live_refresh.py`, `ai_router/models.py`,
+`ai_router/apply_catalogue.py`, `ai_router/activation.py`,
+`ai_router/__init__.py`, `ai_router/__main__.py`,
+`ai_router/model_metadata.py`, `ai_router/model_refresh.py`,
+`ai_router/winacl.py`, `ai_router/winsecurity.py`, `ai_router/image_items.py`,
+`ai_router/turn_budget.py`,
+`ai_router/model_prompt.py`, `ai_router/model_prompt_page.py`,
+`ai_router/model_policy.py`,
+`ai_router/subscription_roster.py`, `ai_router/subscription_catalogue.py`,
+`ai_router/subscription_discovery.py`, `ai_router/subscription_recovery.py`,
+`ai_router/retired_slugs.py`,
+`ai_router/clients/__init__.py`, `ai_router/clients/codex.py`,
+`ai_router/clients/registry.py`, `ai_router/clients/roster.py`,
+`ai_router/transport.py`, `ai_router/subscription_fallback.py`,
+`ai_router/codex_route.py`, `ai_router/codex_helpers.py`, `ai_router/routed_models.py`,
+`ai_router/usage_episodes.py`,
+`ai_router/subscription_history.py`, `ai_router/context_recovery.py`,
+`ai_router/provider_defs.py`, `ai_router/upstream.py`, `ai_router/ingress.py`,
+`ai_router/client_close.py`,
+`ai_router/relay.py`, `ai_router/tool_merge.py`, `ai_router/atomic_write.py`,
+`ai_router/stream_relay.py`, `ai_router/stream_events.py`,
+`ai_router/stream_attempt.py`, `ai_router/strip_retry.py`,
+`ai_router/rejected_repair.py`,
+`ai_router/state.py`, `ai_router/wire_shape.py`,
+`ai_router/events.py`,
+`ai_router/request_evidence.py`, `ai_router/inspect_requests.py`,
+`ai_router/protocols/__init__.py`, `ai_router/protocols/responses.py`,
+`ai_router/protocols/messages.py`, `ai_router/models.json`,
+`ai_router/messages_errors.py`, `ai_router/messages_events.py`,
+`ai_router/routed_base_instructions.txt`,
+`ai_router/subscription_base_instructions.txt`,
+`ai_router/model_instructions.py`,
+`tools/provision_key.py`, `tools/global_instructions.py`, `tools/disable.py`.
+
+Development probes, capture utilities, benchmark scripts and publishing
+helpers are source-checkout tools and are not shipped to end users.
+
+The feed-signature module lives with its consumers as
+`packaging/feed_verify.py`: `packaging/feed.py` and `packaging/release.py`
+load it as a sibling, never from the runtime tree. Signature enforcement is active: the updater verifies the detached
+sidecar before parsing (Plan 145). Key rotation adds the new public key
+beside the old one, ships, waits one fleet cycle, starts signing with the
+new seed, ships again, then removes the old key.
+
+Claude profile task sharing ships as sibling helpers under `packaging/`:
+`claude_profile_rules.py`, `claude_profile_identity.py`, `claude_profile_hook.py`,
+`claude_profile_history.py`, `claude_profile_records.py`,
+`claude_profile_bundle.py`, `claude_profile_publish.py`,
+`claude_profile_transaction.py`, `claude_profile_ledger.py` and
+`claude_profile_sync.py`. `claude_desktop_platform.py` supplies native
+lifecycle commands and loads `claude_desktop_policy.py` for read-only switch
+restrictions, while `claude_profile_launch.py` follows the installed
+release pointer for both Open Claude and Switch Claude; setup deletes the
+router's own `claude_switch_launch.py` home copy once it rebuilds a 0.6
+shortcut. Temporary stages,
+before images and transaction manifests stay inside the local session store
+and are never release members. Private control directories protect backups;
+POSIX attachment permissions stay unchanged so hard-linked originals elsewhere
+are unaffected. Windows checks owner-only access and uses extended absolute
+paths for filesystem operations in long session folders. Record metadata keeps
+ordinary paths. Recovery metadata includes store-relative paths, session IDs
+and file digests, so it stays private. It contains no session text, credentials
+or exception detail.
+
+The empty `.claude-profile-switch.lock` in the router home coordinates Open and
+Switch through the operating system. Its presence alone does not mean a switch
+is running; the operating system releases the lock when the helper exits.
+
+The installer also places `packaging/router_launch.py` and
+`packaging/update_launch.py` beside the state directory as `router_launch.py`
+and `update_launch.py`, so restarts and scheduled updates follow the pointer
+without symlinks. Windows Task Scheduler runs those through the packaged
+`packaging/task_launch.py` copied to `task_launch.py`, which routes the
+task's output into `logs/`. On a Mac that gets the Switch Codex app,
+`packaging/codex_switch_launch.py` is copied beside them as
+`codex_switch_launch.py`; the app runs it under the router's Python, so it
+follows the pointer the same way.
+
+Windows task output also contains JSON launch, completion and failure events.
+Their fields are task kind, UTC timestamp, numeric status and a safe error class.
+Missing target scripts are recorded before execution. Windows failures before Python
+starts require Task Scheduler History and last-result metadata.
+Health-verified installation completion appends `installed <version>; health verified`
+to `logs/update.log`, including direct, regular, Express and beta installation.
+An attachment failure gets a separate event; unchanged checks and rollbacks make no installation claim.

@@ -1,6 +1,5 @@
 """CI cleanup uses only retained handles verified to belong to its new account."""
 from contextlib import contextmanager
-import importlib.util
 import ctypes
 import json
 import os
@@ -14,14 +13,12 @@ import unittest
 from unittest import mock
 
 from tests import test_native_setup
+from tests import loading
 
 
 def tool():
     path = Path(__file__).resolve().parents[1] / 'tools/windows_standard.py'
-    spec = importlib.util.spec_from_file_location('windows_standard_ci', path)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+    return loading.load(path, 'windows_standard_ci')
 
 
 class ProfileBootstrapTests(unittest.TestCase):

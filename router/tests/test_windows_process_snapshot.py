@@ -46,9 +46,10 @@ class WindowsSnapshotTests(unittest.TestCase):
                 '[Security.Principal.WindowsIdentity]::GetCurrent().User.Value', "'%s'" % USER)
             return subprocess.run([POWERSHELL, '-NoProfile', '-NonInteractive',
                                    '-Command', script], **kwargs)
-        if tracked is None:
-            return platform._snapshot('win32', IDENTITY, run)
-        return platform._snapshot('win32', IDENTITY, run, tracked=tracked)
+        with mock.patch.object(subprocess, 'CREATE_NO_WINDOW', 0x08000000, create=True):
+            if tracked is None:
+                return platform._snapshot('win32', IDENTITY, run)
+            return platform._snapshot('win32', IDENTITY, run, tracked=tracked)
 
     def test_protected_unrelated_processes_are_not_owner_queried(self):
         rows = [row(n, 'C:\\Windows\\System32\\' + name, denied=True)

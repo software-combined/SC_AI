@@ -1,7 +1,6 @@
 """Read native desktop storage identity without changing sign-in or device state."""
 import base64
 import contextlib
-import importlib.util
 import hashlib
 import json
 import os
@@ -11,11 +10,10 @@ import stat
 import sys
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import loader  # noqa: E402
 
-_spec = importlib.util.spec_from_file_location(
-    'router_identity_policy', Path(__file__).with_name('claude_desktop_policy.py'))
-_policy = importlib.util.module_from_spec(_spec)
-_spec.loader.exec_module(_policy)
+_policy = loader.load(Path(__file__).with_name('claude_desktop_policy.py'))
 UUID = re.compile(r'[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}', re.I)
 # Default organization observed in Claude 2.9939.2's static-gateway local stores.
 STATIC_ORGANIZATION = '00000000-0000-4000-8000-000000000001'
@@ -179,10 +177,7 @@ def capture_subscription(profile, event, env):
                 matches.append(org.name)
         if len(matches) != 1 or not same_guard(_subscription_guard(profile), guard):
             return False
-        spec = importlib.util.spec_from_file_location(
-            'router_identity_atomic', Path(__file__).with_name('atomic_write.py'))
-        atomic = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(atomic)
+        atomic = loader.load(Path(__file__).with_name('atomic_write.py'))
         atomic.replace_json(profile / BINDING, {
             'account': guard['account'], 'organization': matches[0], 'guard': guard})
         return True

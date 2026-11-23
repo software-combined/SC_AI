@@ -1,6 +1,5 @@
 """Install and run the desktop's non-interactive session identity callback."""
 import argparse
-import importlib.util
 import json
 import os
 import shlex
@@ -8,12 +7,12 @@ import sys
 import time
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import loader  # noqa: E402
+
 
 def _load(name):
-    spec = importlib.util.spec_from_file_location(name, Path(__file__).with_name(name + '.py'))
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+    return loader.load(Path(__file__).with_name(name + '.py'))
 
 
 _identity = _load('claude_profile_identity')

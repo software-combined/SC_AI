@@ -73,6 +73,7 @@ class ClientRetentionTests(unittest.TestCase):
             with self.subTest(selection=selection), tempfile.TemporaryDirectory() as tmp:
                 home = Path(tmp) / 'router'
                 _full_install(self, tmp, home, '1.0.0', selection)
+                self.enterContext(mock.patch.object(install_mod._client_choice, 'detect', return_value=()))
                 _install(tmp, home, ['--clients', 'none', '--anthropic-mode', 'none'])
                 state = install_mod.ensure_state(home)
                 state['clients'] = 'claude'  # Last selection is not the attachment union.
@@ -86,7 +87,8 @@ class ClientRetentionTests(unittest.TestCase):
                                  expected)
                 state = install_mod.ensure_state(home)
                 self.assertEqual(state['anthropic_mode'], 'none')
-                self.assertEqual(state['clients'], 'both' if 'codex' in expected else 'none')
+                # Receipts win; a Claude desktop attachment alone saves no `none` choice.
+                self.assertEqual(state['clients'], 'both' if 'codex' in expected else 'claude')
                 self.assertEqual(set(install_mod._delivery.clients(home, state)),
                                  {'codex', 'claude'} if 'codex' in expected else {'claude'})
                 if 'claude-desktop' in expected:

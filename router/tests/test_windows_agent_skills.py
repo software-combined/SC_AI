@@ -1,5 +1,4 @@
 """App-installed Codex stays discoverable from a scheduled Windows updater."""
-import importlib.util
 import os
 import shutil
 import tempfile
@@ -7,11 +6,10 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
+from tests.loading import load
+
 ROOT = Path(__file__).resolve().parents[1]
-spec = importlib.util.spec_from_file_location(
-    'router_windows_agent_skills', ROOT / 'packaging' / 'agent_skills.py')
-skills = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(skills)
+skills = load(ROOT / 'packaging' / 'agent_skills.py', 'router_windows_agent_skills')
 
 
 class WindowsClientPathTest(unittest.TestCase):

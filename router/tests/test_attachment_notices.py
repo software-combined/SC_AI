@@ -49,17 +49,6 @@ class AttachmentNotices(unittest.TestCase):
             self.assertTrue(notice.show_pending(self.home, spawn=lambda _: 42,
                                                pid_alive=lambda _: True))
 
-    def test_relevant_client_change_gets_a_fresh_event_after_an_old_notice_was_seen(self):
-        notice.record_attachment(self.home, '1.0.0', 'a' * 32)
-        prior = json.loads(self.path.read_text())
-        self.path.write_text(json.dumps(dict(prior, shown=True, names=['Already announced'])))
-        self.assertTrue(notice.record_client_change(self.home, '1.0.1', 'new-event'))
-        current = json.loads(self.path.read_text())
-        self.assertNotIn('shown', current)
-        self.assertNotIn('names', current)
-        self.assertEqual(current['client_change'], 'new-event')
-        self.assertFalse(notice.record_client_change(self.home, '1.0.1', 'new-event'))
-
     def test_closed_client_does_not_keep_a_restart_notice_queued(self):
         notice.record_attachment(self.home, '1.0.0', 'a' * 32)
         self.assertTrue(notice.suppress_closed_client_restart(self.home))

@@ -5,11 +5,14 @@ claiming a profile. A claim is not a task-sharing binding: Claude must create
 its own gateway identity before the existing pair guard can allow sharing.
 """
 import contextlib
-import importlib.util
 import json
 import os
 import re
+import sys
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import loader  # noqa: E402
 
 
 OWNER = '.claude-profile-control-owner.json'
@@ -19,19 +22,11 @@ OWNER_STAGE = re.compile(re.escape(OWNER) + r'\.tmp-[0-9a-f]{32}\Z')
 
 
 def _identity():
-    spec = importlib.util.spec_from_file_location(
-        'router_account_identity', Path(__file__).with_name('claude_profile_identity.py'))
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+    return loader.load(Path(__file__).with_name('claude_profile_identity.py'))
 
 
 def _rotation():
-    spec = importlib.util.spec_from_file_location(
-        'router_account_rotation', Path(__file__).with_name('claude_profile_rotation.py'))
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+    return loader.load(Path(__file__).with_name('claude_profile_rotation.py'))
 
 
 def pending(home):

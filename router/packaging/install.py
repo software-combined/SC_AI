@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Install the Codex model router. Runs on Python 3.9+; finds 3.14 for the router itself.
+"""Install the Codex model router. Runs on Python 3.14 or newer, like the router itself.
 
 Shared launchd/plist/feed helpers live in packaging/service.py. This
 module owns first install, explicit upgrade, rollback and uninstall only.
@@ -16,15 +16,11 @@ import sys
 import tarfile
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-import importlib.util
-# Bootstrap loader (Plan 123 exception): service must be spec-loaded before
-# service.load() exists, so this single bootstrap copy stays.
-_spec = importlib.util.spec_from_file_location(
-    'packaging.service',
-    Path(__file__).resolve().parent / 'service.py')
-_svc = importlib.util.module_from_spec(_spec)
-_spec.loader.exec_module(_svc)
+if sys.version_info < (3, 14):
+    raise SystemExit('SCG Router setup needs Python 3.14 or newer. Install it, then run setup again.')
+sys.path[:0] = [str(Path(__file__).resolve().parent), str(Path(__file__).resolve().parents[1])]
+import loader  # noqa: E402
+_svc = loader.load(Path(__file__).resolve().parent / 'service.py', 'packaging.service')
 _platforms = _svc.load(
     'router_platforms', Path(__file__).resolve().parent / 'platforms' / '__init__.py')
 _codex_config = _svc.load(
@@ -56,7 +52,6 @@ PLATFORM = sys.platform
 # call sites below read them via _svc so swaps take effect. Immutable values
 # copy directly.
 FEED_URL = _svc.FEED_URL
-MIN_PYTHON = _svc.MIN_PYTHON
 LABEL = _svc.LABEL
 UPDATE_LABEL = _svc.UPDATE_LABEL
 DEFAULT_OPENAI_MODELS = _svc.DEFAULT_OPENAI_MODELS
@@ -75,7 +70,6 @@ same_interpreter = _svc.same_interpreter
 ensure_updater = _svc.ensure_updater
 loaded_updater_release = _svc.loaded_updater_release
 _update_failures = _svc.update_failures
-_record_update_failure = _svc.record_update_failure
 _clear_update_failures = _svc.clear_update_failures
 reload_main_service = _svc.reload_main_service
 render_plist = _svc.render_plist
@@ -91,7 +85,6 @@ require_live_home = _svc.require_live_home
 run = _svc.run
 health = _svc.health
 wait_version = _svc.wait_version
-ensure_serving = _svc.ensure_serving
 
 
 SUPPORTED_PLATFORMS = ('darwin', 'linux', 'win32')
@@ -126,11 +119,8 @@ _bundle = _svc.load(
 # pushes the callable seams into the bundle module, while the rest travel as
 # explicit wrapper arguments. The aliases below keep test patch points resolving.
 
-
 verify_sha256 = _bundle.verify_sha256
 newer = _bundle.newer
-check_manifest = _bundle.check_manifest
-check_identity = _bundle.check_identity
 
 _delivery = _svc.load('router_install_delivery', Path(__file__).resolve().parent / 'install_delivery.py')
 _completion = _svc.load('router_setup_completion', Path(__file__).resolve().parent / 'setup_completion.py')
@@ -197,9 +187,8 @@ def do_rollback(args):
 
 
 def _sync_seams():
-    global run, health, wait_version, ensure_serving
-    run, health, wait_version, ensure_serving = (
-        _svc.run, _svc.health, _svc.wait_version, _svc.ensure_serving)
+    global run, health, wait_version
+    run, health, wait_version = _svc.run, _svc.health, _svc.wait_version
     _bundle.bind_seams(run=run, safe_extract=safe_extract,
                        install_launcher=install_launcher,
                        swap_current=swap_current)
@@ -262,6 +251,29 @@ def _rollback_failed_install(home, state, backend, latest, previous, catalog_pat
     raise SystemExit(1)
 
 
+def _start_service(backend, python, home, state, previous, version, action):
+    """Start the current release's service; True only once `version` answers health."""
+    try:
+        backend.install(python, home, state, current_release_dir(home), previous)
+        return wait_version(state, version)
+    except (OSError, subprocess.CalledProcessError, SystemExit) as exc:
+        # SystemExit is caught on purpose: reload and launcher failures raise it,
+        # and letting it through skipped the caller's failure handling entirely.
+        # Say why first: a backend refusal (task registration, group policy) is
+        # otherwise indistinguishable from a health timeout.
+        print(f'service {action} failed: {exc}')
+        return False
+
+
+def _healthy_end(args, home, python, setup_url, clients, version, connected=None):
+    """Close a healthy start: finish key setup, then name the serving version."""
+    _finish_key_setup(args, home, python, setup_url, clients)
+    # Read after key setup: a late key-window answer can attach a client.
+    detail = '' if connected is None else '; ' + _client_choice._connected(connected, home, _codex_config)
+    print(f'router {version}; health ok{detail}')
+    return 0
+
+
 def _open_key_window(python, home, setup_url, clients):
     """Wait for the key window in this install's selected home."""
     home = Path(home).resolve()
@@ -270,7 +282,7 @@ def _open_key_window(python, home, setup_url, clients):
 
 def _attach_current(args, home, python):
     return _client_choice.attach_current(args, home, codex=_codex_config, desktop=_desktop_config,
-        claude=attach_claude, write_state=_write_state, python=python,
+        claude=attach_claude, python=python, write_state=_write_state,
         resolve=_resolve_clients_and_modes, ensure_state=ensure_state, ready=_current_ready)
 
 
@@ -287,7 +299,6 @@ def do_install(args, _fetch=fetch, _run=None):
     if not args.dry_run and not _client_choice.require_recovered(
             Path(args.home).expanduser(), automatic=os.environ.get('ROUTER_AUTOMATIC_UPDATE') == '1'):
         return 0
-    _svc._feed.configure_home(Path(args.home).expanduser())
     return _delivery.run_install(args, lambda delivery: _do_install(args, _fetch, _run, delivery),
         run=lambda *a, **kw: run(*a, **kw), fetch=None if _fetch is fetch else _fetch)
 
@@ -310,23 +321,24 @@ def _do_install(args, _fetch=fetch, _run=None, delivery=None):
                       if PLATFORM == 'win32' else 'brew install python@3.14')
             print(f'No Python 3.14 found: {remedy}')
             raise SystemExit(2)
-    _codex_config._owned.PYTHON = python
-    if delivery is not None: delivery.update(python=python, backend=platform_backend(), platform=PLATFORM)
+    if delivery is not None:
+        delivery.update(python=python, backend=platform_backend())
     _delivery.recover(home, delivery or {})
     feed = args.feed or _svc.channel_feed(home)
     latest = _updater._verified_feed(feed, _svc.feed_read(_fetch, feed), _fetch)
     serial = check_serial(home, latest, pinned=bool(args.feed))
     if delivery is not None: delivery.update(latest=latest, feed=feed)
     current = current_version(home)
+    args.found = _client_choice.newly_found(args, home, _codex_config, (delivery or {}).get('automatic', True))
     # Current-runtime repair keeps its code; verified maintenance can advance independently.
     repair = bool(args.setup or args.repair) and not newer(latest['version'], current)
     if delivery is not None: delivery['repair_version'] = current if repair else None
     if not newer(latest['version'], current) and not repair:
         _delivery.recover_current(home, delivery, python, current)
         print(f'up to date {current}')
-        if (args.clients is None and args.client is None and not args.choose_clients
-                and not args.desktop and args.claude_mode is None
-                and args.anthropic_mode is None and args.openai_mode is None):
+        if (not _client_choice.flagged(args) and not args.found
+                and args.claude_mode is None and args.anthropic_mode is None
+                and args.openai_mode is None):
             return 0 if args.dry_run else _complete_choices(home, python)
         return _attach_current(args, home, python)
     if args.dry_run:
@@ -366,10 +378,9 @@ def _do_install(args, _fetch=fetch, _run=None, delivery=None):
     if args.repair and not _delivery.close_assistants(home):
         args.repair_cancelled = True
         raise SystemExit('Repair cancelled; run setup again when your assistants are ready.')
-    client, clients, _, mode = _resolve_clients_and_modes(args, home, state, repair=repair)
-    python = _codex_config._owned.PYTHON = _delivery.activate(home, delivery, python)
-    # Keep first-run keys in the window. TTL mirrors setup.SETUP_TTL_S without
-    # importing runtime code on Python 3.9; --setup or a keyless service arms it.
+    _, clients, _, mode = _resolve_clients_and_modes(args, home, state, repair=repair)
+    python = _delivery.activate(home, delivery, python)
+    # Keep first-run keys in the window (TTL mirrors setup.SETUP_TTL_S); --setup or a keyless service arms it.
     missing = provider_keys().unhandled(home, state, _diag._key_private)
     env_named = [defn.key.env for defn in missing
                  if os.environ.get(defn.key.env, '').strip()]
@@ -393,13 +404,7 @@ def _do_install(args, _fetch=fetch, _run=None, delivery=None):
             raise
     if repair:
         # Restart retained code; --setup also asks it to read a fresh key-window link.
-        try:
-            backend.install(python, home, state, current_release_dir(home), None)
-            healthy = wait_version(state, current)
-        except (OSError, subprocess.CalledProcessError, SystemExit) as exc:
-            print(f'service restart failed: {exc}')
-            healthy = False
-        if not healthy:
+        if not _start_service(backend, python, home, state, None, current, 'restart'):
             print('the service did not come back with the fresh setup link; '
                   're-run the installer')
             return 1
@@ -411,75 +416,37 @@ def _do_install(args, _fetch=fetch, _run=None, delivery=None):
         _claude_config.refresh_snapshot(
             home, state, _codex_config,
             lambda: _operator.listing(state))
-        _finish_key_setup(args, home, python, setup_url, clients)
-        print(f'router {current}; health ok')
-        return 0
+        return _healthy_end(args, home, python, setup_url, clients, current)
     catalog_path = home / 'mixed-models.json'
     before_catalog = catalog_path.read_bytes() if catalog_path.exists() else None
     previous = install_bundle(home, latest['version'], tarball, manifest_doc, python)
-    try:
-        backend.install(python, home, state, current_release_dir(home), previous)
-        healthy = wait_version(state, latest['version'])
-    except (OSError, subprocess.CalledProcessError, SystemExit) as exc:
-        # SystemExit is caught on purpose: reload and launcher failures raise it,
-        # and letting it through here skipped the rollback below entirely.
-        # Say why before rolling back: a backend refusal (task registration,
-        # group policy) is otherwise indistinguishable from a health timeout.
-        print(f'service start failed: {exc}')
-        healthy = False
-    if not healthy:
+    if not _start_service(backend, python, home, state, previous, latest['version'], 'start'):
         _delivery.refuse_failed_cohort(delivery)
-        _rollback_failed_install(home, state, backend, latest, previous, catalog_path,
-                                 before_catalog)
+        _rollback_failed_install(home, state, backend, latest, previous, catalog_path, before_catalog)
     if delivery is not None: delivery['installed_version'] = latest['version']
-    # Stage the restart notice once the new version is healthy (fresh
-    # installs are a no-op); notice failures never surface.
-    _svc.notice.record(home, previous, latest['version'], args.clients)
-    previous_receipt = _codex_config.codex_attachment(home)
     saved = None if args.desktop or args.client == 'none' else _desktop_config.saved_profile(home, _codex_config)
-    if clients == 'none':
-        if args.desktop or saved:
-            # An explicit desktop request attaches that profile alone;
-            # a saved profile is refreshed without detaching other clients.
-            _client_choice.attach_desktop_only(args, home, state, _codex_config,
-                                               _desktop_config, saved, python)
-        else:
-            if args.client == 'none':
-                _delivery._load('client_removal').remove_all(home, _codex_config,
-                    lambda expected, entry: _restore_owned_config(home, python, expected, entry))
-                _delivery._load('claude_profile_hook').uninstall(home)
-        prune_releases(home, latest['version'], previous,
-                       backend.pinned_release(home))
-        if not args.feed:
-            (home / 'feed-serial').write_text(str(serial) + '\n')
-        backend.start_updates(home)
-        _finish_key_setup(args, home, python, setup_url, 'claude' if args.desktop else clients)
-        print(f"router {latest['version']}; health ok; {_client_choice.none_outcome(args, bool(saved))}")
-        return 0
-    if clients in ('claude', 'both'): attach_claude(home, state, python=python)
-    if args.desktop or saved: _desktop_config.attach(home, state, _codex_config, saved, python=python)
-    # Only explicit service-only installation or uninstall drops attachments.
-    if clients == 'claude':
-        # Claude-only: the shared service is up; Codex settings untouched.
-        if not args.feed:
-            (home / 'feed-serial').write_text(str(serial) + '\n')
-        backend.start_updates(home)
-        _finish_key_setup(args, home, python, setup_url, clients)
-        print(f"router {latest['version']}; health ok; Claude Code attached")
-        return 0
-    _client_choice.attach_codex(home, state, mode, _codex_config, previous_receipt, static_catalogue=args.static_catalogue, python=python)
+    if args.client == 'none':
+        _delivery._load('client_removal').remove_all(home, _codex_config,
+            lambda expected, entry: _restore_owned_config(home, python, expected, entry), python)
+        _delivery._load('claude_profile_hook').uninstall(home)
+    names = _client_choice.wanted(args, clients, saved)
+    try:
+        connected = _client_choice.attach_each(home, state, mode, names, codex=_codex_config,
+            desktop=_desktop_config, claude=attach_claude, python=python, saved=saved,
+            static_catalogue=args.static_catalogue, explicit=_client_choice.flagged(args))
+    finally:
+        # Stage the healthy version's notice even if an attach fails (fresh installs: no-op).
+        _client_choice.save_attached(args, home, state, _codex_config, _write_state)
+        _svc.notice.record(home, previous, latest['version'], args.clients)
     # launchd keeps the updater command until the job is reloaded and a
     # scheduled run defers that reload, so pruning its release breaks it.
-    prune_releases(home, latest['version'], previous,
-                   backend.pinned_release(home))
+    prune_releases(home, latest['version'], previous, backend.pinned_release(home))
     if not args.feed:
         # One-shot rule, as for the feed URL: a pinned feed keeps its own
         # serial, so recording it makes the real feed look stale for good.
         (home / 'feed-serial').write_text(str(serial) + '\n')
     backend.start_updates(home)
-    _finish_key_setup(args, home, python, setup_url, clients)
-    print(f"router {latest['version']}; health ok; restart Codex to load the router")
-    return 0
+    return _healthy_end(args, home, python, setup_url, clients, latest['version'], connected)
 
 
 def attach_claude(home, state, settings_path=None, env=None, listing=None,
@@ -496,7 +463,6 @@ def detach_claude(home, settings_path=None, env=None):
     return _claude_config.detach(home, _codex_config, settings_path_override=settings_path, env=env)
 
 
-_release_key = _bundle._release_key
 prune_releases = _bundle.prune_releases
 
 
@@ -554,11 +520,10 @@ def do_uninstall(args):
     python = find_python(args.python) if attached else None
     if attached and python is None:
         raise SystemExit('Python 3.14 is required to restore Codex settings safely.')
-    _codex_config._owned.PYTHON = python
     removal = _delivery._load('client_removal')
     try:
         removal.remove_all(home, _codex_config,
-            lambda expected, entry: _restore_owned_config(home, python, expected, entry))
+            lambda expected, entry: _restore_owned_config(home, python, expected, entry), python)
     except (OSError, ValueError) as exc:
         raise SystemExit('Removal conflict: damaged receipt. Services left running.') from exc
     try:
@@ -607,8 +572,7 @@ def build_parser():
     parser.add_argument('--support', action='store_true', help='Write a redacted support bundle and print its path.')
     parser.add_argument('--uninstall', action='store_true')
     parser.add_argument('--restart', action='store_true', help='Restart SCG Router after running replies finish.')
-    parser.add_argument('--preflight', action='store_true',
-                        help='Report missing install prerequisites and exit.')
+    parser.add_argument('--preflight', action='store_true', help='Report missing install prerequisites and exit.')
     parser.add_argument('--status', action='store_true',
                         help='Print installed version, service, client, and key status.')
     parser.add_argument('--json', action='store_true',
@@ -618,23 +582,23 @@ def build_parser():
                         help='First-run key window: mint a setup link and open it even when a key exists.')
     parser.add_argument('--repair', action='store_true',
                         help='Update or repair existing setup, preserving working keys and saved choices.')
-    parser.add_argument('--choose-clients', action='store_true', help='Ask which assistant and surface this computer uses.')
     parser.add_argument('--openai-mode', default=None)
     parser.add_argument('--anthropic-mode', default=None,
                         choices=('subscription', 'none'),
                         help='Independent Claude subscription choice; '
                              'unset follows the OpenAI mode as before.')
     parser.add_argument('--client', default=None, choices=(_client_roster.DEFAULT_CLIENT, 'none'),
-                        help='Client to activate (default codex); none leaves '
-                             'all client settings and guidance untouched.')
+                        help='Client to activate (default codex); none runs the service only '
+                             'and removes every client attachment when it installs a release.')
     parser.add_argument('--clients', default=None, choices=_client_roster.CLIENT_IDS + ('both', 'none'),
-                        help='Clients to attach (default codex); both attaches '
-                             'Codex and Claude Code; none attaches no terminal client.')
+                        help='Clients to attach (default: those found on this computer); '
+                             'both attaches Codex and Claude Code; none attaches no terminal client.')
     parser.add_argument('--claude-mode', default=None,
                         choices=('subscription', 'none'),
                         help='Independent Claude subscription choice; '
                              'unset follows the Anthropic mode as before.')
     parser.add_argument('--desktop', action='store_true', help='Also attach the Claude desktop gateway profile.')
+    parser.add_argument('--connect-found', action='store_true', help='Attach found assistants despite --clients none.')
     return parser
 
 
@@ -687,7 +651,10 @@ def main(argv=None):
             print('deferred: another router operation is in progress')
             return 1 if args.uninstall else 0
         require_live_home(home, 'this action')
-        rc = action(args)
+        try:
+            rc = action(args)
+        except _delivery.Deferred:
+            return 0  # The deferral was recorded and announced; the next scheduled pass retries.
         if rc == 0 and action is do_install:
             # A pending restart notice fires only from this CLI entry point,
             # never from do_install, so in-process callers cannot spawn one.

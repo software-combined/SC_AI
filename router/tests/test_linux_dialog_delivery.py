@@ -1,12 +1,9 @@
-"""Retained dialogs work after the download leaves; failed notices stay pending."""
-import io
-import json
+"""Retained dialogs work after the download leaves; a dialog that cannot show gives no answer."""
 import os
 import shutil
 import subprocess
 import tempfile
 import unittest
-from contextlib import redirect_stdout
 from pathlib import Path
 from types import SimpleNamespace
 from unittest import mock
@@ -38,40 +35,12 @@ class DialogDeliveryTests(unittest.TestCase):
         shutil.rmtree(download)
         return kept / 'gui/bin/zenity'
 
-    def test_chooser_and_key_dialog_find_retained_copy_without_download_or_path(self):
+    def test_question_and_key_dialog_find_retained_copy_without_download_or_path(self):
         wrapper = self.retained()
-        args = SimpleNamespace(dry_run=False, clients=None, client=None,
-                               desktop=False, choose_clients=True)
-        run = mock.Mock(side_effect=[SimpleNamespace(returncode=0, stdout=value)
-                                    for value in ('Claude', 'Terminal')])
-        with mock.patch('shutil.which', return_value=None), redirect_stdout(io.StringIO()):
-            self.assertTrue(self.client.maybe_ask(args, self.home, 'linux', run=run))
-            self.assertEqual(args.clients, 'claude')
-            self.assertEqual(run.call_args.args[0][0], str(wrapper.resolve()))
+        with mock.patch('shutil.which', return_value=None):
+            self.assertEqual(self.client.tool('linux', home=self.home), str(wrapper.resolve()))
             with mock.patch.dict(os.environ, {'ROUTER_HOME': str(self.home)}):
                 self.assertEqual(key_dialog.tool('linux'), str(wrapper.resolve()))
-
-    def test_failed_renewal_presentation_does_not_suppress_a_graphical_retry(self):
-        self.retained()
-        notice, native = module('download_notice'), module('native_dialog')
-        auth = mock.Mock()
-        load = notice._load
-        def modules(name):
-            return native if name == 'native_dialog' else auth if name == 'download_auth' else load(name)
-        with mock.patch.object(notice, '_load', side_effect=modules), \
-                mock.patch.object(native.sys, 'platform', 'linux'), \
-                mock.patch.dict(os.environ, {'DISPLAY': ':9'}), \
-                mock.patch('shutil.which', return_value='/system/zenity'), \
-                mock.patch.object(native.platform, '_run', return_value=SimpleNamespace(
-                    returncode=1, stdout='', stderr='Gtk-WARNING: cannot open display')) as run:
-            self.assertFalse(notice.show(self.home, now=100000))
-            self.assertFalse((self.home / 'download-notice.json').exists())
-            auth.signin.assert_not_called()
-            run.return_value = SimpleNamespace(returncode=0, stdout='', stderr='')
-            self.assertTrue(notice.show(self.home, now=100001))
-            self.assertEqual(json.loads((self.home / 'download-notice.json').read_text()),
-                             {'shown': 100001})
-            auth.signin.assert_called_once_with(self.home)
 
     def test_invalid_pointer_or_missing_wrapper_falls_back_to_system_tool(self):
         wrapper = self.retained()
@@ -136,52 +105,19 @@ class DialogDeliveryTests(unittest.TestCase):
                     self.assertIs(native.confirm_result('Question', self.home, run), expected)
                     self.assertEqual(run.call_args.args[0][0], '/dialog')
 
-    def test_missing_display_launch_error_and_timeout_stay_pending_then_cancel_suppresses(self):
+    def test_missing_display_launch_error_and_timeout_give_no_answer(self):
         wrapper = self.retained()
-        notice, native, auth = module('download_notice'), module('native_dialog'), mock.Mock()
-        load = notice._load
-        def modules(name):
-            return native if name == 'native_dialog' else auth if name == 'download_auth' else load(name)
-        with mock.patch.object(notice, '_load', side_effect=modules), \
-                mock.patch.object(native.sys, 'platform', 'linux'), \
-                mock.patch.object(native.platform, '_run') as run, \
-                mock.patch.object(native, 'message') as message:
-            self.assertFalse(notice.show(self.home, now=100000))
+        native = module('native_dialog')
+        with mock.patch.object(native.sys, 'platform', 'linux'), \
+                mock.patch.object(native.platform, '_run') as run:
+            self.assertIsNone(native.confirm_result('Question', self.home))
             run.assert_not_called()
             with mock.patch.dict(os.environ, {'WAYLAND_DISPLAY': 'wayland-0'}):
                 for failure in (FileNotFoundError(), subprocess.CalledProcessError(2, 'dialog'),
                                 subprocess.TimeoutExpired('dialog', 120)):
                     run.side_effect = failure
-                    self.assertFalse(notice.show(self.home, now=100001))
-                    self.assertFalse((self.home / 'download-notice.json').exists())
-                run.side_effect = None
-                run.return_value = SimpleNamespace(returncode=1, stdout='', stderr='')
-                self.assertFalse(notice.show(self.home, now=100002))
-                argv = run.call_args.args[0]
-                self.assertEqual(argv[0], str(wrapper.resolve()))
-                self.assertIn('SCG Router', argv)
-                self.assertIn(str(native.ICON), argv)
-                self.assertEqual(argv[argv.index('--ok-label') + 1], 'Continue')
-                self.assertEqual(argv[argv.index('--cancel-label') + 1], 'Cancel')
-                before = run.call_count
-                self.assertFalse(notice.show(self.home, now=100003))
-                self.assertEqual(run.call_count, before)
-            auth.signin.assert_not_called()
-            message.assert_not_called()
-            self.assertEqual(json.loads((self.home / 'download-notice.json').read_text()),
-                             {'shown': 100002})
-
-    def test_signin_failure_message_is_best_effort(self):
-        notice, native = module('download_notice'), module('native_dialog')
-        auth = mock.Mock()
-        auth.signin.side_effect = OSError('unavailable')
-        load = notice._load
-        with mock.patch.object(notice, '_load', side_effect=lambda name:
-                native if name == 'native_dialog' else auth if name == 'download_auth' else load(name)), \
-                mock.patch.object(native, 'confirm_result', return_value=True), \
-                mock.patch.object(native, 'message', side_effect=subprocess.TimeoutExpired('dialog', 120)):
-            self.assertFalse(notice.show(self.home, now=100000))
-        self.assertTrue((self.home / 'download-notice.json').is_file())
+                    self.assertIsNone(native.confirm_result('Question', self.home))
+        self.assertEqual(run.call_args.args[0][0], str(wrapper.resolve()))
 
     @unittest.skipIf(os.name == 'nt', 'The retained Linux wrapper uses POSIX shell.')
     def test_only_the_wrapper_child_receives_bundled_gtk_environment(self):

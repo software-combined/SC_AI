@@ -30,12 +30,15 @@ while Codex is switched: Switch Codex moves Codex back to the ChatGPT
 subscription first, so neither detach nor uninstall does that silently, and
 an older release may have no way to switch back.
 
-Python 3.9-safe, stdlib only and inert on import: the installer, the remover
+Python 3.9-safe, stdlib only and side-effect free on import (apart from `sys.path`): the installer, the remover
 and Switch Codex load it by path.
 """
-import importlib.util
 import json
+import sys
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import loader  # noqa: E402
 
 DEFAULT, SWITCHED, SWITCHED_SIGNED_IN, OPENROUTER, SWITCHED_BACK = (
     'default', 'switched', 'switched_signed_in', 'openrouter', 'switched_back')
@@ -58,10 +61,7 @@ EDITED = ('Codex settings were changed by hand, so SCG Router left them '
 
 
 def _load(name, filename):
-    spec = importlib.util.spec_from_file_location(name, filename)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+    return loader.load(filename, name)
 
 
 _HERE = Path(__file__).resolve().parent

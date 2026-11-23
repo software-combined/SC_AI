@@ -1,18 +1,17 @@
 """Stage one screened union before publishing or retiring any session copy."""
-import importlib.util
 import json
 import os
 import shutil
+import sys
 import uuid
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import loader  # noqa: E402
+
 
 def _load(name, filename):
-    spec = importlib.util.spec_from_file_location(
-        name, Path(__file__).resolve().parent / filename)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+    return loader.load(Path(__file__).resolve().parent / filename, name)
 
 
 _transaction = _load('router_bundle_transaction', 'claude_profile_transaction.py')

@@ -3,17 +3,20 @@ import os
 import unittest
 from pathlib import Path
 
+from tests.loading import load
+
 INSTALLER_TESTS = None  # lazy, single owner stays tools/ci_scope.py
+# Windows always sets SystemRoot. Other hosts run Windows paths against fakes, so they
+# get a stand-in system directory for packaging/windows_shell.py; nothing is created there.
+if os.name != 'nt':
+    os.environ.setdefault('SystemRoot', '/scg-router-test-windows')
 
 
 def _installer_modules():
     global INSTALLER_TESTS
     if INSTALLER_TESTS is None:
-        import importlib.util
         tool = Path(__file__).resolve().parents[1] / 'tools' / 'ci_scope.py'
-        spec = importlib.util.spec_from_file_location('router_ci_scope', tool)
-        module = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(module)
+        module = load(tool, 'router_ci_scope')
         INSTALLER_TESTS = frozenset(module.INSTALLER_TESTS)
     return INSTALLER_TESTS
 

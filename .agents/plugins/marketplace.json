@@ -87,6 +87,12 @@
       "source": {"source": "local", "path": "./plugins/development/scg-optimise-ci"},
       "policy": {"installation": "AVAILABLE", "authentication": "ON_INSTALL"},
       "category": "Productivity"
+    },
+    {
+      "name": "scg-codebase-readiness",
+      "source": {"source": "local", "path": "./plugins/development/scg-codebase-readiness"},
+      "policy": {"installation": "AVAILABLE", "authentication": "ON_INSTALL"},
+      "category": "Productivity"
     }
   ]
 }

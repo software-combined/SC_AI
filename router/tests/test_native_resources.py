@@ -17,7 +17,7 @@ from tests.test_maintenance_recovery import payload
 class NativeResourcesTests(unittest.TestCase):
     def fixture(self, root):
         owner = module('native_resources')
-        owner.sys = SimpleNamespace(platform='linux')  # Independent controls path; Windows has cohort workflow tests.
+        owner._backend = owner.loader.load(Path(owner.__file__).parent / 'platforms/__init__.py').NoRepair
         original = owner.load
         owner.load = lambda name: (SimpleNamespace(reconcile=lambda _: 'inactive')
             if name == 'runtime_rebind' else original(name))

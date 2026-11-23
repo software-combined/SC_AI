@@ -188,13 +188,12 @@ class DesktopReopenTests(unittest.TestCase):
                 dialog.message.assert_not_called()
 
     def test_setup_check_does_not_enter_the_wizard_without_finish_setup(self):
-        setup, dialog, switch = module('native_setup'), mock.Mock(), mock.Mock()
-        facts = dict(serving=True, update={}, onboarding=dict(ready=False, clients={'claude-desktop': {}}))
+        setup, dialog = module('native_setup'), mock.Mock()
+        facts = dict(serving=True, update={}, onboarding=dict(ready=False, clients={'codex': {}}))
         dialog.confirm_result.return_value = False
-        with mock.patch.object(setup, 'status', return_value=facts), \
-                mock.patch.object(setup, '_claude_on_openrouter', switch):
+        with mock.patch.object(setup, 'status', return_value=facts):
             setup._check(Path('/resources'), Path('/home'), dialog)
-        switch.assert_not_called()
+        dialog.confirm.assert_not_called()
         self.assertEqual(dialog.confirm_result.call_args.kwargs['labels'], ('Finish setup', 'Cancel'))
         facts['onboarding']['ready'] = True
         dialog.confirm_result.reset_mock()

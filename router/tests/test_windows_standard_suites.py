@@ -1,7 +1,6 @@
 """Windows suite selection preserves discovery and rejects incomplete evidence."""
 import collections
 from contextlib import redirect_stderr
-import importlib.util
 import io
 import json
 from pathlib import Path
@@ -15,14 +14,13 @@ from unittest import mock
 
 from tools.ci_unittest import leaves
 
+from tests.loading import load
+
 ROOT = Path(__file__).resolve().parents[1]
 
 
 def tool():
-    spec = importlib.util.spec_from_file_location('windows_suites', ROOT / 'tools/windows_standard.py')
-    owner = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(owner)
-    return owner
+    return load(ROOT / 'tools/windows_standard.py', 'windows_suites')
 
 
 class SuiteSelectionTests(unittest.TestCase):

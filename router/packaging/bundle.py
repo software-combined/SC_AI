@@ -9,21 +9,15 @@ like the installer. Loaded via service.load(), never `import packaging.bundle`,
 so installed bundles keep working without a `packaging` distribution.
 """
 import hashlib
-import json
 import os
 import shutil
 import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-import importlib.util  # noqa: E402
-# Bootstrap loader (Plan 123 exception): service must be spec-loaded before
-# service.load() exists, so this single bootstrap copy stays.
-_spec = importlib.util.spec_from_file_location(
-    'packaging.service',
-    Path(__file__).resolve().parent / 'service.py')
-_svc = importlib.util.module_from_spec(_spec)
-_spec.loader.exec_module(_svc)
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import loader  # noqa: E402
+_svc = loader.load(Path(__file__).resolve().parent / 'service.py', 'packaging.service')
 
 # Seam globals (Plan 130): install.py mirrors its swaps here via
 # bind_seams() on every _sync_seams() pass, so the bundle call sites read
@@ -243,8 +237,8 @@ def do_rollback(args, *, platform_backend, restart_router, wait_version,
         print(f'up to date {current}')
         return 0
     try:
-        state = json.loads((home / 'mixed-router-state.json').read_text())
-    except (OSError, ValueError):
+        state = _svc._state.read_strict(_svc._state.path(home))
+    except _svc._state.StateUnreadable:
         raise SystemExit(f'router state is missing or unreadable under {home}')
     previous = swap_current(home, target)
     restart_router(home)

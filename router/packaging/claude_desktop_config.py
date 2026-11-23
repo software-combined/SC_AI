@@ -14,20 +14,13 @@ import os
 import re
 import sys
 import uuid
-import importlib.util as _ilu
 from pathlib import Path
 
-_spec = _ilu.spec_from_file_location(
-    'router_runtime_atomic_write',
-    Path(__file__).resolve().parents[1] / 'ai_router' / 'atomic_write.py')
-atomic_write = _ilu.module_from_spec(_spec)
-_spec.loader.exec_module(atomic_write)
-_spec = _ilu.spec_from_file_location('router_desktop_removal', Path(__file__).with_name('client_removal.py'))
-_removal = _ilu.module_from_spec(_spec)
-_spec.loader.exec_module(_removal)
-_spec = _ilu.spec_from_file_location('router_desktop_windows_paths', Path(__file__).with_name('desktop_windows.py'))
-_windows = _ilu.module_from_spec(_spec)
-_spec.loader.exec_module(_windows)
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import loader  # noqa: E402
+atomic_write = loader.load(Path(__file__).resolve().parents[1] / 'ai_router' / 'atomic_write.py')
+_removal = loader.load(Path(__file__).with_name('client_removal.py'))
+_windows = loader.load(Path(__file__).with_name('desktop_windows.py'))
 
 PROVIDER_KEY = 'inferenceProvider'
 CREDENTIAL_KIND_KEY = 'inferenceCredentialKind'
@@ -260,10 +253,7 @@ def _remove_old_switch_shim(home):
 def _install_switch_launcher(home, python, env=None):
     # Keep the existing Mac recovery shortcuts. Native tray controls on other
     # platforms still need the same identity callback for account-bound sharing.
-    spec = _ilu.spec_from_file_location(
-        'router_desktop_switch', Path(__file__).with_name('claude_desktop_switch.py'))
-    switch = _ilu.module_from_spec(spec)
-    spec.loader.exec_module(switch)
+    switch = loader.load(Path(__file__).with_name('claude_desktop_switch.py'))
     actions = (('switch', 'Switch Claude'), ('start', 'Open Claude')) if sys.platform == 'darwin' else ()
     for action, name in actions:
         try:
@@ -366,26 +356,6 @@ def attach(home, state, receipts, data_dir_override=None, env=None, *, python=No
     return entry_path
 
 
-def attach_current(args, receipts, write_state, *, python=None):
-    """An explicit desktop attachment is independent of update availability."""
-    if args.client == 'none':
-        raise SystemExit('--desktop conflicts with --client none')
-    if args.dry_run:
-        print('would connect Claude desktop to the installed router')
-        return 0
-    home = Path(args.home).expanduser()
-    try:
-        state = json.loads((home / 'mixed-router-state.json').read_text())
-    except (OSError, ValueError):
-        raise SystemExit('Router settings are missing or invalid; run setup first')
-    if args.claude_mode is not None and args.claude_mode != state.get('claude_mode'):
-        state['claude_mode'] = args.claude_mode
-        write_state(home, state)
-    attach(home, state, receipts, python=python)
-    print('Claude desktop connected; switch Claude to OpenRouter in the SCG Router menu to use the router.')
-    return 0
-
-
 def detach(home, receipts, data_dir_override=None, env=None):
     """Restore desktop settings to pre-attach values; forget the attachment."""
     del data_dir_override, env
@@ -393,8 +363,4 @@ def detach(home, receipts, data_dir_override=None, env=None):
         _removal.detach_json(home, CLIENT_KEY, receipts)
     except _removal._json.Conflict as exc:
         raise SystemExit('Claude desktop removal conflict: ' + str(exc)) from None
-    spec = _ilu.spec_from_file_location(
-        'router_desktop_hook', Path(__file__).with_name('claude_profile_hook.py'))
-    hook = _ilu.module_from_spec(spec)
-    spec.loader.exec_module(hook)
-    hook.uninstall(home)
+    loader.load(Path(__file__).with_name('claude_profile_hook.py')).uninstall(home)

@@ -8,7 +8,10 @@ on:
     # for a title or body edit (a text edit), and every job below skips that.
     types: [opened, synchronize, reopened, edited]
   push:
-    branches: [main, development]
+    # Main acceptance runs on the pull request into main. The merge commit
+    # keeps that tree, so a push to main would repeat it; release.yml reuses
+    # the pull request's run instead.
+    branches: [development]
 
 permissions:
   contents: read
@@ -29,7 +32,7 @@ jobs:
     name: Change scope
     # Native installer jobs are part of main acceptance. Develop runs skip
     # them (Plan 156, narrowed 2026-09-15), and so does a text edit.
-    if: (github.event.action != 'edited' || github.event.changes.base) && ((github.event_name == 'pull_request' && github.base_ref == 'main') || (github.event_name == 'push' && github.ref == 'refs/heads/main'))
+    if: (github.event.action != 'edited' || github.event.changes.base) && (github.event_name == 'pull_request' && github.base_ref == 'main')
     runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
@@ -48,14 +51,8 @@ jobs:
         # changed" and silently skipping the native checks.
         run: |
           set -o pipefail
-          if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
-            git diff --name-only "origin/${{ github.base_ref }}...HEAD"
-          elif [ "${{ github.event.before }}" = 0000000000000000000000000000000000000000 ]; then
-            # A new branch has no before commit. Inspect the whole candidate.
-            git ls-tree --full-tree -r --name-only "${{ github.sha }}"
-          else
-            git diff --name-only "${{ github.event.before }}...${{ github.sha }}"
-          fi | python3 tools/ci_scope.py --installer >> "$GITHUB_OUTPUT"
+          git diff --name-only "origin/${{ github.base_ref }}...HEAD" \
+            | python3 tools/ci_scope.py --installer >> "$GITHUB_OUTPUT"
 
   installer-macos:
     name: Installer (macOS)
@@ -96,24 +93,6 @@ jobs:
         shell: pwsh
         run: python -m unittest -v tests.test_windows_acl_native
 
-  installer-python39:
-    name: Installer (Python 3.9)
-    needs: changes
-    if: needs.changes.outputs.installer == 'true'
-    # Pinned: actions/python-versions publishes no 3.9 build for Ubuntu 26.04,
-    # which ubuntu-latest now resolves to; 24.04 still has 3.9.25.
-    runs-on: ubuntu-24.04
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
-        with:
-          persist-credentials: false
-      - uses: ./.github/actions/setup
-        with:
-          python-version: "3.9"
-      - name: Installer surface imports on 3.9
-        run: python tools/check_installer_python39.py
-
   windows-standard:
     name: Windows standard user (${{ matrix.suite }})
     needs: changes
@@ -137,7 +116,7 @@ jobs:
     name: Offline unit suite
     # Independent of native acceptance. Starting both together avoids paying
     # for their durations in series; Test still requires every result.
-    if: (github.event.action != 'edited' || github.event.changes.base) && ((github.event_name == 'pull_request' && github.base_ref == 'main') || (github.event_name == 'push' && github.ref == 'refs/heads/main'))
+    if: (github.event.action != 'edited' || github.event.changes.base) && (github.event_name == 'pull_request' && github.base_ref == 'main')
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -149,7 +128,7 @@ jobs:
       - name: Unit suite (offline)
         env:
           SCG_RUN_INSTALLER_TESTS: '1'
-          VERIFICATION_BASE: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+          VERIFICATION_BASE: ${{ github.event.pull_request.base.sha }}
         run: python tools/plugin_verification.py --base "$VERIFICATION_BASE" --run --workers 2 --report "$RUNNER_TEMP/unit-results.json"
 
   test:
@@ -163,7 +142,7 @@ jobs:
     # Installer jobs may be skipped when scope finds no installer paths;
     # release-only prerequisites are skipped on development runs.
     # !cancelled() lets the failure guard run after a failed prerequisite.
-    needs: [changes, installer-macos, installer-windows, installer-python39, desktop-menus, plugin-schedulers, hook-adapter, unit-suite, windows-standard]
+    needs: [changes, installer-macos, installer-windows, desktop-menus, plugin-schedulers, hook-adapter, unit-suite, windows-standard]
     if: ${{ !cancelled() && (github.event.action != 'edited' || github.event.changes.base) }}
     # Development keeps the fast static checks. Main acceptance waits for
     # the selected offline suite and native checks running in parallel.
@@ -277,7 +256,7 @@ jobs:
     name: Plugin schedulers
     # Native plugin schedules and Router recovery use real service managers
     # on disposable runners. Run for main acceptance; development stays lightweight.
-    if: (github.event.action != 'edited' || github.event.changes.base) && ((github.event_name == 'pull_request' && github.base_ref == 'main') || (github.event_name == 'push' && github.ref == 'refs/heads/main'))
+    if: (github.event.action != 'edited' || github.event.changes.base) && (github.event_name == 'pull_request' && github.base_ref == 'main')
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest]
@@ -313,7 +292,7 @@ jobs:
     # runs its tests, so this is their only executor: without the matrix, the
     # Windows claim would be asserted rather than exercised. Main acceptance
     # only, like the scheduler job above.
-    if: (github.event.action != 'edited' || github.event.changes.base) && ((github.event_name == 'pull_request' && github.base_ref == 'main') || (github.event_name == 'push' && github.ref == 'refs/heads/main'))
+    if: (github.event.action != 'edited' || github.event.changes.base) && (github.event_name == 'pull_request' && github.base_ref == 'main')
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest]

@@ -1,40 +1,36 @@
-"""Which clients this install serves, and attaching them to a current install.
+"""Which clients this install serves, and attaching each of them.
 
 Split from the installer entry point, which sits at its recorded line ceiling
-(Plan 166). A plain re-run stops before the client stage, so an explicit
-attachment request has to be honoured here or it silently does nothing until
-the next release. Runs on the installer's Python 3.9: no router imports, and
-every collaborator arrives as an argument. `client_dialog` owns how a person
-is asked, `codex_switch_config` which Codex block an attach writes and
-`codex_switch_app` whether the Switch Codex app goes with it; this module
-owns what the answer attaches, and loads those siblings so the entry point
-keeps loading one module per concern.
+(Plan 166). Runs on the installer's Python 3.9: no router imports, and every
+collaborator arrives as an argument. A manual run attaches what it finds on
+this computer; `client_executable` and `claude_desktop_platform` own how an
+assistant is found, `codex_switch_config` which Codex block an attach writes
+and `codex_switch_app` whether the Switch Codex app goes with it.
 """
-import importlib.util
+import json
 import os
+import sys
 import time
 import uuid
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import client_executable  # noqa: E402
+import loader  # noqa: E402
+
 
 def _load(name):
-    spec = importlib.util.spec_from_file_location(
-        'router_' + name, Path(__file__).resolve().parent / (name + '.py'))
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+    return loader.load(Path(__file__).resolve().parent / (name + '.py'))
 
 
-_dialog = _load('client_dialog')
 _switch = _load('codex_switch_config')
 _app = _load('codex_switch_app')
 
+LABELS = {'codex': 'Codex', 'claude': 'Claude Code', 'claude-desktop': 'Claude desktop'}
+TERMINAL = {'codex': ('codex',), 'claude': ('claude',), 'both': ('codex', 'claude'), 'none': ()}
 _RESTART = {'Codex': 'quit and reopen Codex',
             'Claude Code': 'restart Claude Code',
             'Claude desktop': 'switch Claude to OpenRouter in the SCG Router menu'}
-
-
-maybe_ask = _dialog.maybe_ask
 refuse_switched = _switch.refuse_switched
 
 
@@ -56,22 +52,107 @@ def require_recovered(home, *, automatic=False):
     return True
 
 
+def detect(platform_name=None):
+    """The assistants installed on this computer, in attach order."""
+    found = []
+    for name in ('codex', 'claude'):
+        try:
+            if client_executable.resolve(name):
+                found.append(name)
+        except client_executable.DiscoveryError:
+            pass  # An install Windows cannot verify is not attached.
+    try:
+        _load('claude_desktop_platform').app_identity(platform_name or sys.platform)
+        found.append('claude-desktop')
+    except Exception:  # Detection never stops an install.
+        pass
+    return tuple(found)
+
+
+def newly_found(args, home, receipts, automatic):
+    """Assistants found on this computer that are not attached yet.
+
+    Only a manual run looks. Client flags, a dry run, a scheduled or Express
+    update and a saved `client: none` add nothing. A saved `clients: none` adds
+    nothing unless `--connect-found` asks. Mode flags change the attached
+    clients only, so they add nothing once any client is attached.
+    """
+    if automatic or args.dry_run or flagged(args):
+        return ()
+    path = Path(home) / 'mixed-router-state.json'
+    try:
+        state = json.loads(path.read_text()) if path.exists() else {}
+        saved_none = state.get('client') == 'none' or (
+            state.get('clients') == 'none' and not args.connect_found)
+        attached = receipts.read_receipt(home).get('clients', {})
+    except (OSError, ValueError, AttributeError):
+        return ()  # Repair recovers unreadable files first; nothing attaches on top of them.
+    mode_only = attached and any((args.openai_mode, args.claude_mode, args.anthropic_mode))
+    return () if saved_none or mode_only else tuple(name for name in detect() if name not in attached)
+
+
+def _choice(names):
+    """The saved `clients` value for these terminal clients."""
+    return 'both' if len(names) == 2 else names[0] if names else 'none'
+
+
+def _terminal(home, receipts):
+    """The terminal clients the receipts hold, in attach order."""
+    attached = receipts.read_receipt(home).get('clients', {})
+    return [name for name in ('codex', 'claude') if name in attached]
+
+
+def saved_clients(home, state, receipts):
+    """The saved `clients` choice, else the terminal clients the receipts hold.
+
+    A missing choice is never read as Codex, and reading it saves nothing.
+    """
+    if state.get('client') == 'none':
+        return 'none'
+    if isinstance(state.get('clients'), str):
+        return state['clients']
+    try:
+        return _choice(_terminal(home, receipts))
+    except (OSError, ValueError, AttributeError):
+        return 'none'  # An unreadable receipt names no client.
+
+
+def save_attached(args, home, state, receipts, write_state):
+    """Save the terminal clients the receipts now hold after a run without client flags.
+
+    The restart notice and later scheduled updates read this saved choice, so it
+    names exactly what is connected. Finding nothing never saves `none`, and a
+    saved `none` changes only on a run that found assistants (`--connect-found`).
+    """
+    if flagged(args) or (state.get('clients') == 'none' and not getattr(args, 'found', ())):
+        return
+    try:
+        names = _terminal(home, receipts)
+    except (OSError, ValueError):
+        return  # The service-only repair leaves an unreadable receipt alone.
+    if names and state.get('clients') != _choice(names):
+        state['clients'] = _choice(names)
+        write_state(home, state)
+
+
 def resolve(args, home, state, receipts, write_state, repair=False):
-    """Explicit additions, then attached clients, saved choice, and legacy Codex."""
+    """Explicit flags, else attached clients or the saved choice plus newly found ones.
+
+    Saves only the choice from flags, receipts or the saved choice; a newly
+    found assistant is saved by `save_attached` once it attaches. A saved
+    `none` changes only with `--clients` or `--client`.
+    """
     validate(args)
-    choices = ('codex', 'claude', 'both', 'none')
-    maybe_ask(args, home, attached=(any_attached(home, receipts)
-              or state.get('clients') in choices or state.get('client') == 'none'))
-    validate(args)
+    found = getattr(args, 'found', ())
     try:
         attached = receipts.read_receipt(home).get('clients', {})
     except (OSError, ValueError):
-        if not repair or any((args.client, args.clients, args.desktop, args.choose_clients,
+        if not repair or any((args.client, args.clients, args.desktop,
                               args.openai_mode, args.claude_mode, args.anthropic_mode)):
             raise SystemExit('client receipts are unreadable; repair them before continuing')
         # The service-only repair leaves unreadable client settings and receipts alone.
         attached = {}
-    explicit = args.clients is not None or args.client is not None or args.desktop
+    explicit = flagged(args)
     if (attached and args.clients is None and args.client is None
             and any((args.openai_mode, args.claude_mode, args.anthropic_mode))):
         explicit = False  # Mode-only completion follows every retained attachment.
@@ -80,29 +161,34 @@ def resolve(args, home, state, receipts, write_state, repair=False):
         raise SystemExit('client must be codex or none')
     if explicit:
         clients = args.clients or ('none' if client == 'none' or args.desktop else 'codex')
+        # A bare --desktop names no terminal client, so it keeps the saved choice.
+        keep = clients if args.clients is not None or args.client is not None else None
     else:
+        saved = state.get('clients')
         if attached:
             names = [name for name in ('codex', 'claude') if name in attached]
-            clients = 'both' if len(names) == 2 else names[0] if names else 'none'
         else:
-            clients = state.get('clients')
-            if clients not in choices:
-                clients = 'none' if client == 'none' else 'codex'
-    if clients not in choices:
+            names = list(TERMINAL.get(saved, ()) if isinstance(saved, str) else ())
+        # Found assistants are saved only once they attach (`save_attached`).
+        # Finding nothing never saves `none`, and a saved `none` stays without client flags.
+        keep = _choice(names) if names and saved != 'none' else None
+        clients = _choice(names + [name for name in found
+                                   if name in ('codex', 'claude') and name not in names])
+    if clients not in TERMINAL:
         raise SystemExit('clients must be codex, claude, both, or none')
     claude_mode = args.claude_mode or args.anthropic_mode or state.get(
         'anthropic_mode', state.get('claude_mode', 'subscription'))
-    mode = args.openai_mode or state.get('openai_mode') or receipts.default_mode()
+    mode = args.openai_mode or state.get('openai_mode') or 'subscription'
     if claude_mode not in ('subscription', 'none') or mode not in ('subscription', 'none'):
         raise SystemExit('openai_mode and claude_mode must be subscription or none')
     updated = dict(state, claude_mode=claude_mode, openai_mode=mode)
     if state.get('client', 'codex') != client:
         updated['client'] = client
-    if not (getattr(args, 'client_choice_cancelled', False)
-            or (args.choose_clients and args.clients is None)):
-        updated['clients'] = clients
+    if keep is not None:
+        updated['clients'] = keep
     if (args.claude_mode is not None or args.anthropic_mode is not None
-            or args.clients in ('claude', 'both') or args.desktop):
+            or args.clients in ('claude', 'both') or args.desktop
+            or {'claude', 'claude-desktop'} & set(found)):
         updated['anthropic_mode'] = claude_mode
     elif ('anthropic_mode' not in state
           and mode != state.get('openai_mode', 'subscription')
@@ -110,26 +196,10 @@ def resolve(args, home, state, receipts, write_state, repair=False):
         # Legacy Claude shares OpenAI's mode until an independent choice is saved.
         claude_mode = state.get('openai_mode', 'subscription')
         updated.update(claude_mode=claude_mode, anthropic_mode=claude_mode)
-    if updated != state and not getattr(args, 'client_choice_cancelled', False):
+    if updated != state:
         write_state(home, updated)
         state.update(updated)
     return client, clients, claude_mode, mode
-
-
-def any_attached(home, receipts):
-    """True when any client is attached, or when the receipt is unreadable.
-
-    An unreadable receipt is not evidence of a fresh host, and the --setup
-    repair owns recovering it, so it reads as attached: this gate must never
-    attach on top of state it cannot read, and it must not crash on it. The
-    error contract matches claude_config.refresh_snapshot: a receipt the
-    process cannot even open reads as attached too. Later eager reads
-    elsewhere are unchanged.
-    """
-    try:
-        return bool(receipts.read_receipt(home).get('clients'))
-    except (OSError, ValueError):
-        return True
 
 
 def mode_flags(state, attached):
@@ -143,8 +213,15 @@ def mode_flags(state, attached):
     return flags
 
 
-def _connected(names):
+def _connected(names, home, receipts):
     """One client-aware closing line; never names a client that is not served."""
+    if not names:
+        try:
+            attached = receipts.read_receipt(home).get('clients', {})
+        except (OSError, ValueError, AttributeError):
+            attached = {}
+        kept = [label for name, label in LABELS.items() if name in attached]
+        return 'no client changes; %s still connected' % ', '.join(kept) if kept else 'no assistant connected'
     return '%s connected; %s to use the router.' % (
         ', '.join(names), ' and '.join(_RESTART[name] for name in names))
 
@@ -166,8 +243,7 @@ def attach_codex(home, state, mode, codex_config, previous=None,
     if variant != _switch.DEFAULT and previous.get('openai_mode') not in (None, mode):
         variant = _switch.SWITCHED_BACK
     block = _switch.build(home, state, mode, static_catalogue, variant)
-    # Global instructions are install-once via the setup window's starter
-    # choice: this installer never writes, rewrites, or re-enforces them.
+    # The installer never writes, rewrites, or re-enforces global instructions.
     rules_receipt = previous.get('global_instructions')
     stamp = time.strftime('%Y%m%d-%H%M%S', time.gmtime()) + '-' + uuid.uuid4().hex[:8]
     (home / f'config-before-{stamp}.toml').write_bytes(
@@ -177,9 +253,10 @@ def attach_codex(home, state, mode, codex_config, previous=None,
     except OSError:
         pass
     block, before, desktop, reviewer = codex_config.attach_config(
-        config_path, block, previous, seed_external=mode == 'none' or variant in _switch.ROUTED_VARIANTS)
+        config_path, block, previous, seed_external=mode == 'none' or variant in _switch.ROUTED_VARIANTS,
+        python=python)
     after = codex_config._owned.read(config_path)
-    codex_config._owned.inspect(after, block)
+    codex_config._owned.inspect(after, block, python=python)
     event = previous.get('repair_notice') if after == before else None
     event = event or uuid.uuid4().hex
     fallback_return = previous.get(_switch.FALLBACK_RETURN)
@@ -188,7 +265,7 @@ def attach_codex(home, state, mode, codex_config, previous=None,
                                reviewer=reviewer, repair_notice=event, fallback_return=fallback_return
                                if variant == _switch.SWITCHED else None)
     entry = codex_config.codex_attachment(home)
-    codex_config._owned.inspect(codex_config._owned.read(config_path), block)
+    codex_config._owned.inspect(codex_config._owned.read(config_path), block, python=python)
     if entry.get('inserted_block') != block or entry.get('repair_notice') != event:
         raise OSError('attachment readback failed')
     try:
@@ -200,34 +277,56 @@ def attach_codex(home, state, mode, codex_config, previous=None,
     return config_path
 
 
-def attach_desktop_only(args, home, state, codex, desktop, saved=None, python=None):
-    """Attach the Claude desktop profile alone, detaching nothing else.
+def attach_each(home, state, mode, names, *, codex, desktop, claude, python, saved=None,
+                static_catalogue=False, explicit=False):
+    """Attach each client on its own, so one that refuses never stops the others.
 
-    `--clients none` selects no terminal client, so with `--desktop` the
-    desktop profile is the whole attachment. `--client none` promises to
-    leave every client setting untouched and keeps refusing the pair.
+    Only a client named by flag or already attached fails the run, once every
+    client has been tried. Any other client that refuses (newly found, or only
+    saved) is skipped. If a newly found Claude desktop cannot connect, setup
+    skips it without a message. Returns the labels of the attached clients.
     """
-    if args.client == 'none':
-        raise SystemExit('--desktop conflicts with --client none')
-    desktop.attach(home, state, codex, saved, python=python)
+    try:
+        before = codex.read_receipt(home).get('clients', {})
+    except (OSError, ValueError):
+        before = {}  # The service-only repair leaves an unreadable receipt alone.
+    done, errors = [], []
+    for name in names:
+        try:
+            if name == 'codex':
+                attach_codex(home, state, mode, codex, static_catalogue=static_catalogue, python=python)
+            elif name == 'claude':
+                claude(home, state, python=python)
+            else:
+                desktop.attach(home, state, codex, saved, python=python)
+            done.append(LABELS[name])
+        except (Exception, SystemExit) as exc:
+            if explicit or name in before:
+                errors.append(exc)
+            elif name != 'claude-desktop':
+                print('%s was not connected: %s' % (LABELS[name], exc))
+    if errors:
+        raise errors[0]
+    return done
 
 
-def none_outcome(args, desktop=False):
-    """The closing line for the branch that attaches no terminal client."""
-    if args.desktop or desktop:
-        return 'Claude desktop connected'
-    if getattr(args, 'client_choice_cancelled', False):
-        return 'no client attached'
-    return 'service-only, no client changes'
+def flagged(args):
+    """True when flags name the clients, so each named client must attach."""
+    return args.clients is not None or args.client is not None or bool(args.desktop)
 
 
-def attach_current(args, home, *, codex, desktop, claude, write_state, resolve,
-                   ensure_state, python, ready):
-    """Attach what the flags ask for without re-extracting the release.
+def wanted(args, clients, saved):
+    """The clients to attach, in order: terminal clients, then Claude desktop when asked for, saved or found."""
+    desktop = args.desktop or saved or 'claude-desktop' in getattr(args, 'found', ())
+    return list(TERMINAL[clients]) + ['claude-desktop'] * bool(desktop)
 
-    Additive by design: it attaches the selected clients and detaches nothing.
-    A bare re-run never reaches here (the caller keeps its old no-op), and
-    `--clients none --desktop` means the Claude desktop profile alone.
+
+def attach_current(args, home, *, codex, desktop, claude, resolve, ensure_state, python, ready,
+                   write_state):
+    """Attach the wanted clients without re-extracting the release.
+
+    Additive by design: it attaches and detaches nothing. `--clients none
+    --desktop` means the Claude desktop profile alone.
     """
     if args.dry_run:
         print('would connect the selected clients to the installed router')
@@ -237,36 +336,15 @@ def attach_current(args, home, *, codex, desktop, claude, write_state, resolve,
     previous = state.copy()
     _, clients, _, mode = resolve(args, home, state)
     saved = desktop.saved_profile(home, codex) if args.desktop or getattr(args, 'repair', False) else None
-    if args.choose_clients and args.clients is None:
-        # The chooser was asked for but could not ask (no dialog tool, or an
-        # unattended run): attach nothing rather than guessing.
+    names = wanted(args, clients, saved)
+    if not names:
         ready(home, state, previous, python, only_if_changed=True)
+        print(_connected(names, home, codex))
         return 0
-    if clients == 'none':
-        if not args.desktop and not saved:
-            ready(home, state, previous, python, only_if_changed=True)
-            if not getattr(args, 'client_choice_cancelled', False):
-                print('nothing to attach: --clients none attaches no client')
-            return 0
-        ready(home, state, previous, python)
-        if saved:
-            desktop.attach(home, state, codex, saved, python=python)
-            return 0
-        return desktop.attach_current(args, codex, write_state, python=python)
     ready(home, state, previous, python)
-    names = []
-    if clients in ('codex', 'both'):
-        attach_codex(home, state, mode, codex,
-                     static_catalogue=args.static_catalogue, python=python)
-        names.append('Codex')
-    if clients in ('claude', 'both'):
-        claude(home, state, python=python)
-        names.append('Claude Code')
-    if args.desktop or saved:
-        if saved:
-            desktop.attach(home, state, codex, saved, python=python)
-        else:
-            desktop.attach_current(args, codex, write_state, python=python)
-        names.append('Claude desktop')
-    print(_connected(names))
+    connected = attach_each(home, state, mode, names, codex=codex, desktop=desktop, claude=claude,
+                            python=python, saved=saved, static_catalogue=args.static_catalogue,
+                            explicit=flagged(args))
+    save_attached(args, home, state, codex, write_state)
+    print(_connected(connected, home, codex))
     return 0
