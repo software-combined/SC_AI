@@ -130,11 +130,10 @@ class ReleaseShellTests(unittest.TestCase):
 class InstallerCiGateTests(unittest.TestCase):
     """Plan 156: scoped native installer checks behind the one Test gate."""
     CHECK = (WORKFLOWS / 'check.yml').read_text()
-    SETUP = (ROOT.parent / '.github/actions/setup/action.yml').read_text()
 
     def test_required_gate_waits_for_all_scoped_jobs(self):
         self.assertIn(
-            'needs: [changes, installer-macos, installer-windows, installer-python39, desktop-menus, plugin-schedulers, hook-adapter, unit-suite, windows-standard]',
+            'needs: [changes, installer-macos, installer-windows, desktop-menus, plugin-schedulers, hook-adapter, unit-suite, windows-standard]',
             self.CHECK)
         self.assertIn('if: ${{ !cancelled() && ' + NOT_A_TEXT_EDIT + ' }}', self.CHECK)
         self.assertIn(
@@ -182,7 +181,7 @@ class InstallerCiGateTests(unittest.TestCase):
             self.assertNotEqual(failed.returncode, 0)
 
     def test_installer_jobs_are_scope_selected_for_main_acceptance(self):
-        for job in ('installer-macos', 'installer-windows', 'installer-python39'):
+        for job in ('installer-macos', 'installer-windows'):
             self.assertIn(f'{job}:', self.CHECK)
         # The producer wiring too: without the step id and the job output no
         # installer job is ever selected, however correct the consumer is.
@@ -207,14 +206,6 @@ class InstallerCiGateTests(unittest.TestCase):
                      'tests.test_stream_containment', 'tests.test_policy_scans'):
             with self.subTest(module=name):
                 self.assertNotIn(name, listed)
-
-    def test_the_39_check_selects_its_interpreter_through_the_composite(self):
-        # The composite owns the pin and must pass the version input through;
-        # the 3.9 job must not carry a second pin of its own (policy scan
-        # enforces that side).
-        self.assertIn('python-version: ${{ inputs.python-version }}', self.SETUP)
-        self.assertIn('python-version: "3.9"', self.CHECK)
-        self.assertIn('tools/check_installer_python39.py', self.CHECK)
 
     def test_releases_require_acceptance_before_publishing(self):
         self.assertNotIn('tools/ci_scope.py --installer-tests', RELEASE)

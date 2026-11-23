@@ -13,8 +13,8 @@ says where new code belongs.
 
 ## Set up
 
-The runtime needs Python 3.14 and nothing else; installer scripts stay
-Python 3.9-compatible. Clone SC_AI and run the gates from `router/`:
+The runtime and installer need Python 3.14 and nothing else. Clone SC_AI and
+run the gates from `router/`:
 
 ```sh
 cd router

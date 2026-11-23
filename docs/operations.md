@@ -330,7 +330,7 @@ sh bootstrap.sh
 
 A machine that cannot use the bootstrap's download path still gets its
 first install from a handed-off release directory with
-`python3 packaging/install.py --feed file:///path/to/latest.json`, a
+`python3.14 packaging/install.py --feed file:///path/to/latest.json`, a
 one-shot pin that is never persisted.
 
 `docs/agent-install-prompt.md` guides staff through the native installer
@@ -438,7 +438,7 @@ always authoritative.
 ## New model notifications
 
 When a scheduled update lands a version that adds models for the machine's
-policy scope, the updater asks the running router over loopback (the 3.9
+policy scope, the updater asks the running router over loopback (the
 updater never imports the runtime) and shows one native restart dialog. The
 dialog names up to three new models the way the picker does
 (`<Vendor>: <Model>`, without the `· OpenRouter` route suffix). No browser
@@ -502,7 +502,7 @@ after those checks. Older blocked updaters still need that one external action.
 
 Revert through `development` to `main` and tag (the next release supersedes
 the bad one), or pin one machine with
-`python3 packaging/install.py --rollback --to X`. The installer itself
+`python3.14 packaging/install.py --rollback --to X`. The installer itself
 restores the old pointer automatically when the new release fails its
 health check. Scheduled updates keep running after a rollback, so the
 channel offers the newer release again at the next pass; stop the scheduled
@@ -579,12 +579,12 @@ Every command is read-only unless it says otherwise, and none prints a
 token, key or URL:
 
 ```sh
-python3 packaging/install.py --doctor    # helper rows, a Fix line per WARN/FAIL
-python3 packaging/install.py --status    # version, service, keys, channel, update recency
-python3 packaging/install.py --check-update   # installed and available versions only
-python3 packaging/install.py --update    # apply what the channel offers (scheduled action)
-python3 packaging/install.py --rollback  # list installed releases; --to VERSION restores one
-python3 packaging/install.py --support   # 0600 redacted bundle for a support request
+python3.14 packaging/install.py --doctor    # helper rows, a Fix line per WARN/FAIL
+python3.14 packaging/install.py --status    # version, service, keys, channel, update recency
+python3.14 packaging/install.py --check-update   # installed and available versions only
+python3.14 packaging/install.py --update    # apply what the channel offers (scheduled action)
+python3.14 packaging/install.py --rollback  # list installed releases; --to VERSION restores one
+python3.14 packaging/install.py --support   # 0600 redacted bundle for a support request
 ```
 
 `--doctor` exits 1 when any row fails. Its rows cover the Python runtime, the

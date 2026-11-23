@@ -8,9 +8,8 @@ Install through the [staff download page](https://hub.softwarecombined.com/insta
 See [setup](../docs/setup.md), [desktop controls](../docs/desktop-menu.md),
 [compatibility](../docs/compatibility.md), and [operations](../docs/operations.md).
 
-Source commands run from this directory. Python 3.14 or later is required;
-the runtime uses the standard library only. Installer entrypoints remain
-compatible with Python 3.9.
+Source commands run from this directory. Python 3.14 or later is required
+for the runtime and the installer; both use the standard library only.
 
 ```sh
 python3.14 tools/plugin_verification.py --base origin/development --run

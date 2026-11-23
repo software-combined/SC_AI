@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Install the Codex model router. Runs on Python 3.9+; finds 3.14 for the router itself.
+"""Install the Codex model router. Runs on Python 3.14 or newer, like the router itself.
 
 Shared launchd/plist/feed helpers live in packaging/service.py. This
 module owns first install, explicit upgrade, rollback and uninstall only.
@@ -16,8 +16,9 @@ import sys
 import tarfile
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-sys.path.insert(0, str(Path(__file__).resolve().parent))
+if sys.version_info < (3, 14):
+    raise SystemExit('SCG Router setup needs Python 3.14 or newer. Install it, then run setup again.')
+sys.path[:0] = [str(Path(__file__).resolve().parent), str(Path(__file__).resolve().parents[1])]
 import loader  # noqa: E402
 _svc = loader.load(Path(__file__).resolve().parent / 'service.py', 'packaging.service')
 _platforms = _svc.load(
@@ -379,8 +380,7 @@ def _do_install(args, _fetch=fetch, _run=None, delivery=None):
         raise SystemExit('Repair cancelled; run setup again when your assistants are ready.')
     _, clients, _, mode = _resolve_clients_and_modes(args, home, state, repair=repair)
     python = _delivery.activate(home, delivery, python)
-    # Keep first-run keys in the window. TTL mirrors setup.SETUP_TTL_S without
-    # importing runtime code on Python 3.9; --setup or a keyless service arms it.
+    # Keep first-run keys in the window (TTL mirrors setup.SETUP_TTL_S); --setup or a keyless service arms it.
     missing = provider_keys().unhandled(home, state, _diag._key_private)
     env_named = [defn.key.env for defn in missing
                  if os.environ.get(defn.key.env, '').strip()]

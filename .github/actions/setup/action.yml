@@ -6,9 +6,7 @@ description: >
 inputs:
   python-version:
     description: >
-      Interpreter for the steps that follow. Plan 156 runs the installer
-      surface check on the 3.9 the installer supports; everything else
-      stays on the router's 3.14.
+      Interpreter for the steps that follow; the router and installer need 3.14.
     default: "3.14"
   cache:
     description: >

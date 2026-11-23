@@ -93,24 +93,6 @@ jobs:
         shell: pwsh
         run: python -m unittest -v tests.test_windows_acl_native
 
-  installer-python39:
-    name: Installer (Python 3.9)
-    needs: changes
-    if: needs.changes.outputs.installer == 'true'
-    # Pinned: actions/python-versions publishes no 3.9 build for Ubuntu 26.04,
-    # which ubuntu-latest now resolves to; 24.04 still has 3.9.25.
-    runs-on: ubuntu-24.04
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
-        with:
-          persist-credentials: false
-      - uses: ./.github/actions/setup
-        with:
-          python-version: "3.9"
-      - name: Installer surface imports on 3.9
-        run: python tools/check_installer_python39.py
-
   windows-standard:
     name: Windows standard user (${{ matrix.suite }})
     needs: changes
@@ -160,7 +142,7 @@ jobs:
     # Installer jobs may be skipped when scope finds no installer paths;
     # release-only prerequisites are skipped on development runs.
     # !cancelled() lets the failure guard run after a failed prerequisite.
-    needs: [changes, installer-macos, installer-windows, installer-python39, desktop-menus, plugin-schedulers, hook-adapter, unit-suite, windows-standard]
+    needs: [changes, installer-macos, installer-windows, desktop-menus, plugin-schedulers, hook-adapter, unit-suite, windows-standard]
     if: ${{ !cancelled() && (github.event.action != 'edited' || github.event.changes.base) }}
     # Development keeps the fast static checks. Main acceptance waits for
     # the selected offline suite and native checks running in parallel.

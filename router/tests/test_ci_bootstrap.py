@@ -18,10 +18,9 @@ class CleanHistoryScopeTests(unittest.TestCase):
     def setUp(self):
         self.root = Path(self.enterContext(tempfile.TemporaryDirectory()))
         self.component = self.root / 'router'
-        for name in ('tools', 'config', 'packaging', 'ai_router'):
+        for name in ('tools', 'packaging', 'ai_router'):
             (self.component / name).mkdir(parents=True)
-        for name in ('tools/ci_scope.py', 'config/installer-python-surface.txt'):
-            shutil.copyfile(COMPONENT / name, self.component / name)
+        shutil.copyfile(COMPONENT / 'tools/ci_scope.py', self.component / 'tools/ci_scope.py')
         (self.component / 'packaging/install.py').write_text('# Synthetic installer fixture.\n')
         self.env = {**os.environ, 'GIT_CONFIG_GLOBAL': os.devnull, 'GIT_CONFIG_NOSYSTEM': '1',
                     'GITHUB_OUTPUT': str(self.root / 'scope.out')}

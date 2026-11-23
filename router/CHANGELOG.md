@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Setup from a source checkout (`install.sh`, `install.ps1` or `packaging/install.py`) needs Python 3.14 and says so clearly on an older Python.
 - Remove retired download sign-in code. Downloads were already public, so updates work as before.
 - `tools/build_native_installer.py` no longer accepts `--download-config` or the no-op `--allow-unsigned`.
 - Setup and update saves retry on the newer settings instead of overwriting a concurrent save. A very short window remains, and an installer run can still replace a save made while it runs.
