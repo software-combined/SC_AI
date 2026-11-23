@@ -79,6 +79,22 @@ def card(item, answer):
             + f'<details><summary>Evidence</summary><p>{e(answer.get("evidence", ""))}</p></details></article>')
 
 
+def checked(verification):
+    """The score check from results.json: who checked, what held, and each change or rejected suggestion."""
+    if not isinstance(verification, dict):
+        return '<div class="panel"><h3>Score check</h3><p>No score check was recorded.</p></div>'
+    who = "A second agent" if verification.get("checkedBy") == "subagent" else "The scoring agent itself"
+    changed, rejected = verification.get("changed") or [], verification.get("rejected") or []
+    rows = [f'<li>{e(str(c.get("itemCode", "")))}: level {e(str(c.get("from", "")))} to {e(str(c.get("to", "")))}. '
+            f'{e(str(c.get("why", "")))}</li>' for c in changed]
+    rows += [f'<li>{e(str(r.get("itemCode", "")))}: suggestion not accepted. '
+             f'{e(str(r.get("why", "")))}</li>' for r in rejected]
+    return (f'<div class="panel"><h3>Score check</h3><p>{who} checked the scores against the evidence: '
+            f'{e(str(verification.get("held", "?")))} held, {len(changed)} changed, '
+            f'{len(rejected)} suggestions not accepted.</p>'
+            + (f'<ul class="notes">{"".join(rows)}</ul>' if rows else "") + '</div>')
+
+
 def render(framework, results, answers):
     levels = [a["answer"]["level"] for a in answers.values() if a["answer"]["kind"] == "scored"]
     counts = {c: sum(1 for lv in levels if COLOUR[lv] == c) for c in ("green", "amber", "red")}
@@ -95,6 +111,7 @@ def render(framework, results, answers):
         f'<div class="cards">{"".join(card(i, answers[i["code"]]) for i in d["items"])}</div></section>'
         for d in framework["dimensions"])
     notes = "".join(f"<li>{e(n)}</li>" for n in results.get("notChecked", []))
+    check = checked(results.get("verification"))
     style = (SKILL / "assets" / "report.css").read_text(encoding="utf-8")
     return f"""<!doctype html>
 <html lang="en-AU"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
@@ -108,6 +125,7 @@ def render(framework, results, answers):
 {f'<div class="panel actions-panel"><h3>Top actions</h3><ol class="actions">{actions}</ol></div>' if actions else ''}
 {dimensions}
 {f'<div class="panel"><h3>Not checked</h3><ul class="notes">{notes}</ul></div>' if notes else ''}
+{check}
 </main><footer>Levels: 1 or 2 red, 3 amber, 4 or 5 green. Each score is based on the evidence shown under it.</footer></div></body></html>
 """
 

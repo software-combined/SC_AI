@@ -13,7 +13,7 @@ A fresh checker reads the draft scores and the evidence, and looks for scores th
 1. **The evidence exists.** Each cited path, number and map ID is real. Numbers match `measure.json`.
 2. **The evidence supports the level.** The chosen descriptor matches the evidence, and the next level up does not. If the evidence sits between two levels, the lower one is chosen.
 3. **Absent and unreadable are not mixed up.** A setting that could not be read is `unanswered` with `Not checked:`, never level 1. A thing that was looked for and not found is scored.
-4. **"Blocks" is real.** A level that needs blocking cites a required check on every branch that leads to production.
+4. **"Blocks" is real.** A level that needs blocking cites a required check, from branch protection or a ruleset, on every branch that leads to production.
 5. **Same evidence, same weight.** The same fact does not lift or sink several questions beyond what each descriptor asks.
 6. **The reason is plain and true.** The one-line reason matches the evidence and a non-engineer can follow it.
 7. **Nothing private.** No secrets, credentials, customer data or local user paths appear in any output.

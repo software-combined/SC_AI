@@ -21,7 +21,8 @@
   example settings files and API schema files. Settings signals are scoped
   to the audited unit plus files that serve every unit.
 - `build_report.py` writes one self-contained HTML report with the Software
-  Combined colours, light and dark modes, and a phone layout.
+  Combined colours, light and dark modes, and a phone layout. The report
+  shows the score check: who checked, how many scores held, and each change.
 
 ## scg-review 0.7.6 (2026-11-23)
 

@@ -33,11 +33,12 @@ Each lane is defined by paths and rules, so two runs split the work the same way
 **Lane 2: documentation map.**
 - Every `AGENTS.md` and `CLAUDE.md` at any level, the documentation folder tree and its index.
 - For each document: the code domain it matches (`match`, `doc-only` or `code-only`), its line count, and its responsibility (`rules`, `design`, `testing`, `operations`, `reference` or `mixed`).
-- Claims: the first five checkable claims, taken in the order of the root `AGENTS.md` routes. A checkable claim names a command, a path, a number or a boundary that you can check by reading the repository's files.
+- Claims: the first five checkable claims, taken in the order of the root `AGENTS.md` routes, or in file order if it has no routes. A checkable claim names a command, a path, a number or a boundary that you can check by reading the repository's files.
 
 **Lane 3: verification and delivery map.**
 - CI files, the single check command (if any), hooks, secret-scan and coverage config, deploy triggers, environments and the release and rollback guide.
-- The read-only settings from the code host: branch protection for each shared branch, CODEOWNERS, the delete-on-merge setting, deployments, and the median time of recent pull request runs.
+- The read-only settings from the code host: the rules for each shared branch, CODEOWNERS, the delete-on-merge setting, deployments, and the median time of recent pull request runs.
+- Branch rules can come from classic branch protection or from rulesets, so read both. On GitHub, `gh api repos/<owner>/<name>/rules/branches/<branch>` lists every active rule for a branch, and `gh api repos/<owner>/<name>/rulesets/<id>` shows who can bypass a ruleset. A "Branch not protected" reply from the classic protection call alone does not mean the branch is unprotected. If a setting needs access you do not have, record it as `unreadable`.
 - Hygiene: strict typing, lint warnings, dead-code and duplication tools, the config module and example file, lockfiles, the update tool and its open updates, and pinned CI actions.
 - Run and preview: the local start command, sample data, whether real credentials are needed, and preview links on recent pull requests.
 
