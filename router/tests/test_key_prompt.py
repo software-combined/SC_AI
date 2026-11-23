@@ -38,7 +38,7 @@ class DialogArgvTests(unittest.TestCase):
         self.assertIn('with hidden answer', script)
         self.assertIn('buttons {"Cancel", "Continue"}', script)
         self.assertEqual(script.count('display dialog'), 1)
-        self.assertIn(key_dialog.ICON.name, script)
+        self.assertIn(key_dialog.owner().ICON.name, script)
 
     def test_windows_form_masks_the_key(self):
         argv = key_dialog.argv(r'C:\powershell.exe', 'win32')
@@ -46,14 +46,14 @@ class DialogArgvTests(unittest.TestCase):
         self.assertIn('UseSystemPasswordChar = $true', script)
         self.assertNotIn('ComboBox', script)
         self.assertTrue(script.endswith('[Console]::Out.Write($k.Text)'))
-        self.assertIn(key_dialog.ICON.name, script)
+        self.assertIn(key_dialog.owner().ICON.name, script)
 
     def test_linux_zenity_form_fields(self):
         argv = key_dialog.argv('/usr/bin/zenity', 'linux')
         self.assertIn('--forms', argv)
         self.assertIn('--add-password=%s key' % provider_defs.OPENROUTER.label, argv)
         self.assertFalse([arg for arg in argv if arg.startswith('--add-combo')])
-        self.assertIn('--window-icon=' + str(key_dialog.ICON), argv)
+        self.assertIn('--window-icon=' + str(key_dialog.owner().ICON), argv)
 
     def test_no_subscription_or_starter_question_is_asked(self):
         for platform_name, tool_path in (('darwin', '/usr/bin/osascript'),

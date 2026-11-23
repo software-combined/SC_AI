@@ -50,6 +50,12 @@ A repair that owns every connection asks only when Claude desktop uses
 OpenRouter; any other repair asks when a connection needs rewriting.
 Scheduled updates never call it. Public bootstrap scripts retain the saved
 channel and working runtime; repair never starts key setup.
+`client_dialog` is the one dialog owner. It holds the `SCG Router` title, the
+bundled icon and each platform's launch: macOS through `osascript`, Windows
+through `windows_shell` and Linux through the tool `dialog_tool` finds. Other
+dialog modules keep their own wording and answers and ask it to draw. The
+runtime key window loads it only when a window opens. `tests/test_popup_style.py`
+fails when another module restates the title or icon or starts a dialog tool.
 `dialog_tool` is a Python 3.9 leaf shared by installer and runtime dialogs.
 It validates retained setup paths before selecting the Linux wrapper.
 `native_dialog` distinguishes cancellation from failed presentation so renewal
@@ -790,6 +796,7 @@ parent metadata before selection. The verified root exits first, allowing its
 job to close workers before remaining verified survivors are ended.
 `windows_dialog.py` verifies the retained compiled helper for switch confirmation
 and progress. The helper owns presentation; Python owns consent and configuration.
+Without the helper, the dialog owner's styled form takes its place.
 `windows_shell.py` is the PowerShell launcher for shipped installer code (the shared single-select question's dialog tool and
 the checkout build tools still find PowerShell themselves). It starts the
 system copy by absolute path with one flag set and no console window. Values reach a

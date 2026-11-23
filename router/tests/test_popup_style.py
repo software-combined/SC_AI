@@ -1,12 +1,13 @@
 """One style for every dialog the router shows (AGENTS.md section 4a).
 
-The update notice and the first-run key window are produced by different
-modules on different Python versions, so this test is the single place that
-pins their shared title, icon and vocabulary.
+`packaging/client_dialog.py` owns the title, the icon and each platform's
+dialog launch; this test pins that ownership and the shared vocabulary.
 """
+import ast
 import unittest
 from pathlib import Path
 from types import SimpleNamespace
+from unittest import mock
 
 from ai_router import key_dialog
 
@@ -62,15 +63,53 @@ def _popup_text():
     return ' '.join(text).lower()
 
 
+# Files that may name a dialog tool or draw a window without the owner.
+OWNER = 'packaging/client_dialog.py'
+EXEMPT = {
+    'ai_router/dialog_tool.py': 'finds the dialog tool the owner uses',
+    'ai_router/key_dialog.py': "the key window's masked entry form",
+    'packaging/codex_switch_launch.py': 'a self-contained copy that runs beside older releases',
+    'packaging/native/native_build.py': 'build tooling, not a dialog',
+    'packaging/native/native_linux_gui.py': 'bundles the Linux dialog tool at build time',
+    'packaging/windows_shell.py': 'the one PowerShell launcher the owner uses',
+}
+MARKERS = ('display dialog', 'NSAlert', '--window-icon', '--title', 'System.Windows.Forms.Form', 'MessageBox')
+
+
+def _dialog_code(path):
+    """Module-level TITLE or ICON names and dialog launch strings in one file."""
+    tree = ast.parse(path.read_text(encoding='utf-8'))
+    found = []
+    for statement in tree.body:
+        if isinstance(statement, (ast.Assign, ast.AnnAssign)):
+            found += [node.id for node in ast.walk(statement)
+                      if isinstance(node, ast.Name) and node.id in ('TITLE', 'ICON')]
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Constant) and isinstance(node.value, str):
+            found += [mark for mark in MARKERS if mark in node.value]
+            if node.value in ('zenity', '-Command'):
+                found.append(node.value)
+    return found
+
+
 class PopupStyleTests(unittest.TestCase):
+    def test_only_the_owner_names_the_title_icon_or_dialog_tools(self):
+        files = sorted((_ROOT / 'packaging').rglob('*.py')) + sorted((_ROOT / 'ai_router').rglob('*.py'))
+        for path in files:
+            rel = path.relative_to(_ROOT).as_posix()
+            if rel != OWNER and rel not in EXEMPT:
+                with self.subTest(rel):
+                    self.assertEqual(_dialog_code(path), [], 'ask packaging/client_dialog.py instead')
+        self.assertEqual(sorted(_dialog_code(_ROOT / OWNER)[:2]), ['ICON', 'TITLE'])
+
     def test_shared_title(self):
-        self.assertEqual(key_dialog.TITLE, _notice().TITLE, 'SCG Router')
+        self.assertEqual(_dialog().TITLE, key_dialog.owner().TITLE, 'SCG Router')
 
     def test_shared_icon_asset(self):
-        self.assertEqual(key_dialog.ICON, _notice().ICON)
-        self.assertEqual(key_dialog.ICON,
-                         _ROOT / 'packaging' / 'assets' / 'router-icon.png')
-        self.assertTrue(key_dialog.ICON.is_file())
+        icon = _dialog().ICON
+        self.assertEqual(icon, key_dialog.owner().ICON)
+        self.assertEqual(icon, _ROOT / 'packaging' / 'assets' / 'router-icon.png')
+        self.assertTrue(icon.is_file())
 
     def test_every_platform_carries_the_icon(self):
         for platform_name, tool_path in (('darwin', '/usr/bin/osascript'),
@@ -78,7 +117,7 @@ class PopupStyleTests(unittest.TestCase):
                                          ('win32', 'C:/powershell.exe')):
             with self.subTest(platform_name):
                 blob = ' '.join(key_dialog.argv(tool_path, platform_name))
-                self.assertIn(key_dialog.ICON.name, blob)
+                self.assertIn(_dialog().ICON.name, blob)
         self.assertIn('POSIX file', _notice()._darwin_script('0.6.25', '/icon.png'))
 
     def test_no_jargon_in_user_visible_text(self):
@@ -95,7 +134,7 @@ class PopupStyleTests(unittest.TestCase):
                 blob = ' '.join(key_dialog.argv(
                     tool_path, platform_name, provider_id='bedrock'))
                 self.assertIn('aws bedrock key', blob.lower())
-                self.assertIn(key_dialog.TITLE, blob)
+                self.assertIn(_dialog().TITLE, blob)
                 self.assertIn('saved as you paste it', blob.lower())
 
     def test_plain_language_prompts(self):
@@ -124,12 +163,6 @@ class PopupStyleTests(unittest.TestCase):
                         '$r.Controls.Add($b)', '$r.Controls.Add($c)'):
             with self.subTest(control):
                 self.assertIn(control, script)
-
-    def test_the_question_shares_the_title_and_icon(self):
-        dialog = _dialog()
-        self.assertEqual(dialog.TITLE, key_dialog.TITLE, 'SCG Router')
-        self.assertEqual(dialog.ICON, key_dialog.ICON)
-        self.assertTrue(dialog.ICON.is_file())
 
     def test_every_platform_question_carries_the_icon(self):
         dialog = _dialog()
@@ -162,10 +195,9 @@ class PopupStyleTests(unittest.TestCase):
 
     def test_the_codex_offer_shares_the_style(self):
         offer = _offer()
-        platform = load(_ROOT / 'packaging' / 'claude_desktop_platform.py', 'router_offer_platform_style')
         for kind in offer.MESSAGES:
             with self.subTest(kind=kind):
-                script = platform.dialog_script(offer.MESSAGES[kind], True, ('Open Switch Codex', 'Later'))
+                script = _dialog().dialog_script(offer.MESSAGES[kind], True, ('Open Switch Codex', 'Later'))
                 self.assertIn('with title "SCG Router"', script)
                 self.assertIn('router-icon.png', script)
                 self.assertIn('buttons {"Later", "Open Switch Codex"}', script)
@@ -177,17 +209,19 @@ class PopupStyleTests(unittest.TestCase):
 
     def test_confirmations_default_to_the_action_and_notices_offer_ok(self):
         platform = load(_ROOT / 'packaging' / 'claude_desktop_platform.py', 'router_claude_desktop_platform')
+        dialog = platform._dialogs
         self.assertIn('buttons {"Cancel", "Continue"} default button "Continue" cancel button "Cancel"',
-                      platform.dialog_script('Switch Claude to OpenRouter?', True))
+                      dialog.dialog_script('Switch Claude to OpenRouter?', True))
         # Setup progress keeps Cancel: it is the only way to stop setup.
-        self.assertIn('buttons {"Cancel"}', platform.dialog_script('Setting up SCG Router.'))
+        self.assertIn('buttons {"Cancel"}', dialog.dialog_script('Setting up SCG Router.'))
         calls = []
         run = lambda argv, **_: calls.append(argv) or SimpleNamespace(returncode=0, stdout='', stderr='')
-        for name in ('darwin', 'win32', 'linux'):
-            platform.show_message('SCG Router is up to date.', name, run=run)
+        with mock.patch.object(dialog, 'tool', return_value='/usr/bin/zenity'):
+            for name in ('darwin', 'win32', 'linux'):
+                platform.show_message('SCG Router is up to date.', name, run=run)
         self.assertIn('buttons {"OK"} default button "OK"', calls[0][-1])
         self.assertIn("$c.Text='OK'", calls[1][-1])
-        self.assertEqual(calls[2][calls[2].index('--ok-label') + 1], 'OK')
+        self.assertIn('--ok-label=OK', calls[2])
         self.assertNotIn('Cancel', ' '.join(calls[0] + calls[2]))
 
     def test_windows_question_lays_every_control_out(self):

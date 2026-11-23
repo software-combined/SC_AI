@@ -16,7 +16,7 @@
   "packaging/codex_config.py": 478,
   "packaging/codex_desktop_switch.py": 420,
   "packaging/install.py": 670,
-  "packaging/notice.py": 500,
+  "packaging/notice.py": 426,
   "packaging/service.py": 507,
   "packaging/updater.py": 546,
   "tests/test_agent_skills.py": 318,

@@ -214,7 +214,7 @@ class ShowPendingTests(unittest.TestCase):
             self.assertTrue(notice_mod.show_pending(home, spawn=seen.append))
             durable = home / 'router-icon.png'
             self.assertTrue(durable.is_file())
-            self.assertEqual(durable.read_bytes(), notice_mod.ICON.read_bytes())
+            self.assertEqual(durable.read_bytes(), notice_mod._dialog().ICON.read_bytes())
             self.assertEqual(seen, [['fake-dialog', '1.0.1']])
 
     @unittest.skipUnless(sys.platform == 'darwin',
@@ -223,12 +223,12 @@ class ShowPendingTests(unittest.TestCase):
         bundle = Path(tempfile.mkdtemp(prefix='notice-bundle-'))
         (bundle / 'assets').mkdir()
         icon = bundle / 'assets' / 'router-icon.png'
-        shutil.copy(notice_mod.ICON, icon)
+        shutil.copy(notice_mod._dialog().ICON, icon)
         with tempfile.TemporaryDirectory() as tmp:
             home = Path(tmp) / 'home'
             home.mkdir()
             self._pending(home)
-            with mock.patch.object(notice_mod, 'ICON', icon):
+            with mock.patch.object(notice_mod._dialog(), 'ICON', icon):
                 commands = []
                 self.assertTrue(notice_mod.show_pending(home, spawn=commands.append))
             durable = home / 'router-icon.png'

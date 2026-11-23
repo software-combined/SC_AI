@@ -35,7 +35,7 @@ RUNTIME_IMPORTERS = {'ai_router/router.py', 'ai_router/ingress.py',
 # local loader's constant arguments fill it in.
 PACKAGING_PATHS = {
     ('ai_router/candidate_evidence.py', 'packaging/VERSION'),
-    ('ai_router/key_dialog.py', 'packaging/assets/router-icon.png'),
+    ('ai_router/key_dialog.py', 'packaging/client_dialog.py'),
     ('ai_router/runtime.py', 'packaging/VERSION'),
     ('ai_router/work_account.py', 'packaging/client_dialog'),
     ('ai_router/work_account.py', 'packaging/download_oauth'),

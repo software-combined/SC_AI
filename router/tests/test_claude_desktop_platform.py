@@ -50,7 +50,7 @@ class PlatformHarness:
             assert 'Stop-Process' not in script and 'taskkill' not in script
             return result()
         if argv[0] == 'zenity':
-            assert '--cancel-label' in argv and 'Cancel' in argv
+            assert '--cancel-label=Cancel' in argv
             return result()
         raise AssertionError('Unexpected platform command: ' + repr(argv))
 
@@ -61,6 +61,9 @@ class DesktopPlatformTests(unittest.TestCase):
         self.addCleanup(temp.cleanup)
         self.root = Path(temp.name).resolve()
         self.identity = dict(root='/apps/Claude.app', exe='/apps/Claude.app/Claude', user='501', app='Claude!App')
+        tool = mock.patch.object(platform._dialogs, 'tool', return_value='zenity')  # A host without zenity.
+        tool.start()
+        self.addCleanup(tool.stop)
 
     def row(self, pid=10, parent=1, exe=None, born='Mon Sep 28 10:00:00 2026'):
         return dict(pid=pid, parent=parent, user='501', born=born,
@@ -191,8 +194,8 @@ class DesktopPlatformTests(unittest.TestCase):
             blob = ' '.join(run.call_args.args[0])
             self.assertIn('SCG Router', blob)
             self.assertIn('Cancel', blob)
-            self.assertIn(platform.ICON.name, blob)
-        script = platform._windows_dialog("Task's long text", True)
+            self.assertIn(platform._dialogs.ICON.name, blob)
+        script = platform._dialogs.windows_form("Task's long text", True)
         # Validate every assigned enum against the WinForms contract, not a token substring.
         enums = re.findall(
             r'\$\w+\.(AutoSizeMode|FlowDirection|DialogResult)=([^;]+);', script)
@@ -265,7 +268,7 @@ class DesktopPlatformTests(unittest.TestCase):
         if not pwsh:
             return  # The strict command harness above remains active on every host.
         _, commands = self.stop('win32', [[self.row()], []])
-        scripts = [c[-1] for c in commands] + [platform._windows_dialog('Open Claude?', True)]
+        scripts = [c[-1] for c in commands] + [platform._dialogs.windows_form('Open Claude?', True)]
         def capture(argv, **kwargs):
             scripts.append(argv[-1])
             return result(json.dumps(self.identity))
