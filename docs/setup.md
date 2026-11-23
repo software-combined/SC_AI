@@ -22,7 +22,7 @@ automatic update jobs.
   SHA-256 tool.
 - Linux needs a running systemd user manager in the signed-in desktop session;
   setup refuses a bare remote SSH session without one.
-- Check [compatibility](compatibility.md) for the supported platforms and
+- Check [compatibility](compatibility.md) for the tested client versions and
   unfinished acceptance checks.
 
 ## Set up SCG Router

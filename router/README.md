@@ -23,7 +23,7 @@ This creates an artifact and does not install or publish it.
 The source layout differs from the installed layout: release bundles retain
 `ai_router/`, `packaging/`, `tools/`, and `plugins/` at their top level.
 Existing runtime names, user state, feed signing trust, and desktop controls
-remain compatible. See [repository transition](../docs/repository-transition.md).
+remain compatible. See [architecture](../docs/architecture.md).
 
 Contribute through [the repository rules](../CONTRIBUTING.md).
 Router changes follow [the Router changelog](CHANGELOG.md) and version marker

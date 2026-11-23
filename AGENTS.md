@@ -170,8 +170,8 @@ Every user-visible router change updates `router/CHANGELOG.md` and
 matching `packaging/VERSION`, then run the release workflow. Plugin-only changes
 follow section 9; they never bump `packaging/VERSION` or trigger router tags.
 New entries go under `## Unreleased` and move under the version heading when
-the tag is cut; entries older than the current minor series move, unedited,
-to `docs/changelog-archive.md`.
+the tag is cut; entries older than the current minor series are removed from
+`router/CHANGELOG.md` (Git history keeps them).
 
 ## 7. Compatibility rule
 

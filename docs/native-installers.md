@@ -54,11 +54,10 @@ its hourly model refresh to the updater.
 
 With the repository variable `NATIVE_INSTALLERS_ACCEPTED` set to `true`, every stable
 release publishes all five installers and switches the download page to them, so
-the page always offers the current release. Keep it unset until the native
-acceptance matrix passes. Without it, the page says the installers are not ready
-and keeps the setup scripts in its IT section.
-The owner turned it on on 20 October 2026, before the device checks ran;
-release 1.3.6 was the first to publish all five installers.
+the page always offers the current release. The variable is set to `true`; the
+device checks in the native acceptance matrix still apply to each release.
+Without it, the page says the installers are not ready and keeps the setup
+scripts in its IT section.
 After Mac verification, `NATIVE_INSTALLERS_MACOS_ARM64_ONLY=true` can publish
 the Mac arm64 stable package while the other native packages remain private.
 This platform-specific publication does not assert acceptance of the other
@@ -144,15 +143,11 @@ separate from native-package acceptance.
 | Linux | Run with FUSE and without FUSE on both supported Ubuntu releases and processors. |
 | Access | Allow downloads without an account; reject tampered metadata, bundles and off-origin redirects. |
 
-The first local proof built and mounted an unsigned macOS arm64 DMG. Its bundled
-Python reported 3.14.7 and its local feed matched the bundled archive. A clean
-Ubuntu 24.04 container ran the bundled Zenity dependency closure without system
-Python or GTK. These are build and dependency checks. They do not complete this
-matrix or prove a nontechnical staff member can finish the shared-link flow.
+On Windows, also run native Windows CI and real desktop checks for one tray
+icon after updating, sign-in startup, missed-check recovery, both switch
+directions, title routing, guarded attachment recovery and coherent task runtime
+paths. Check that a startup warning follows the menu rather than delaying it. Windows
+Server CI does not replace Windows 11 desktop acceptance.
 
-The 1.2.0 candidate also passed one real Claude Code 2.1.283 file-read round trip
-through an isolated router. It requested `deepseek/deepseek-v4.1-flash` at Low
-and completed in two upstream calls. Both calls reported that exact model;
-served effort was not exposed. The probe used synthetic data, a twelve-call cap,
-2,048 output tokens per call and a USD 0.25 client budget. This proves that reply
-path, not graphical installation or the remaining platform matrix.
+Build and dependency checks do not complete this matrix. They also do not prove
+that a nontechnical staff member can finish the shared-link flow.

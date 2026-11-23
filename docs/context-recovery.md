@@ -33,15 +33,15 @@ does not prove that a native tool disappeared.
 
 Use the offered native operation and report its actual result. Use supported
 discovery for deferred tools. A full delegation lane, rejected model or invalid
-argument needs its own diagnosis. A saved blocker is historical evidence;
+argument needs its own diagnosis. A saved blocker can be out of date;
 verify it before asking for a restart or a replacement chat.
 
 ## Updating older installations
 
-An earlier generated template contained a paragraph that incorrectly treated
-all context transitions as automatic compaction. The router recognizes that
-exact paragraph by a stored SHA-256 fingerprint and replaces only the matching
-paragraph. Its old wording is not redistributed in the source or package.
+Older installations can carry a generated template paragraph that treats all
+context transitions as automatic compaction, which is wrong. The router
+recognises that exact paragraph by a stored SHA-256 fingerprint and replaces
+only the matching paragraph. The source and package do not carry its wording.
 Custom prefixes, suffixes, token settings and other paragraphs are preserved.
 A similar paragraph with a different fingerprint stays unchanged. Applying
 the update again makes no further change.
@@ -50,10 +50,10 @@ the update again makes no further change.
 
 Run `python3.14 -m unittest tests.test_context_recovery` from a source checkout.
 The suite uses synthetic tasks and mocked upstreams. The separate diagnostic
-wrapper retains its offline scenario; native live execution is retired and
-refused before credential or client access. No subscription credential file
+wrapper runs an offline scenario only; it refuses native live execution before
+credential or client access. No subscription credential file
 needs to be copied or extracted for these tests.
 
 Offline tests verify routing and migration behavior. Real-client compatibility
-requires separately approved evidence before a production release, as described
-in [compatibility](compatibility.md) and [publication](publication.md).
+requires separately approved evidence before a production release; see
+[compatibility](compatibility.md) and [publication](publication.md).

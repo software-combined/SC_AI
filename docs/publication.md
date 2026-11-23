@@ -99,30 +99,30 @@ public forks receive no publishing grants or copied repository variables.
 Application release bundles include operator helpers but exclude developer
 probes, capture tools, benchmarks and publishing scripts.
 
-## Existing distribution and release decisions
+## Older downloads and release decisions
 
 The public 1.0.19.165 and 1.0.21.169 archives contain the old prompt and
 developer tools. Their verified SHA-256 values are, respectively,
 `9a3a3ffb6f57bb8919dd34de272a321f59f11b31bd08ad1dfd228273c965a937` and
 `c78d4716d7c917f940652e122699871b509c08c8fe9718df7ce9aefe7099138b`.
-Removing material from this candidate does not remove that download, other
-old archives, cached copies or historical disclosures.
+Removing material from the current source does not remove those downloads,
+other old archives, cached copies or earlier disclosures.
 
 Before publishing, preserve the private archive record and prepare a
 successor bundle, source companion and signed feed. Verify the successor
 before withdrawing affected older downloads, retiring their feed references
 and clearing caches. Keep verified private copies for rollback and reference.
 Publishing a successor does not remove older affected downloads.
-Historical infrastructure identifiers are not confirmed credentials; a
-rotation decision needs evidence that an actual secret was exposed.
+Old infrastructure identifiers are not confirmed credentials; a rotation
+decision needs evidence that an actual secret was exposed.
 
 Approval also covers provider scope, runtime component licences, SC brand
 use and public security/support ownership. External users have no support
 service level. Local tests cannot establish provider approval, model quality
-or live provider acceptance. `docs/compatibility.md` records fresh installed-client
-checks against local synthetic upstreams, with external network access
-blocked. Native OAuth and paid provider acceptance still require separately
-authorized live checks before a production support claim. Windows runtime
+or live provider acceptance. [Compatibility](compatibility.md) records the
+current client versions and release checks. Native OAuth and paid provider
+acceptance require separately authorised live checks before a production
+support claim. Windows runtime
 redistribution follows the Visual C++ runtime basis recorded in `runtime-licenses.md`.
-See repository verification and review gates before committing or integrating
-the candidate.
+Follow the repository verification and review gates before committing or
+integrating a change.
