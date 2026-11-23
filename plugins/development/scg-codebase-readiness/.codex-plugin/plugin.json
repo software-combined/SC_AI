@@ -1,0 +1,17 @@
+{
+  "name": "scg-codebase-readiness",
+  "version": "0.1.0",
+  "description": "Audit a repository against the Software Combined standard for an AI-optimised codebase and build a plain-language report.",
+  "author": {"name": "Software Combined"},
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "SCG Codebase Readiness",
+    "shortDescription": "Check if a codebase is ready for AI agents.",
+    "longDescription": "Map a repository, score 15 questions on structure, consistency, documentation, verification and safe delivery, and build a report anyone can read. It never changes the audited code or its settings.",
+    "developerName": "Software Combined",
+    "category": "Productivity",
+    "capabilities": [],
+    "defaultPrompt": "Use the codebase-ai-readiness skill to audit the repository at <absolute path>."
+  },
+  "repository": "https://github.com/software-combined/SC_AI"
+}

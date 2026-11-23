@@ -1,5 +1,18 @@
 # Changelog
 
+## scg-codebase-readiness 0.1.0 (2026-11-23)
+
+- New plugin. The `codebase-ai-readiness` skill audits one repository against
+  the standard for an AI-optimised codebase: 15 questions in five dimensions
+  (structure, consistency, documentation, verification and safe delivery).
+- Recon maps the repository in three lanes (code, documentation, verification
+  and delivery) with a fixed return schema, so two runs split and merge the
+  same way. Small repositories need no subagents.
+- `measure.py` reads tracked files only, disables fsmonitor and optional locks,
+  and reports values it cannot measure as null, never zero.
+- `build_report.py` writes one self-contained HTML report with the Software
+  Combined colours, light and dark modes, and a phone layout.
+
 ## scg-agent-factory 1.2.0 (2026-11-23)
 
 - Require the project manager and every owner to read this skill and the roster

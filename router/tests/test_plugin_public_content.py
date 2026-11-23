@@ -49,8 +49,8 @@ def public_files():
 
 
 class PluginPublicContentTests(unittest.TestCase):
-    def test_all_nine_plugin_surfaces_are_covered(self):
-        self.assertEqual(len(PLUGIN_SURFACES), 9)
+    def test_all_ten_plugin_surfaces_are_covered(self):
+        self.assertEqual(len(PLUGIN_SURFACES), 10)
         for name, roots in PLUGIN_SURFACES.items():
             with self.subTest(surface=name):
                 self.assertTrue(any(path.exists() for path in roots))

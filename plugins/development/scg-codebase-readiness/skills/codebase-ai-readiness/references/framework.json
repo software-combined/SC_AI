@@ -1,0 +1,365 @@
+{
+  "id": "codebase-ai",
+  "name": "AI-optimised codebase",
+  "dimensions": [
+    {
+      "number": 1,
+      "name": "Codebase structure",
+      "shortName": "Structure",
+      "summary": "Can an agent find the right files and read little?",
+      "contributesToOverall": true,
+      "items": [
+        {
+          "code": "1.1",
+          "subCapability": "Domain and subdomain split",
+          "shortLabel": "Domain split",
+          "scale": "maturity-1-5",
+          "descriptors": [
+            {"level": 1, "text": "Code is grouped by file type or not grouped at all. A task in one business area touches files across the whole repository."},
+            {"level": 2, "text": "Some folders are named after business areas, but most code sits in shared catch-all folders such as utils, services or components."},
+            {"level": 3, "text": "Most code sits under a named business domain, but domains are large and have no subdomains, or shared folders still hold business rules."},
+            {"level": 4, "text": "Code is split by domain, then subdomain, then file. A written rule says where new code goes. A few areas still break the rule."},
+            {"level": 5, "text": "Every source file sits under its owning domain and subdomain. The split is written down, used the same way in apps, packages and documents, and a task in one area opens only that area."}
+          ],
+          "evidenceToLookFor": "Folder tree to depth 3, share of files under domain folders, catch-all folders (utils, helpers, common, misc), the written rule for where code goes.",
+          "naAllowed": false
+        },
+        {
+          "code": "1.2",
+          "subCapability": "Service and layer boundaries",
+          "shortLabel": "Service boundaries",
+          "scale": "maturity-1-5",
+          "descriptors": [
+            {"level": 1, "text": "No boundaries. Screens, business rules and database code import each other freely, or sit in the same files."},
+            {"level": 2, "text": "Layers or services exist by convention only. Nothing is written down and cross-imports are common."},
+            {"level": 3, "text": "Boundaries are written down and mostly followed, but no automatic test checks them."},
+            {"level": 4, "text": "An automatic architecture test checks the main boundaries, but it has known exceptions or does not block a merge on every branch that leads to production."},
+            {"level": 5, "text": "Entry points are independent, imports go one way, domain rules do not import infrastructure, and a required check blocks the merge on every branch that leads to production when a boundary breaks."}
+          ],
+          "evidenceToLookFor": "Architecture guide, dependency-cruiser or similar config and its rules, the CI step that runs it, sampled imports across apps and packages.",
+          "naAllowed": false
+        },
+        {
+          "code": "1.3",
+          "subCapability": "File size limits",
+          "shortLabel": "File size",
+          "scale": "maturity-1-5",
+          "descriptors": [
+            {"level": 1, "text": "No automatic size check, and at least one handwritten source file is over 1,000 lines."},
+            {"level": 2, "text": "No automatic size check. No file is over 1,000 lines, but more than 10% are over 400."},
+            {"level": 3, "text": "No automatic size check, and 10% or fewer of handwritten source files are over 400 lines."},
+            {"level": 4, "text": "An automatic size check exists, but old large files remain on a baseline or the check does not block a merge on every branch that leads to production."},
+            {"level": 5, "text": "No handwritten source file is over 400 lines, files over 250 are flagged for review, and a required check blocks the merge on every branch that leads to production when the limit breaks."}
+          ],
+          "evidenceToLookFor": "Line counts per file in three bands (up to 250, 251 to 400, over 400), the largest files, the written limit, the size-check script and the CI step that runs it.",
+          "naAllowed": false
+        }
+      ]
+    },
+    {
+      "number": 2,
+      "name": "Consistency",
+      "shortName": "Consistency",
+      "summary": "Is there one way to do things, and is it checked?",
+      "contributesToOverall": true,
+      "items": [
+        {
+          "code": "2.1",
+          "subCapability": "Written coding standards",
+          "shortLabel": "Written standards",
+          "scale": "maturity-1-5",
+          "descriptors": [
+            {"level": 1, "text": "No written standards. How to write code here lives in people's heads."},
+            {"level": 2, "text": "Standards are scattered in a README, a wiki or old pull requests. They are partial or out of date."},
+            {"level": 3, "text": "One rules document exists in the repository, but it is long, vague, or misses ownership, dependencies or testing."},
+            {"level": 4, "text": "One rules document covers ownership, dependencies, naming and tests, but some rules are long or vague, or branches and review are missing."},
+            {"level": 5, "text": "One rules document of about 60 lines covers ownership, dependencies, naming, branches, tests and review. Each rule is one or two plain sentences, and the agent entry file routes to it."}
+          ],
+          "evidenceToLookFor": "The rules or patterns document, its length and last change date, whether the agent entry file links to it, rules that name a concrete limit or command.",
+          "naAllowed": false
+        },
+        {
+          "code": "2.2",
+          "subCapability": "Pattern consistency in the code",
+          "shortLabel": "Pattern consistency",
+          "scale": "maturity-1-5",
+          "descriptors": [
+            {"level": 1, "text": "Each area is written a different way. Several frameworks, styles or naming schemes sit side by side."},
+            {"level": 2, "text": "A common style exists in newer code, but older areas follow other patterns and nothing marks which one is current."},
+            {"level": 3, "text": "Most sampled files follow the same shape and naming. Two or more competing patterns remain for the same job."},
+            {"level": 4, "text": "Sampled files in different domains follow the same shape, naming and one-job-per-file rule, with rare exceptions."},
+            {"level": 5, "text": "Every sampled file follows the written patterns. A new file can copy its nearest neighbour, and old patterns are removed, not left beside the new ones."}
+          ],
+          "evidenceToLookFor": "Three to five source files from different domains, naming of files and functions, files that mix screen, rule and data code, duplicate ways to do one job.",
+          "naAllowed": false
+        },
+        {
+          "code": "2.3",
+          "subCapability": "Automated enforcement",
+          "shortLabel": "Automated checks",
+          "scale": "maturity-1-5",
+          "descriptors": [
+            {"level": 1, "text": "No lint, type check or format check."},
+            {"level": 2, "text": "Checks exist but are optional, noisy or not run in CI."},
+            {"level": 3, "text": "Checks run in CI, but there is no single command that people and agents run locally."},
+            {"level": 4, "text": "One command runs the checks locally and CI runs the same command, but it does not block a merge on every branch that leads to production."},
+            {"level": 5, "text": "One command runs the checks locally, CI runs the same command, and a required check blocks the merge on every branch that leads to production when it fails."}
+          ],
+          "evidenceToLookFor": "The scripts in the package or build file, a single check command, whether CI runs that same command, and whether its CI job is a required check on every branch that leads to production. Which checks it contains is scored in 1.2 and 1.3.",
+          "naAllowed": false
+        }
+      ]
+    },
+    {
+      "number": 3,
+      "name": "Documentation",
+      "shortName": "Documentation",
+      "summary": "Does the agent get the right context, and only that?",
+      "contributesToOverall": true,
+      "items": [
+        {
+          "code": "3.1",
+          "subCapability": "Agent entry point and routing",
+          "shortLabel": "AGENTS.md routing",
+          "scale": "maturity-1-5",
+          "descriptors": [
+            {"level": 1, "text": "No AGENTS.md or CLAUDE.md. An agent starts with no instructions."},
+            {"level": 2, "text": "An agent file exists but it is generic, auto-generated or out of date."},
+            {"level": 3, "text": "The agent file has real rules, but it is one long document that every task must read in full."},
+            {"level": 4, "text": "The agent file links to separate guides, but it is over about 40 lines, the routing is a plain list, or some guides are missing or unlinked."},
+            {"level": 5, "text": "A root AGENTS.md of about 40 lines or fewer routes each kind of task to the one or two guides it needs. CLAUDE.md only loads AGENTS.md. Every route resolves."}
+          ],
+          "evidenceToLookFor": "Root AGENTS.md and CLAUDE.md, their line counts, the routing table, whether each linked guide exists.",
+          "naAllowed": false
+        },
+        {
+          "code": "3.2",
+          "subCapability": "Documentation architecture",
+          "shortLabel": "Doc architecture",
+          "scale": "maturity-1-5",
+          "descriptors": [
+            {"level": 1, "text": "Little or no documentation in the repository, or one very large README."},
+            {"level": 2, "text": "Documents exist but are scattered across folders with no index. Long guides mix rules, design and operations."},
+            {"level": 3, "text": "Documents sit in one folder with some grouping, but not by domain and subdomain. Many are over 200 lines, or there is no index."},
+            {"level": 4, "text": "Documents are grouped by domain and subdomain with an index, and most have one responsibility. A few are over 200 lines, mix responsibilities, or use different domain names from the code."},
+            {"level": 5, "text": "Documents are grouped by domain and then subdomain, with the same names as the code. Each document has one responsibility, a short index lists them all, every document is 200 lines or fewer and a check enforces it."}
+          ],
+          "evidenceToLookFor": "The documentation folder tree compared with the code's domain and subdomain folders, the index, documents that mix rules, design, testing and operations, line counts of every Markdown file, a doc size check.",
+          "naAllowed": false
+        },
+        {
+          "code": "3.3",
+          "subCapability": "Documentation accuracy and redundancy",
+          "shortLabel": "Doc accuracy",
+          "scale": "maturity-1-5",
+          "descriptors": [
+            {"level": 1, "text": "Documents describe a system that no longer exists. Most sampled claims are wrong."},
+            {"level": 2, "text": "Several broken links or wrong commands. The same topic is explained in several places and the copies disagree."},
+            {"level": 3, "text": "Most sampled claims hold. Some links are broken, or the same rule is repeated in two or more documents."},
+            {"level": 4, "text": "All sampled claims hold and links resolve, but small repeats or leftover old text remain, or no link check runs in CI."},
+            {"level": 5, "text": "All sampled claims hold, every local link resolves, each decision has one owning guide, no leftover old text was found, and a link check runs in CI."}
+          ],
+          "evidenceToLookFor": "Broken local links, five sampled claims checked against the repository, paragraphs repeated across documents, a link check in CI, planning or archive files mixed with current guides.",
+          "naAllowed": false
+        }
+      ]
+    },
+    {
+      "number": 4,
+      "name": "Verification",
+      "shortName": "Verification",
+      "summary": "Does the agent get a fast, trusted pass or fail?",
+      "contributesToOverall": true,
+      "items": [
+        {
+          "code": "4.1",
+          "subCapability": "CI speed and scoping",
+          "shortLabel": "CI optimisation",
+          "scale": "maturity-1-5",
+          "descriptors": [
+            {"level": 1, "text": "No CI, or CI does not run on pull requests."},
+            {"level": 2, "text": "CI runs everything in one long job on every change, with no cache."},
+            {"level": 3, "text": "CI caches dependencies or splits into jobs, but every change runs the full suite in sequence."},
+            {"level": 4, "text": "CI runs jobs in parallel with caching and cancels superseded runs, but every change runs the full suite, or a typical run takes over 15 minutes."},
+            {"level": 5, "text": "CI works out what a change touched and runs only the needed checks, in parallel, with caching, time limits and one final gate, and a typical run finishes within 15 minutes."}
+          ],
+          "evidenceToLookFor": "CI workflow files: scope planning, parallel jobs or a matrix, caching, concurrency cancel, time limits, a final gate job. The median duration of the last 20 successful pull request runs.",
+          "naAllowed": false
+        },
+        {
+          "code": "4.2",
+          "subCapability": "Test coverage",
+          "shortLabel": "Test coverage",
+          "scale": "maturity-1-5",
+          "descriptors": [
+            {"level": 1, "text": "No automated tests, or tests exist but do not run."},
+            {"level": 2, "text": "A few tests cover a small part of the code. Coverage is not measured."},
+            {"level": 3, "text": "Tests cover the main behaviour and run in CI. Coverage is not measured, or has no target."},
+            {"level": 4, "text": "Coverage is measured and reported in CI with a written target, but CI does not fail below it, or key areas are under it."},
+            {"level": 5, "text": "Coverage is measured, meets a written target, and CI fails below it. Of the last 10 fix commits, each adds or changes a test."}
+          ],
+          "evidenceToLookFor": "Ratio of test files to production files, test folders by type, a coverage tool and threshold in config or CI, the latest coverage number if available, and whether each of the last 10 fix commits touches a test.",
+          "naAllowed": false
+        },
+        {
+          "code": "4.3",
+          "subCapability": "Checks before the change leaves the laptop",
+          "shortLabel": "Pre-commit checks",
+          "scale": "maturity-1-5",
+          "descriptors": [
+            {"level": 1, "text": "Nothing runs before a push. Problems are found in CI or in production."},
+            {"level": 2, "text": "Some people run lint or tests by hand before a push. Nothing is required."},
+            {"level": 3, "text": "A hook or local check exists but covers format or lint only, or nothing says it is required."},
+            {"level": 4, "text": "The rules require a secret scan and the checks before every commit, through a hook tracked in the repository or shared hook tooling that the rules name."},
+            {"level": 5, "text": "Every commit passes a review, a secret scan and the affected checks before it leaves the laptop. The rules require it, a tracked or named shared hook enforces it, and its set-up is documented."}
+          ],
+          "evidenceToLookFor": "Pre-commit or hook config, a secret-scan config, the rule that requires a review before commit, whether the rules name shared hook tooling. You cannot see whether each contributor installed a hook kept outside the repository: say so in notChecked.",
+          "naAllowed": false
+        }
+      ]
+    },
+    {
+      "number": 5,
+      "name": "Safe delivery",
+      "shortName": "Delivery",
+      "summary": "Can anyone ship a change without breaking production?",
+      "contributesToOverall": true,
+      "items": [
+        {
+          "code": "5.1",
+          "subCapability": "Protected main branch",
+          "shortLabel": "Branch protection",
+          "scale": "maturity-1-5",
+          "descriptors": [
+            {"level": 1, "text": "No protection. Anyone with write access can push to the production branch or delete it."},
+            {"level": 2, "text": "People agree not to push to the production branch, but nothing enforces it."},
+            {"level": 3, "text": "The production branch needs a pull request and a passing check, but approvals are not required, administrators can bypass the rules, or a shared integration branch that leads to it is unprotected."},
+            {"level": 4, "text": "Every shared branch that leads to production needs a pull request, a passing check and one approval. Force pushes and deletion are off and the rules apply to administrators."},
+            {"level": 5, "text": "As level 4, and high-risk areas (for example access, money, data migrations or infrastructure) need a named owner's review, for example through a CODEOWNERS file."}
+          ],
+          "evidenceToLookFor": "Branch protection or ruleset settings for the default branch and each shared integration branch: pull request required, required checks, approvals, force push, deletion, administrator bypass. A CODEOWNERS file and the paths it covers.",
+          "naAllowed": false
+        },
+        {
+          "code": "5.2",
+          "subCapability": "Branch hygiene and naming",
+          "shortLabel": "Branch hygiene",
+          "scale": "maturity-1-5",
+          "descriptors": [
+            {"level": 1, "text": "Dozens of old branches with no pattern. Nobody knows which ones are still in use."},
+            {"level": 2, "text": "No naming rule, and more than 10 merged or stale branches remain."},
+            {"level": 3, "text": "No written naming rule, but few branches are open and most follow a pattern by habit."},
+            {"level": 4, "text": "A naming rule is written and followed, and few branches are open, but merged branches are not deleted automatically."},
+            {"level": 5, "text": "A written naming rule is followed by every branch, merged branches are deleted automatically, and no branch is without a commit for 30 days."}
+          ],
+          "evidenceToLookFor": "Number of remote branches, their name prefixes, branches with no commit for 30 days, branches already merged but not deleted, the written naming rule, the delete-on-merge setting.",
+          "naAllowed": false
+        },
+        {
+          "code": "5.3",
+          "subCapability": "Automatic deployment",
+          "shortLabel": "Auto deployment",
+          "scale": "maturity-1-5",
+          "descriptors": [
+            {"level": 1, "text": "Deployment is manual and undocumented. One person knows how to release."},
+            {"level": 2, "text": "Deployment is a documented list of manual steps or commands that a person runs."},
+            {"level": 3, "text": "A script or pipeline deploys, but a person must start it from their own machine or with their own cloud access."},
+            {"level": 4, "text": "A merge deploys to a staging environment automatically. Production needs manual steps beyond one approval, or has no recorded check after release."},
+            {"level": 5, "text": "A merge deploys to staging automatically, production is one approved action, each deployment is recorded and checked after release, and the rollback steps are written down."}
+          ],
+          "evidenceToLookFor": "CI workflows that deploy and what triggers them, deployment environments and recent deployment records on the code host, the release guide, rollback steps, whether a deploy needs a person's own machine or credentials.",
+          "naAllowed": true
+        }
+      ]
+    }
+  ],
+  "levers": [
+    {
+      "id": "domain-restructure",
+      "name": "Domain and boundary restructure",
+      "description": "Move code under owning domains and subdomains, write the boundary rules, and add an architecture test to CI.",
+      "prerequisites": [],
+      "need": {
+        "questions": [
+          {"itemCode": "1.1", "target": 4},
+          {"itemCode": "1.2", "target": 4}
+        ],
+        "activities": ["Write where each kind of code goes.", "Add an architecture test and run it in CI.", "Move one domain at a time when it is next changed."],
+        "goalRequired": false
+      }
+    },
+    {
+      "id": "size-limits-rollout",
+      "name": "File size limits rollout",
+      "description": "Add a size check for source files and documents, put old large files on a baseline, and split a part out whenever one is changed.",
+      "prerequisites": [],
+      "need": {
+        "questions": [
+          {"itemCode": "1.3", "target": 4},
+          {"itemCode": "3.2", "target": 4}
+        ],
+        "activities": ["Add the size-check script and run it in CI.", "Record a baseline for old large files so they cannot grow."],
+        "goalRequired": false
+      }
+    },
+    {
+      "id": "pattern-consolidation",
+      "name": "Pattern consolidation",
+      "description": "Pick one pattern for each recurring job, write it down, and remove the old patterns when each area is next changed.",
+      "prerequisites": [],
+      "need": {
+        "questions": [
+          {"itemCode": "2.2", "target": 4}
+        ],
+        "activities": ["List the competing patterns for the same job.", "Write the chosen pattern in the rules document.", "Move one area at a time when it is next changed."],
+        "goalRequired": false
+      }
+    },
+    {
+      "id": "agent-docs-setup",
+      "name": "Agent rules and documentation set-up",
+      "description": "Add a short AGENTS.md that routes each task to small guides, write the rules document, and remove stale or repeated text.",
+      "prerequisites": [],
+      "need": {
+        "questions": [
+          {"itemCode": "2.1", "target": 4},
+          {"itemCode": "3.1", "target": 4},
+          {"itemCode": "3.3", "target": 4}
+        ],
+        "activities": ["Write a routing table in AGENTS.md.", "Split long guides by domain.", "Add a link check to CI."],
+        "goalRequired": false
+      }
+    },
+    {
+      "id": "verification-uplift",
+      "name": "Fast checks and coverage uplift",
+      "description": "Add one check command, scope and parallelise CI, measure test coverage against a target, and require a review and secret scan before every commit.",
+      "prerequisites": [],
+      "need": {
+        "questions": [
+          {"itemCode": "2.3", "target": 4},
+          {"itemCode": "4.1", "target": 4},
+          {"itemCode": "4.2", "target": 4},
+          {"itemCode": "4.3", "target": 4}
+        ],
+        "activities": ["Create one check command and run it in CI.", "Measure coverage and set a target.", "Add the pre-commit review and secret scan."],
+        "goalRequired": false
+      }
+    },
+    {
+      "id": "protected-delivery",
+      "name": "Protected branches and automatic deployment",
+      "description": "Protect every shared branch, agree a branch naming rule with delete-on-merge, and make a merge deploy to staging with production as one approved action.",
+      "prerequisites": [],
+      "need": {
+        "questions": [
+          {"itemCode": "5.1", "target": 4},
+          {"itemCode": "5.2", "target": 4},
+          {"itemCode": "5.3", "target": 4}
+        ],
+        "activities": ["Protect the production and integration branches.", "Write the branch naming rule and turn on delete-on-merge.", "Add a pipeline that deploys to staging on merge."],
+        "goalRequired": false
+      }
+    }
+  ]
+}
