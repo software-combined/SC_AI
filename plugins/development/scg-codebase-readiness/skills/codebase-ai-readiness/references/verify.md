@@ -1,0 +1,42 @@
+# Verify: check the scores before the report
+
+A fresh checker reads the draft scores and the evidence, and looks for scores the evidence does not support. It did not score, so it does not defend the scores. It changes nothing: the main agent decides.
+
+## What the checker gets
+
+- The draft `results.json`, `recon.json` and `measure.json`.
+- The [framework](framework.json) and the [scoring rules](../SKILL.md#scoring-rules).
+- Read-only access to the audited repository, under the same rules as the audit: read files from Git, never follow a symbolic link, never run a command the repository names.
+
+## The checklist, for every question
+
+1. **The evidence exists.** Each cited path, number and map ID is real. Numbers match `measure.json`.
+2. **The evidence supports the level.** The chosen descriptor matches the evidence, and the next level up does not. If the evidence sits between two levels, the lower one is chosen.
+3. **Absent and unreadable are not mixed up.** A setting that could not be read is `unanswered` with `Not checked:`, never level 1. A thing that was looked for and not found is scored.
+4. **"Blocks" is real.** A level that needs blocking cites a required check on every branch that leads to production.
+5. **Same evidence, same weight.** The same fact does not lift or sink several questions beyond what each descriptor asks.
+6. **The reason is plain and true.** The one-line reason matches the evidence and a non-engineer can follow it.
+7. **Nothing private.** No secrets, credentials, customer data or local user paths appear in any output.
+
+Check at most three claims per question by reading the repository. Stop there: this is a check, not a second audit.
+
+## What the checker returns
+
+Only this JSON, one entry per question:
+
+```json
+[
+  { "itemCode": "3.2", "verdict": "holds | adjust | unsupported", "suggestedLevel": 3, "reason": "One line with the evidence." }
+]
+```
+
+- `holds`: the score stands.
+- `adjust`: the evidence supports a different level, given in `suggestedLevel`.
+- `unsupported`: the cited evidence is missing or wrong; the question needs new evidence or `unanswered`.
+
+## What the main agent does
+
+1. Decide each `adjust` and `unsupported` item against the evidence. Accept, or reject with a one-line reason.
+2. Apply accepted changes to `results.json`.
+3. Record the outcome in `results.json` under `verification`: who checked (`subagent` or `self`), how many items held, which changed and why, and which suggestions you rejected and why.
+4. Do not run a second round unless an accepted change touched more than three questions.

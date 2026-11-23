@@ -28,6 +28,7 @@ codex plugin marketplace add software-combined/SC_AI --ref main
 codex plugin add scg-ponytail@scg-agent-plugins
 codex plugin add scg-review@scg-agent-plugins
 codex plugin add scg-optimise-ci@scg-agent-plugins
+codex plugin add scg-codebase-readiness@scg-agent-plugins
 ```
 
 SCG Review uses the single `scg-ponytail:ponytail` skill for its simplifier
