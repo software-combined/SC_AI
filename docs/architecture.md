@@ -135,7 +135,10 @@ bytes are unchanged. A concurrent save reruns the change on the newer document, 
 bounded number of times; a save landing in the short gap between that check and the
 rename can still be lost. `install.py` still writes its whole document under the installation lock.
 `update_status` owns verified channel facts, cache identity and repair summaries.
-It also owns version validation for packaging callers.
+It is the only writer of those facts: component results, installation repair,
+failure counts and check results. Other modules pass it their results inside `state.update`.
+It names the stored component results and the repair-step outcomes once, and holds the
+failure threshold that parks a release. It also owns version validation for packaging callers.
 Only a verified release for the same channel and source can support a cached
 current-version response. Diagnostics and controls read those facts without
 changing state. A successful feed check clears only earlier feed-verification or
@@ -162,7 +165,9 @@ Graphical setup suppresses detached notices while it owns completion guidance.
 ## Domains and direction
 
 `update_reconcile` runs after applying-update installation locks close, including
-unchanged regular and Express checks. Read-only preflight does not take the installation lock.
+unchanged regular and Express checks. It runs post-update repair in one fixed order:
+installation, Codex attachment, assistant attention, then scheduled-task runtime.
+Each step's module owns its checks. Read-only preflight does not take the installation lock.
 An attachment repair, runtime repair or changed attention result takes the lock without waiting
 and repeats verification. Healthy unchanged checks do not acquire it.
 Restart-notice presentation runs after the lock closes.

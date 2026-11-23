@@ -18,7 +18,7 @@
   "packaging/install.py": 700,
   "packaging/notice.py": 500,
   "packaging/service.py": 507,
-  "packaging/updater.py": 587,
+  "packaging/updater.py": 546,
   "tests/test_agent_skills.py": 318,
   "tests/test_bootstrap.py": 310,
   "tests/test_catalogue.py": 495,

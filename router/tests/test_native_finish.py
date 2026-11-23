@@ -159,9 +159,13 @@ class RepairCloseTests(unittest.TestCase):
 
     def test_repair_passes_attachment_ownership_to_the_close_question(self):
         delivery, repair = module('install_delivery'), mock.Mock()
+        original = delivery._load
+
+        def load_with_repair_ui(name):
+            return repair if name == 'repair_ui' else original(name)
         for status, owned in (('ready', True), ('failed', False), ('unknown', False)):
             with mock.patch.object(delivery, 'assistant_status', return_value=status), \
-                    mock.patch.object(delivery, '_load', return_value=repair):
+                    mock.patch.object(delivery, '_load', side_effect=load_with_repair_ui):
                 delivery.close_assistants(Path('/synthetic/home'))
             repair.close_assistants.assert_called_with(Path('/synthetic/home'), owned=owned)
 

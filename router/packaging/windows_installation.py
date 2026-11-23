@@ -94,7 +94,7 @@ def controls(home, latest, feed, fetch, backend):
     except Deferred:
         raise  # activate already recorded and announced this deferral.
     except (Exception, SystemExit):
-        if prepared and prepared.get('started') and restore(home, backend) != 'restored':
+        if prepared and prepared.get('started') and restore(home, backend) != load('update_status').RESTORED:
             raise
         defer(home, latest['version'])
 
@@ -140,15 +140,8 @@ def _journal(home):
 
 def _attention(home, failed):
     service = load('service')
-
-    def mark(state):
-        if failed:
-            state['installation_repair_required'] = True
-        else:
-            state.setdefault('component_repairs', {}).update({name: 'ready' for name in
-                ('controller', 'updater_launcher', 'scheduler', 'controls', 'controls_launchers')})
-            load('update_status').record(state, error='', repaired=True)
-    service._state.update(home, mark, service._atomic_write)
+    service._state.update(home, lambda state: load('update_status').mark_installation(state, failed),
+                          service._atomic_write)
 
 
 def pending(home):
@@ -157,12 +150,12 @@ def pending(home):
 
 def reconcile(home, service, backend):
     """Outer regular/Express maintenance retries only a pending journal, without waiting."""
-    home = Path(home)
+    home, status = Path(home), load('update_status')
     if not pending(home) or (home / '.router-removed').exists():
-        return 'inactive'
+        return status.INACTIVE
     with service.install_lock(home) as held:
         if not held:
-            return 'deferred'
+            return status.DEFERRED
         return restore(home, backend)
 
 
@@ -229,9 +222,9 @@ def ready(home):
         receipt = json.loads((home / RECEIPT).read_text(encoding='utf-8'))
         actual, _, _ = parts(home)
         state = load('service')._state.read(load('service')._state.path(home))
-        components = load('update_status').components(state)
-        return receipt == actual and all(components.get(name) == 'ready' for name in
-            ('controller', 'updater_launcher', 'scheduler', 'controls', 'controls_launchers'))
+        status = load('update_status')
+        components = status.components(state)
+        return receipt == actual and all(components.get(name) == status.READY for name in status.INSTALLED)
     except (OSError, ValueError, KeyError, TypeError, AttributeError):
         return False
 
@@ -275,7 +268,7 @@ def ready_after_commit(home, receipt):
 
 def restore(home, backend):
     """Never kill an updater; retain both runtimes and journal on incomplete recovery."""
-    home = Path(home)
+    home, status = Path(home), load('update_status')
     try:
         doc, before = _journal(home)
         if not doc['restored']:
@@ -314,22 +307,22 @@ def restore(home, backend):
                 load('native_shortcuts').verify(home, resources, python, legacy=True)
             except (Exception, SystemExit):
                 _attention(home, True)
-                return 'restored_mixed'
+                return status.RESTORED_MIXED
             load('atomic_write').replace_json(home / RECEIPT, receipt)
         _attention(home, doc['previous'] == '0.0.0')
         (home / JOURNAL).unlink()
-        return 'restored'
+        return status.RESTORED
     except (Exception, SystemExit):
         _attention(home, True)
         load('update_reconcile').log(home, 'installation', 'restore_failed', status=1)
-        return 'failed'
+        return status.FAILED
 
 
 class Repair:
     """The Windows backend's repair hooks (contract: `platforms.NoRepair`)."""
 
     def recover_interrupted(self, home):
-        return restore(home, self) if pending(home) else 'inactive'
+        return restore(home, self) if pending(home) else load('update_status').INACTIVE
 
     def reconcile_after_update(self, home, service):
         return reconcile(home, service, self)

@@ -1,4 +1,5 @@
 """Every backend answers the repair hooks, and shared modules ask the host backend."""
+import contextlib
 import tempfile
 import unittest
 from pathlib import Path
@@ -104,7 +105,35 @@ class RepairHookTests(unittest.TestCase):
                                    return_value=SimpleNamespace(host=lambda _: SimpleNamespace())), \
                     mock.patch.object(runtime, 'load', wraps=runtime.load) as loaded:
                 self.assertEqual(runtime.reconcile(home), 'inactive')
-            self.assertEqual([call.args for call in loaded.call_args_list], [('service',)])
+            self.assertEqual([call.args for call in loaded.call_args_list], [('service',), ('update_status',)])
+
+    def test_post_update_repair_keeps_one_fixed_step_order(self):
+        maintenance, calls = load('packaging/update_reconcile.py'), []
+
+        def step(name, preflight, applied):
+            def run(*_, apply=True):
+                calls.append((name, apply))
+                return applied if apply else preflight
+            return run
+        backend = SimpleNamespace(reconcile_after_update=step('installation', 'inactive', 'inactive'))
+        modules = dict(
+            codex_recovery=SimpleNamespace(reconcile=step('attachment', 'repairable', 'repaired'),
+                                           offer=lambda *_: calls.append(('offer', True))),
+            runtime_rebind=SimpleNamespace(reconcile=step('runtime', 'repairable', 'ready')),
+            install_delivery=SimpleNamespace(assistant_status=lambda *_: calls.append(('assistants', True)) or 'ready'))
+        state = SimpleNamespace(read=lambda _: dict(clients='codex'), path=lambda home: home,
+                                saved_clients=lambda doc: doc['clients'], update=mock.Mock())
+        service = SimpleNamespace(load=lambda *_: SimpleNamespace(host=lambda _: backend), _state=state,
+                                  _atomic_write=None, install_lock=lambda _: contextlib.nullcontext(True))
+        original = maintenance.load
+        with tempfile.TemporaryDirectory() as temporary, \
+                mock.patch.object(maintenance, 'load', side_effect=lambda name: modules.get(name) or original(name)):
+            outcomes = maintenance.run(Path(temporary), service)
+        self.assertEqual(outcomes, dict(installation='inactive', attachment='repaired', runtime='ready'))
+        # Unlocked preflight in step order, then the locked changes, then the notice.
+        self.assertEqual(calls, [('installation', True), ('attachment', False), ('runtime', False),
+                                 ('attachment', True), ('assistants', True), ('runtime', True), ('offer', True)])
+        state.update.assert_called_once()
 
 
 if __name__ == '__main__':

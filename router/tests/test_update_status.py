@@ -1,9 +1,12 @@
 """Cache metadata proves one exact channel/source/version and cannot erase failures."""
+import ast
 import unittest
+from pathlib import Path
 
 from tests.test_native_setup import module
 
 status = module('update_status')
+ROOT = Path(__file__).resolve().parents[1]
 FEED = 'https://dist.softwarecombined.com/beta/latest.json'
 NOW = '2026-10-18T13:05:00Z'
 
@@ -77,3 +80,32 @@ class UpdateStatusTests(unittest.TestCase):
         status.verified(state, {'version': '1.3.2.185'}, FEED, 'beta', 'etag', NOW)
         self.assertEqual(status.summary(state, '1.2.6.174', FEED, 'beta')['required_action'], 'update')
         self.assertIsNone(status.cache_tag(state, '1.2.6.174', FEED, 'beta', 'etag'))
+
+    def test_only_update_status_writes_update_and_repair_facts(self):
+        writers = []
+        for path in sorted([*ROOT.glob('packaging/**/*.py'), *ROOT.glob('ai_router/**/*.py')]):
+            if path == ROOT / 'packaging/update_status.py':
+                continue
+            for node in ast.walk(ast.parse(path.read_text(encoding='utf-8'))):
+                keys = []
+                if isinstance(node, (ast.Assign, ast.Delete)):
+                    keys = [target.slice for target in node.targets if isinstance(target, ast.Subscript)]
+                elif isinstance(node, ast.AugAssign) and isinstance(node.target, ast.Subscript):
+                    keys = [node.target.slice]
+                elif (isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute) and node.args
+                        and node.func.attr in ('setdefault', 'pop', 'update', '__setitem__', '__delitem__')):
+                    keys = [node.args[0]]
+                if any(isinstance(key, ast.Constant) and key.value in status.STATUS_FIELDS for key in keys):
+                    writers.append('%s:%d' % (path.relative_to(ROOT).as_posix(), node.lineno))
+        self.assertEqual(writers, [])
+
+    def test_installation_result_marks_only_installation_components(self):
+        state = dict(component_repairs='damaged', last_error='installer_failed')
+        status.mark_installation(state, True)
+        self.assertTrue(status.install_pending(state))
+        status.set_components(state, assistants=status.FAILED)
+        status.mark_installation(state, False)
+        self.assertEqual(state['component_repairs'], dict(dict.fromkeys(status.INSTALLED, status.READY),
+                                                          assistants=status.FAILED))
+        self.assertFalse(status.install_pending(state))
+        self.assertEqual(status.summary(state)['required_action'], 'repair')

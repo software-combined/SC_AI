@@ -8,28 +8,28 @@ from native_payload import load
 
 def reconcile(home, *, apply=True):
     """Read-only checks run unlocked; applying repeats checks under install.lock."""
-    home, service = Path(home), load('service')
+    home, service, status = Path(home), load('service'), load('update_status')
     platforms = service.load('router_platforms', Path(__file__).parent / 'platforms' / '__init__.py')
     backend = platforms.host(service)
     if not hasattr(backend, 'rebind_runtime'):
-        return 'inactive'  # Only a backend whose tasks run a retained runtime rebinds them.
-    outcome = 'failed'
+        return status.INACTIVE  # Only a backend whose tasks run a retained runtime rebinds them.
+    outcome = status.FAILED
     try:
         resources = load('native_resources').current(home)
         doc = load('native_payload').metadata(resources)
         if doc['version'] != service.current_version(home) or not doc.get('menu_sha256'):
-            return 'deferred'
+            return status.DEFERRED
         python = str(resources / 'runtime' / doc['runtime_exec'])
         if not apply:
-            return 'ready' if backend.runtime_matches(python, home) else 'repairable'
+            return status.READY if backend.runtime_matches(python, home) else status.REPAIRABLE
         backend.rebind_runtime(python, home)
-        outcome = 'ready'
+        outcome = status.READY
     except (Exception, SystemExit):
         pass  # Old definitions and runtimes are retained; the next check retries.
     if not apply:
         return outcome
     try:
-        service._state.update(home, lambda state: load('update_status').set_components(state, scheduler=outcome),
+        service._state.update(home, lambda state: status.set_components(state, scheduler=outcome),
                               service._atomic_write)
     except (OSError, ValueError, TypeError):
         pass

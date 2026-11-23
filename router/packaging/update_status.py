@@ -15,6 +15,15 @@ ERROR_CODES = (
 )
 FEED_ERRORS = ('feed_unreachable', 'feed_invalid', 'feed_serial', 'feed_untrusted', 'feed_signature')
 COMPONENTS = ('controller', 'updater_launcher', 'scheduler', 'assistants', 'controls', 'controls_launchers')
+# The installation transaction owns every component except the assistant attachments.
+INSTALLED = tuple(name for name in COMPONENTS if name != 'assistants')
+MAX_VERSION_FAILURES = 3  # A version that failed this often waits for a manual repair.
+# Stored component results; on-disk values must not change.
+READY, FAILED, UNKNOWN = 'ready', 'failed', 'unknown'
+# Repair-step outcomes, logged to maintenance.jsonl; values must not change.
+DEFERRED, INACTIVE, CONFLICT, UNHEALTHY = 'deferred', 'inactive', 'conflict', 'unhealthy'
+REPAIRABLE, REPAIRED, UNCHANGED = 'repairable', 'repaired', 'unchanged'
+RESTORED, RESTORED_MIXED = 'restored', 'restored_mixed'
 MISSED_AFTER = 2 * 4 * 60 * 60 + 15 * 60
 STATUS_FIELDS = frozenset((
     'last_check_at', 'last_successful_check_at', 'latest_verified', 'last_error',
@@ -91,7 +100,7 @@ def components(state):
     if not isinstance(values, dict):
         return {}
     return {key: value for key, value in values.items()
-            if key in COMPONENTS and value in ('ready', 'failed', 'unknown')}
+            if key in COMPONENTS and value in (READY, FAILED, UNKNOWN)}
 
 
 def set_components(state, **results):
@@ -99,6 +108,41 @@ def set_components(state, **results):
     saved = state.get('component_repairs')
     state['component_repairs'] = dict(saved if isinstance(saved, dict) else {}, **results)
     return state['component_repairs']
+
+
+def mark_installation(state, failed):
+    """A failed installation transaction asks for repair; a verified one clears its components."""
+    if failed:
+        state['installation_repair_required'] = True
+    else:
+        set_components(state, **dict.fromkeys(INSTALLED, READY))
+        record(state, error='', repaired=True)
+
+
+def failure_counts(state):
+    counts = state.get('update_failures')
+    return dict(counts) if isinstance(counts, dict) else {}
+
+
+def count_failure(state, version):
+    """Count one failed attempt; a count from another verified channel or source restarts."""
+    counts = failure_counts(state)
+    verified = state.get('latest_verified', {})
+    contexts = state.setdefault('update_failure_context', {})
+    if isinstance(verified, dict) and verified.get('version') == version and isinstance(contexts, dict):
+        context = {key: verified.get(key) for key in ('channel', 'source')}
+        if version in contexts and contexts[version] != context:
+            counts.pop(version, None)
+        contexts[version] = context
+    counts[version] = counts.get(version, 0) + 1
+    state['update_failures'] = counts
+
+
+def clear_failures(state, version):
+    counts = failure_counts(state)
+    if version in counts:
+        del counts[version]
+        state['update_failures'] = counts
 
 
 def _parts(value):
@@ -136,7 +180,7 @@ def cache_tag(state, current, feed, channel, etag):
             and record.get('etag') == etag and not state.get('last_error')
             and not install_pending(state)
             and not active_failures(counts, current)
-            and 'failed' not in components(state).values() else None)
+            and FAILED not in components(state).values() else None)
 
 
 def record(state, error=None, applied=None, repaired=False, now=None):
@@ -172,8 +216,8 @@ def summary(state, current=None, feed=None, channel=None, now=None):
     last = seconds(doc.get('last_check_at'))
     overdue = last is not None and (time.time() if now is None else now) - last >= MISSED_AFTER
     parked = active_failures(failed, current)
-    repair = bool(install_pending(doc) or 'failed' in repairs.values()
-                  or any(count >= 3 for count in parked.values()))
+    repair = bool(install_pending(doc) or FAILED in repairs.values()
+                  or any(count >= MAX_VERSION_FAILURES for count in parked.values()))
     retry = bool(not repair and (parked or overdue or error not in (None, 'download_signin_required')))
     return dict(last_check_at=stamp(doc.get('last_check_at')),
         last_successful_check_at=stamp(doc.get('last_successful_check_at')) if known else None,
