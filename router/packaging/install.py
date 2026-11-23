@@ -51,7 +51,6 @@ PLATFORM = sys.platform
 # call sites below read them via _svc so swaps take effect. Immutable values
 # copy directly.
 FEED_URL = _svc.FEED_URL
-MIN_PYTHON = _svc.MIN_PYTHON
 LABEL = _svc.LABEL
 UPDATE_LABEL = _svc.UPDATE_LABEL
 DEFAULT_OPENAI_MODELS = _svc.DEFAULT_OPENAI_MODELS
@@ -70,7 +69,6 @@ same_interpreter = _svc.same_interpreter
 ensure_updater = _svc.ensure_updater
 loaded_updater_release = _svc.loaded_updater_release
 _update_failures = _svc.update_failures
-_record_update_failure = _svc.record_update_failure
 _clear_update_failures = _svc.clear_update_failures
 reload_main_service = _svc.reload_main_service
 render_plist = _svc.render_plist
@@ -86,7 +84,6 @@ require_live_home = _svc.require_live_home
 run = _svc.run
 health = _svc.health
 wait_version = _svc.wait_version
-ensure_serving = _svc.ensure_serving
 
 
 SUPPORTED_PLATFORMS = ('darwin', 'linux', 'win32')
@@ -123,8 +120,6 @@ _bundle = _svc.load(
 
 verify_sha256 = _bundle.verify_sha256
 newer = _bundle.newer
-check_manifest = _bundle.check_manifest
-check_identity = _bundle.check_identity
 
 _delivery = _svc.load('router_install_delivery', Path(__file__).resolve().parent / 'install_delivery.py')
 _completion = _svc.load('router_setup_completion', Path(__file__).resolve().parent / 'setup_completion.py')
@@ -191,9 +186,8 @@ def do_rollback(args):
 
 
 def _sync_seams():
-    global run, health, wait_version, ensure_serving
-    run, health, wait_version, ensure_serving = (
-        _svc.run, _svc.health, _svc.wait_version, _svc.ensure_serving)
+    global run, health, wait_version
+    run, health, wait_version = _svc.run, _svc.health, _svc.wait_version
     _bundle.bind_seams(run=run, safe_extract=safe_extract,
                        install_launcher=install_launcher,
                        swap_current=swap_current)
@@ -254,6 +248,29 @@ def _rollback_failed_install(home, state, backend, latest, previous, catalog_pat
             _bundle._clear_current(home)
         stop_router(home); print('new version failed health check; inspect the service logs')
     raise SystemExit(1)
+
+
+def _start_service(backend, python, home, state, previous, version, action):
+    """Start the current release's service; True only once `version` answers health."""
+    try:
+        backend.install(python, home, state, current_release_dir(home), previous)
+        return wait_version(state, version)
+    except (OSError, subprocess.CalledProcessError, SystemExit) as exc:
+        # SystemExit is caught on purpose: reload and launcher failures raise it,
+        # and letting it through skipped the caller's failure handling entirely.
+        # Say why first: a backend refusal (task registration, group policy) is
+        # otherwise indistinguishable from a health timeout.
+        print(f'service {action} failed: {exc}')
+        return False
+
+
+def _healthy_end(args, home, python, setup_url, clients, version, connected=None):
+    """Close a healthy start: finish key setup, then name the serving version."""
+    _finish_key_setup(args, home, python, setup_url, clients)
+    # Read after key setup: a late key-window answer can attach a client.
+    detail = '' if connected is None else '; ' + _client_choice._connected(connected, home, _codex_config)
+    print(f'router {version}; health ok{detail}')
+    return 0
 
 
 def _open_key_window(python, home, setup_url, clients):
@@ -387,13 +404,7 @@ def _do_install(args, _fetch=fetch, _run=None, delivery=None):
             raise
     if repair:
         # Restart retained code; --setup also asks it to read a fresh key-window link.
-        try:
-            backend.install(python, home, state, current_release_dir(home), None)
-            healthy = wait_version(state, current)
-        except (OSError, subprocess.CalledProcessError, SystemExit) as exc:
-            print(f'service restart failed: {exc}')
-            healthy = False
-        if not healthy:
+        if not _start_service(backend, python, home, state, None, current, 'restart'):
             print('the service did not come back with the fresh setup link; '
                   're-run the installer')
             return 1
@@ -405,23 +416,11 @@ def _do_install(args, _fetch=fetch, _run=None, delivery=None):
         _claude_config.refresh_snapshot(
             home, state, _codex_config,
             lambda: _operator.listing(state))
-        _finish_key_setup(args, home, python, setup_url, clients)
-        print(f'router {current}; health ok')
-        return 0
+        return _healthy_end(args, home, python, setup_url, clients, current)
     catalog_path = home / 'mixed-models.json'
     before_catalog = catalog_path.read_bytes() if catalog_path.exists() else None
     previous = install_bundle(home, latest['version'], tarball, manifest_doc, python)
-    try:
-        backend.install(python, home, state, current_release_dir(home), previous)
-        healthy = wait_version(state, latest['version'])
-    except (OSError, subprocess.CalledProcessError, SystemExit) as exc:
-        # SystemExit is caught on purpose: reload and launcher failures raise it,
-        # and letting it through here skipped the rollback below entirely.
-        # Say why before rolling back: a backend refusal (task registration,
-        # group policy) is otherwise indistinguishable from a health timeout.
-        print(f'service start failed: {exc}')
-        healthy = False
-    if not healthy:
+    if not _start_service(backend, python, home, state, previous, latest['version'], 'start'):
         _delivery.refuse_failed_cohort(delivery)
         _rollback_failed_install(home, state, backend, latest, previous, catalog_path, before_catalog)
     if delivery is not None: delivery['installed_version'] = latest['version']
@@ -447,9 +446,7 @@ def _do_install(args, _fetch=fetch, _run=None, delivery=None):
         # serial, so recording it makes the real feed look stale for good.
         (home / 'feed-serial').write_text(str(serial) + '\n')
     backend.start_updates(home)
-    _finish_key_setup(args, home, python, setup_url, clients)
-    print(f"router {latest['version']}; health ok; {_client_choice._connected(connected, home, _codex_config)}")
-    return 0
+    return _healthy_end(args, home, python, setup_url, clients, latest['version'], connected)
 
 
 def attach_claude(home, state, settings_path=None, env=None, listing=None,
@@ -466,7 +463,6 @@ def detach_claude(home, settings_path=None, env=None):
     return _claude_config.detach(home, _codex_config, settings_path_override=settings_path, env=env)
 
 
-_release_key = _bundle._release_key
 prune_releases = _bundle.prune_releases
 
 
