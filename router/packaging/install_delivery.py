@@ -76,28 +76,29 @@ def result(home, delivery, successful, cancelled=False):
         components = status.set_components(state, assistants=assistants)
         if delivery.get('maintenance_done'):
             status.verified(state, delivery['latest'], delivery['feed'], status.channel(home), None)
-        repaired = successful and assistants == 'ready' and 'failed' not in components.values()
+        repaired = successful and assistants == status.READY and status.FAILED not in components.values()
         status.record(state, error=None if cancelled else '' if successful else 'installer_failed',
                       applied=current if successful else None, repaired=repaired)
     service._state.update(home, record, service._atomic_write)
 
 
 def assistant_status(home, state, python=None):
+    status = _load('update_status')
     report = _load('service').load('router_delivery_classification',
         Path(__file__).resolve().parents[1] / 'tools/classify_attachments.py').classify(home, python=python)
     entries = report.get('clients', {})
     if report.get('receipt') == 'readable' and entries:
         owned = all(row.get('classification') == 'owned' for row in entries.values())
-        return 'ready' if owned else 'failed'
+        return status.READY if owned else status.FAILED
     elif report.get('receipt') == 'missing' and state.get('clients') == 'none':
-        return 'ready'
-    return 'failed' if report.get('receipt') == 'conflict' else 'unknown'
+        return status.READY
+    return status.FAILED if report.get('receipt') == 'conflict' else status.UNKNOWN
 
 
 def close_assistants(home):
     """Repair asks to close assistants only when an attachment needs rewriting."""
     try:
-        owned = assistant_status(home, {}) == 'ready'
+        owned = assistant_status(home, {}) == _load('update_status').READY
     except (OSError, ValueError):
         owned = False  # An unknown classification keeps the close question.
     return _load('repair_ui').close_assistants(home, owned=owned)
@@ -139,26 +140,26 @@ def maintain(home, source, state, python=None, backend=None):
     selected = None
     try:
         selected = _load('native_controller').install(home, source).parent.parent
-        results[step] = 'ready'
+        results[step] = status.READY
         step = 'updater_launcher'
         service.install_launcher(home, selected)
         if (selected / 'packaging/task_launch.py').is_file():
             service.install_task_launcher(home, selected)
-        results[step] = 'ready'
+        results[step] = status.READY
         step = 'controls_launchers'
         copied = 0
         for name in ('native_launch.py', 'desktop_launch.py'):
             if (selected / 'packaging' / name).is_file():
                 service._install_home_file(home, selected, name)
                 copied += 1
-        results[step] = 'ready' if copied == 2 else 'unknown'
+        results[step] = status.READY if copied == 2 else status.UNKNOWN
         repair = getattr(backend, 'repair_updates', None)
         if repair is not None and (home / 'current').exists():
             step = 'scheduler'
             repair(python, home)
-            results[step] = 'ready'
+            results[step] = status.READY
     except (OSError, ValueError, KeyError, TypeError, SystemExit, subprocess.SubprocessError):
-        results[step] = 'failed'
+        results[step] = status.FAILED
         print('Automatic updates need repair; run the current public setup again.')
     status.set_components(state, **results)  # The caller's copy stays current for its later writes.
     try:
@@ -196,7 +197,7 @@ def recover(home, delivery):
         print('deferred: SCG Router was removed; open setup to install it again')
         raise SystemExit(0)
     backend = delivery.get('backend')
-    if backend and not delivery.get('dry_run') and backend.recover_interrupted(home) == 'failed':
+    if backend and not delivery.get('dry_run') and backend.recover_interrupted(home) == _load('update_status').FAILED:
         raise SystemExit('Installation recovery needs repair. Open SCG Router to retry.')
 
 
@@ -227,7 +228,8 @@ def _finalize(home, delivery):
             pass
     delivery.pop('installed_version', None)
     delivery['maintenance_done'] = False
-    if owner.restore(home, delivery['backend']) == 'restored' and _load('service').current_version(home) != '0.0.0':
+    restored = owner.restore(home, delivery['backend']) == _load('update_status').RESTORED
+    if restored and _load('service').current_version(home) != '0.0.0':
         owner.defer(home, prepared['version'])
     raise SystemExit('SCG Router installation did not finish. Updates will retry; open SCG Router if repair is needed.')
 

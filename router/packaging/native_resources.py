@@ -208,21 +208,21 @@ def deliver(home, latest, feed_url, fetch=None):
     try:
         delivered = reconcile(home, latest, feed_url, fetch)
         if delivered:
-            _record(home, 'ready')
+            _record(home, load('update_status').READY)
         return delivered
     except (Exception, SystemExit) as error:
         if getattr(error, 'ownership_conflict', False):
             # A user-owned entry is a known block, not a router failure.
             load('atomic_write').replace_json(Path(home) / 'desktop-delivery.json',
                                              dict(status='blocked'))
-            _record(home, 'unknown')
+            _record(home, load('update_status').UNKNOWN)
             print('SCG Router menu delivery is blocked by an existing shortcut or startup entry.')
             return False
         if isinstance(error, Deferred):
             return False  # The unchanged or restored cohort remains usable; retry quietly.
         load('atomic_write').replace_json(Path(home) / 'desktop-delivery.json',
                                          dict(status='failed'))
-        _record(home, 'failed')
+        _record(home, load('update_status').FAILED)
         print('SCG Router menu update needs repair. Check setup for routing status.')
         return False
 
@@ -239,15 +239,15 @@ def confirm_controls(home, resources):
             return False
         load('atomic_write').replace_json(home / 'desktop-delivery.json',
                                           dict(status='ready', version=doc['version']))
-        _record(home, 'ready', complete=True)
+        _record(home, load('update_status').READY, complete=True)
         return True
 
 
 def _record(home, outcome, complete=False):
     def mark(state):
         components = status.set_components(state, controls=outcome)
-        if (complete and components.get('assistants') == 'ready'
-                and all(value == 'ready' for value in status.components(state).values())
+        if (complete and components.get('assistants') == status.READY
+                and all(value == status.READY for value in status.components(state).values())
                 and state.get('last_applied_version') == service.current_version(Path(home))):
             error = '' if state.get('last_error') in ('installer_failed', 'installer_timeout') else None
             status.record(state, error=error, repaired=True)

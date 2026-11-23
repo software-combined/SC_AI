@@ -38,7 +38,7 @@ def message(doc):
     facts, status = doc['update'], load('update_status')
     failed = status.components(facts)
     labels = list(dict.fromkeys(COMPONENT_LABELS[key]
-        for key in COMPONENT_LABELS if failed.get(key) == 'failed'))
+        for key in COMPONENT_LABELS if failed.get(key) == status.FAILED))
     reason = (_join(labels) + ' need repair.') if labels else (
         'An update or repair did not finish.' if facts.get('installation_repair_required') else
         'SCG Router has not checked for updates recently.' if facts.get('missed_scheduled_checks') else
@@ -96,7 +96,7 @@ def show(home, now=None):
         facts, status = doc['update'], load('update_status')
         load('update_reconcile').log(home, 'update_warning', 'presented',
             action='repair' if answer is True else 'later',
-            components=sorted(key for key, value in status.components(facts).items() if value == 'failed'),
+            components=sorted(key for key, value in status.components(facts).items() if value == status.FAILED),
             error=facts.get('last_error') if facts.get('last_error') in status.ERROR_CODES else None,
             installation_pending=facts.get('installation_repair_required') is True,
             checks_missed=facts.get('missed_scheduled_checks') is True)
