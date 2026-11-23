@@ -19,6 +19,11 @@ It keeps human questions separate from team work and hides technical detail
 until needed. Its offline HTML page also works with existing project owners;
 using the template does not create a Factory team.
 
+A read-only [evaluation script](scg-agent-factory/skills/ai-agent-factory-method/scripts/factory_eval.py)
+summarises chats named `{Project}: {Role}` from local Codex run records: waiting,
+review lanes, effort, skill reads and fresh tokens. It prints chat titles and
+counts, never message content.
+
 Department briefs live in the same plugin and appear under
 [sales](../sales/README.md), [finance](../finance/README.md),
 [operations](../operations/README.md), [customer success](../customer-success/README.md)
