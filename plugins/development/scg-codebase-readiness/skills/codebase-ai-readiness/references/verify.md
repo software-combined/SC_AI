@@ -39,4 +39,12 @@ Only this JSON, one entry per question:
 1. Decide each `adjust` and `unsupported` item against the evidence. Accept, or reject with a one-line reason.
 2. Apply accepted changes to `results.json`.
 3. Record the outcome in `results.json` under `verification`: who checked (`subagent` or `self`), how many items held, which changed and why, and which suggestions you rejected and why.
-4. Do not run a second round unless an accepted change touched more than three questions.
+4. Apart from the second check below, do not run another round unless an accepted change touched more than three questions.
+
+## Second check
+
+A second fresh subagent, on the model the [model table](../SKILL.md#models) gives, checks only the questions that step 6 of [the skill](../SKILL.md#steps) selects.
+
+- It gets the same checklist and inputs as the first checker. Its copy of `results.json` holds the current scores but no `verification` block, so it never sees the first checker's verdicts.
+- It returns the same JSON, one entry per question it checked.
+- The main agent decides its items the same way, and adds them to `verification` with `"by": "second check"` on each changed or rejected entry. Where the two checkers disagree, the evidence decides, not either checker.

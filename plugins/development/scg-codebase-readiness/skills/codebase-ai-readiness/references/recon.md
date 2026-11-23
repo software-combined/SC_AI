@@ -16,7 +16,7 @@ The main agent does this step itself.
 | Medium | 300 to 3,000 files, or 2 to 4 apps or packages | Three subagents, one per lane |
 | Large | More than 3,000 files, or more than 4 apps or packages | One subagent each for the documentation and delivery lanes, and the code map split into up to four groups of related apps or packages: six subagents at most |
 
-Use a smaller model tier for lanes when the host allows it: mapping is reading and listing, not judging.
+Pick each lane's model from the [model table](../SKILL.md#models): mapping is mostly reading and listing, so lanes use smaller models than scoring.
 
 ## 2. The three lanes
 
