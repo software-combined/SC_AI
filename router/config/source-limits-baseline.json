@@ -27,7 +27,6 @@
   "tests/test_client_activation.py": 464,
   "tests/test_codex_desktop_switch.py": 356,
   "tests/test_codex_preferences.py": 378,
-  "tests/test_codex_one_choice.py": 303,
   "tests/test_codex_switch_config.py": 325,
   "tests/test_compaction_summary.py": 458,
   "tests/test_desktop_controls.py": 332,

@@ -25,6 +25,7 @@ import json
 import os
 import plistlib
 import re
+import subprocess
 import sys
 import time
 from datetime import datetime
@@ -230,14 +231,82 @@ def offer(home, now=None, platform_name=None):
         return None
 
 
+def _owner(name):
+    """A sibling owner, loaded only when an offer is shown."""
+    return _load('router_offer_' + name, _HERE / (name + '.py'))
+
+
+def offer_and_switch(home, dialog, platform_name=None):
+    """Show a due offer, then ask through the switch owner before any restart."""
+    platform_name = platform_name or sys.platform
+    # Hold only the offer lock while waiting for the person. Updates must not wait.
+    with _owner('service').install_lock(home, '.codex-switch-offer.lock') as held:
+        if not held:
+            return dict(outcome='cancelled')
+        try:
+            _recover_claim(home)
+        except (OSError, ValueError):
+            return dict(outcome='cancelled')
+        found = due(home)
+        if found is None:
+            return dict(outcome='cancelled')
+        kind, current = found
+        seen_at = current['seen_at']
+        entry = _codex.codex_attachment(home)
+        destination = _switch.SWITCHED if kind == SWITCH else _switch.return_target(entry)
+        before = _offered(home, seen_at)
+        try:
+            _claim(home, seen_at, before, kind)
+        except (OSError, ValueError):
+            return dict(outcome='cancelled')
+        message = (BACK_OPENROUTER if kind == BACK
+                   and destination in (_switch.SWITCHED_SIGNED_IN, _switch.OPENROUTER)
+                   else MESSAGES[kind])
+        if platform_name == 'win32':
+            try:
+                answer = _owner('windows_dialog').show(message, home, True,
+                                                      labels=('Open Switch Codex', 'Later'))
+            except (OSError, ValueError, subprocess.SubprocessError):
+                answer = None
+        else:
+            answer = dialog.confirm_result(message, home, labels=('Open Switch Codex', 'Later'))
+        try:
+            found = due(home, include_offered=True)
+            unchanged = _codex.codex_attachment(home) == entry
+        except (OSError, ValueError, SystemExit):
+            found = None
+        # A dialog that was not shown, or an offer that went stale meanwhile, stays pending.
+        if found is None or found[0] != kind or found[1]['seen_at'] != seen_at or not unchanged or answer is None:
+            _finish_claim(home, seen_at, before)
+            return dict(outcome='cancelled')
+        if not answer:
+            _finish_claim(home, seen_at, before + [kind])
+            return dict(outcome='cancelled')
+        owner = _owner('codex_desktop_switch')
+        failed = False
+        try:
+            result = owner.switch(home, target=destination, expected=entry, offer_kind=kind, offer_seen=seen_at)
+        except (Exception, SystemExit) as exc:
+            result, failed = False, True
+            safe = str(exc) if isinstance(exc, owner.SwitchError) else 'SCG Router could not finish. Try again.'
+            try:
+                dialog.message(safe)
+            except (Exception, SystemExit):
+                pass
+        try:
+            _finish_claim(home, seen_at, before if result is False else before + [kind])
+        except (OSError, ValueError):
+            pass
+        return dict(outcome=('failed' if failed else 'cancelled')
+                    if result is None or result is False else 'done')
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--home', type=Path, required=True)
     parser.add_argument('--desktop-offer', action='store_true', required=True)
     args = parser.parse_args()
     try:
-        control = _load('router_offer_control', _HERE / 'desktop_control.py')
-        dialog = _load('router_offer_dialog', _HERE / 'native_dialog.py')
-        control._limit_offer(args.home, dialog)
+        offer_and_switch(args.home, _load('router_offer_dialog', _HERE / 'native_dialog.py'))
     except (Exception, SystemExit):
         pass  # The next updater pass can retry a dialog that was not shown.

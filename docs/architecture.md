@@ -1051,8 +1051,10 @@ It offers the recorded previous connection after the recorded reset, or when the
 installed app is at or above `FIXED_IN`. A recorded reset is a trigger for an
 offer, not proof that every limit has ended. On all platforms a retained
 controller opens a detached dialog worker.
-The worker rechecks the episode and receipt; the switch owner repeats the
-episode check under the installation lock and asks before changing anything.
+Its `offer_and_switch` owns the offer dialog and claim for that worker and the
+menu's `codex.limit_offer` action. It rechecks the episode and receipt after the
+dialog; the switch owner repeats the episode check under the installation lock
+and asks before changing anything.
 Missing dialogs leave the offer pending.
 
 `packaging/codex_switch_app.py` owns that app. Every Codex attach and update
@@ -1073,7 +1075,8 @@ failed build prints one line and never fails an install.
 ## Distribution (outside the request path)
 
 `desktop_control.py` owns the redacted desktop status and fixed action IDs.
-It calls the existing client switchers, setup, support and update owners.
+It reads status through `diagnostics` without loading the installer.
+It calls the existing client switchers, offer, setup, support and update owners.
 Menu and graphical setup use `install_delivery.run_logged` for content-free
 launch and child-exit records in `update.log`. `native_payload.succeeded` rejects
 deferred zero exits consistently; child exit is separate from verified installation.

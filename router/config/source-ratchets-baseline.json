@@ -150,7 +150,7 @@
     "packaging/codex_config_proof.py": 2,
     "packaging/codex_desktop_switch.py": 22,
     "packaging/codex_switch_app.py": 1,
-    "packaging/desktop_control.py": 7,
+    "packaging/desktop_control.py": 6,
     "packaging/desktop_linux.py": 1,
     "packaging/desktop_menu.py": 10,
     "packaging/desktop_startup.py": 1,

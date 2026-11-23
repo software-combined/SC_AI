@@ -17,13 +17,13 @@ offers, T0, HOUR = offer_fixtures.offers, offer_fixtures.T0, offer_fixtures.HOUR
 class OneChoiceMenuTests(unittest.TestCase):
     def test_both_openrouter_variants_share_one_checked_choice(self):
         control, model = module('desktop_control'), module('desktop_model')
-        installer = mock.Mock()
-        installer._diag._status_document.return_value = {'clients': {'codex': {}}}
+        diagnostics = mock.Mock()
+        diagnostics._status_document.return_value = {'clients': {'codex': {}}}
         config = mock.Mock(SWITCHED='switched', SWITCHED_SIGNED_IN='switched_signed_in',
                            OPENROUTER='openrouter',
                            ROUTED_VARIANTS=('switched', 'switched_signed_in', 'openrouter'))
         config._codex.codex_attachment.return_value = {'openai_mode': 'subscription'}
-        modules = dict(install=installer, codex_switch_config=config,
+        modules = dict(diagnostics=diagnostics, codex_switch_config=config,
                        update_status=module('update_status'),
                        desktop_startup=SimpleNamespace(enabled=lambda _home: False))
         for variant, status in (('switched', 'ChatGPT sign-in not used'),
@@ -210,14 +210,13 @@ class OneChoiceOfferTests(unittest.TestCase):
                 path.write_text(json.dumps(receipt))
                 entry = offers._codex.codex_attachment(self.home)
                 self.assertEqual(offers._switch.return_target(entry), expected)
-                control = module('desktop_control')
                 dialog, owner = mock.Mock(), mock.Mock()
                 dialog.confirm_result.return_value = False
-                modules = {'service': module('service'), 'codex_switch_offer': offers, 'codex_desktop_switch': owner}
-                with mock.patch.object(control.sys, 'platform', 'darwin'), \
+                modules = {'service': module('service'), 'codex_desktop_switch': owner}
+                with mock.patch.object(offers.sys, 'platform', 'darwin'), \
                         mock.patch.object(offers.time, 'time', return_value=T0 + HOUR), \
-                        mock.patch.object(control, 'load', side_effect=modules.__getitem__):
-                    self.assertEqual(control._limit_offer(self.home, dialog), {'outcome': 'cancelled'})
+                        mock.patch.object(offers, '_owner', side_effect=modules.__getitem__):
+                    self.assertEqual(offers.offer_and_switch(self.home, dialog), {'outcome': 'cancelled'})
                 message = dialog.confirm_result.call_args.args[0]
                 self.assertIn('OpenRouter models with ChatGPT sign-in'
                               if expected in ('switched_signed_in', 'openrouter')
@@ -231,25 +230,22 @@ class OneChoiceOfferTests(unittest.TestCase):
         self.assertIn('may still', offers.MESSAGES[offers.BACK].lower())
 
     def test_unavailable_or_refused_desktop_dialog_does_not_switch(self):
-        control = module('desktop_control')
         self.attach(variant='switched')
         self.record()
         dialog, owner, service = mock.Mock(), mock.Mock(), module('service')
         for answer in (None, False):
             with self.subTest(answer=answer), \
-                    mock.patch.object(control.sys, 'platform', 'linux'), \
+                    mock.patch.object(offers.sys, 'platform', 'linux'), \
                     mock.patch.object(offers.time, 'time', return_value=T0 + HOUR), \
-                    mock.patch.object(control, 'load', side_effect={
-                        'service': service, 'codex_switch_offer': offers,
-                        'codex_desktop_switch': owner}.__getitem__):
+                    mock.patch.object(offers, '_owner', side_effect={
+                        'service': service, 'codex_desktop_switch': owner}.__getitem__):
                 dialog.confirm_result.return_value = answer
-                self.assertEqual(control._limit_offer(self.home, dialog), {'outcome': 'cancelled'})
+                self.assertEqual(offers.offer_and_switch(self.home, dialog), {'outcome': 'cancelled'})
                 owner.switch.assert_not_called()
                 if answer is None:
                     self.assertEqual(self.offered()['offered'], [])
 
     def test_desktop_offer_never_starts_a_stale_switch(self):
-        control = module('desktop_control')
         self.attach(variant='switched')
         self.record()
         dialog, owner, service = mock.Mock(), mock.Mock(), module('service')
@@ -257,17 +253,16 @@ class OneChoiceOfferTests(unittest.TestCase):
             self.attach(variant='switched_signed_in')
             return True
         dialog.confirm_result.side_effect = change_profile
-        modules = {'service': service, 'codex_switch_offer': offers, 'codex_desktop_switch': owner}
-        with mock.patch.object(control.sys, 'platform', 'linux'), \
+        modules = {'service': service, 'codex_desktop_switch': owner}
+        with mock.patch.object(offers.sys, 'platform', 'linux'), \
                 mock.patch.object(offers.time, 'time', return_value=T0 + HOUR), \
-                mock.patch.object(control, 'load', side_effect=modules.__getitem__):
-            self.assertEqual(control._limit_offer(self.home, dialog), {'outcome': 'cancelled'})
+                mock.patch.object(offers, '_owner', side_effect=modules.__getitem__):
+            self.assertEqual(offers.offer_and_switch(self.home, dialog), {'outcome': 'cancelled'})
         owner.switch.assert_not_called()
 
     def test_changed_return_target_stays_available_after_stale_offer(self):
         self.attach(variant='switched')
         self.record()
-        control = module('desktop_control')
         dialog, owner = mock.Mock(), mock.Mock()
         def change_return(*_args, **_kwargs):
             path = offers._codex.receipt_path_for(self.home)
@@ -276,11 +271,11 @@ class OneChoiceOfferTests(unittest.TestCase):
             path.write_text(json.dumps(receipt))
             return True
         dialog.confirm_result.side_effect = change_return
-        modules = {'service': module('service'), 'codex_switch_offer': offers, 'codex_desktop_switch': owner}
-        with mock.patch.object(control.sys, 'platform', 'darwin'), \
+        modules = {'service': module('service'), 'codex_desktop_switch': owner}
+        with mock.patch.object(offers.sys, 'platform', 'darwin'), \
                 mock.patch.object(offers.time, 'time', return_value=T0 + HOUR), \
-                mock.patch.object(control, 'load', side_effect=modules.__getitem__):
-            self.assertEqual(control._limit_offer(self.home, dialog), {'outcome': 'cancelled'})
+                mock.patch.object(offers, '_owner', side_effect=modules.__getitem__):
+            self.assertEqual(offers.offer_and_switch(self.home, dialog), {'outcome': 'cancelled'})
         owner.switch.assert_not_called()
         self.assertEqual(offers.due(self.home, now=T0 + HOUR)[0], offers.BACK)
     def test_missing_or_damaged_control_worker_does_not_record_an_offer(self):
