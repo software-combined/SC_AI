@@ -115,8 +115,25 @@ def link_targets(text):
             yield raw, target
 
 
+def with_folders(paths):
+    return {"."} | set(paths) | {f.rsplit("/", i)[0] for f in paths for i in range(1, f.count("/") + 1)}
+
+
+def live_links(root, files, symlinks):
+    """Tracked links whose index text names a tracked path. A dangling link is not a valid link target."""
+    known, live = with_folders(files + symlinks), []
+    for link in symlinks:
+        target = git(root, "cat-file", "blob", ":" + link)
+        if not target or target.startswith("/"):
+            continue
+        resolved = posixpath.normpath(posixpath.join(posixpath.dirname(link), target))
+        if resolved in known:
+            live.append(link)
+    return live
+
+
 def doc_stats(root, docs, all_files):
-    known = {"."} | set(all_files) | {f.rsplit("/", i)[0] for f in all_files for i in range(1, f.count("/") + 1)}
+    known = with_folders(all_files)
     rows, broken, blocks, unreadable = [], [], collections.defaultdict(set), 0
     for doc in docs:
         text = read(os.path.join(root, doc))
@@ -239,7 +256,7 @@ def main(argv):
                         "top_folders": dict(collections.Counter(f.split("/")[0] for f in tests).most_common(10))},
         "structure": {"production_files_by_folder": dict(folders.most_common(60)),
                       "catch_all_folder_names": dict(collections.Counter(p for f in production for p in f.split("/")[:-1] if p.lower() in CATCH_ALL))},
-        "documents": doc_stats(root, [f for f in kept if f.lower().endswith(".md")], files + symlinks),
+        "documents": doc_stats(root, [f for f in kept if f.lower().endswith(".md")], files + live_links(root, files, symlinks)),
         "agent_files": agent_files(root, kept, symlinks),
         "ci": ci_stats(root, files, read),
         "signals": signals(root, sorted(set(in_scope) | shared), read, git),

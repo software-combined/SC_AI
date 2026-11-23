@@ -20,10 +20,13 @@ SIGNALS = {
     "contract_check": r"oasdiff|openapi-diff|buf breaking|@pact-foundation",
 }
 LOCKFILE = re.compile(r"(^|/)(package-lock\.json|npm-shrinkwrap\.json|pnpm-lock\.yaml|yarn\.lock|bun\.lockb?|poetry\.lock|uv\.lock|"
-                      r"Pipfile\.lock|Cargo\.lock|go\.sum|Gemfile\.lock|composer\.lock|packages\.lock\.json|pubspec\.lock|Package\.resolved)$")
-UPDATE_TOOL = re.compile(r"^(\.github/dependabot\.ya?ml|(\.github/)?renovate\.json5?|\.renovaterc(\.json)?)$")
-# An action pinned to a full commit hash, or a local or Docker action, cannot change under the workflow.
-UNPINNED = re.compile(r"^[ \t]+(?:-[ \t]*)?uses:[ \t]*[\"']?(?!\./|docker://)[^@\s\"']+@(?![0-9a-f]{40}\b)", re.M)
+                      r"Pipfile\.lock|Cargo\.lock|go\.sum|Gemfile\.lock|composer\.lock|packages\.lock\.json|pubspec\.lock|Package\.resolved|"
+                      r"Podfile\.lock|deno\.lock)$")
+UPDATE_TOOL = re.compile(r"^(\.github/dependabot\.ya?ml|(\.github/)?renovate\.json5?|\.renovaterc(\.json5?)?)$")
+# A local action, an action pinned to a full commit hash, or a Docker image pinned to an @sha256: digest
+# cannot change under the workflow. A tag or branch can move, so it counts as unpinned.
+UNPINNED = re.compile(r"^[ \t]+(?:-[ \t]*)?uses:[ \t]*[\"']?(?!\./)(?!docker://[^@\s\"']*@sha256:)"
+                      r"(?:docker://|[^@\s\"']+@(?![0-9a-f]{40}\b))", re.M)
 
 
 def top_sections(text):

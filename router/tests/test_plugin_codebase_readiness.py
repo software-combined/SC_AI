@@ -177,20 +177,26 @@ class CodebaseReadinessTests(unittest.TestCase):
         (self.repo / '.github/workflows/ci.yml').write_text(
             'on: [pull_request]\npermissions:\n  contents: read\njobs:\n  test:\n    steps:\n'
             '      - uses: actions/checkout@v4\n      - uses: actions/setup-node@' + 'a' * 40 + '\n'
-            '      - uses: ./local-action\n')
-        for name in ('pnpm-lock.yaml', '.env.example', '.github/dependabot.yml', 'api/openapi.yaml'):
+            '      - uses: ./local-action\n      - uses: docker://alpine:3.8\n'
+            '      - uses: docker://alpine@sha256:' + 'b' * 64 + '\n')
+        for name in ('pnpm-lock.yaml', 'deno.lock', 'ios/Podfile.lock', '.env.example', '.renovaterc.json5',
+                     'api/openapi.yaml'):
             (self.repo / name).parent.mkdir(parents=True, exist_ok=True)
             (self.repo / name).write_text('x\n')
         (self.repo / 'linked.md').symlink_to('README.md')
-        (self.repo / 'docs/b.md').write_text('[l](../linked.md)\n')
+        (self.repo / 'gone.md').symlink_to('missing.md')
+        (self.repo / 'docs/b.md').write_text('[l](../linked.md)\n[g](../gone.md)\n')
         git(self.repo, 'add', '-A')
         result = self.measure()
         flow, found = result['ci']['github_workflows'][0], result['signals']
-        self.assertEqual(flow['unpinned_actions'], 1)
+        self.assertEqual(flow['unpinned_actions'], 2)
         self.assertEqual((found['lockfiles'], found['update_tool'], found['env_example_files'],
                           found['api_schema_files']),
-                         (['pnpm-lock.yaml'], '.github/dependabot.yml', ['.env.example'], ['api/openapi.yaml']))
-        self.assertNotIn('../linked.md', {item['link'] for item in result['documents']['broken_local_links']})
+                         (['deno.lock', 'ios/Podfile.lock', 'pnpm-lock.yaml'], '.renovaterc.json5', ['.env.example'],
+                          ['api/openapi.yaml']))
+        broken = {item['link'] for item in result['documents']['broken_local_links']}
+        self.assertNotIn('../linked.md', broken)
+        self.assertIn('../gone.md', broken)
 
     def test_signals_follow_the_unit(self):
         for name, text in (('src/a.ts', 'x\n'), ('docs/CODEOWNERS', '* @owner\n'),
