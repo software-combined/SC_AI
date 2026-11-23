@@ -1,5 +1,20 @@
 # Changelog
 
+## scg-agent-factory 1.2.0 (2026-11-23)
+
+- Require the project manager and every owner to read this skill and the roster
+  at each start, resume and compaction. Name the acting owner in each
+  acknowledgement and route the work to it.
+- Pause until work returns a result, question, handover or failure, with one
+  long safety timeout to catch a silent hang, instead of polling. Tell the
+  human only when something changes. Use default or high effort for coordination turns when
+  none is set; the human keeps the model choice.
+- Check shared machines, sign-ins, ports and devices before dispatch. Owners
+  send access blockers to the project manager, who asks the human once.
+- Add a read-only evaluation script that summarises Factory chats from local
+  Codex run records and flags waiting, review-heavy, maximum-effort,
+  owner-asked-human and skill-not-read patterns.
+
 ## scg-review 0.7.5 and scg-subagents 0.9.1 (2026-11-14)
 
 - Explain direct native handoff discovery, expected canonical call records,
