@@ -201,6 +201,15 @@ class CodebaseReadinessTests(unittest.TestCase):
         self.assertNotIn('../linked.md', broken)
         self.assertIn('../gone.md', broken)
 
+    def test_azure_pipelines_are_found(self):
+        (self.repo / '.azure/pipelines').mkdir(parents=True)
+        (self.repo / '.azure/pipelines/ci-build.yml').write_text('steps:\n- script: npx eslint . --max-warnings 0\n')
+        git(self.repo, 'add', '-A')
+        result = self.measure()
+        self.assertEqual(result['ci']['other_ci_files'], ['.azure/pipelines/ci-build.yml'])
+        self.assertTrue(result['signals']['lint'])
+        self.assertTrue(json.loads(run('measure.py', self.repo, '--path', 'docs').stdout)['signals']['lint'])
+
     def test_signals_follow_the_unit(self):
         for name, text in (('src/a.ts', 'x\n'), ('docs/CODEOWNERS', '* @owner\n'),
                            ('other/package.json', '{"scripts": {"lint": "eslint ."}}\n'),
@@ -209,12 +218,18 @@ class CodebaseReadinessTests(unittest.TestCase):
             (self.repo / name).parent.mkdir(parents=True, exist_ok=True)
             (self.repo / name).write_text(text)
         git(self.repo, 'add', '-A')
-        found = json.loads(run('measure.py', self.repo, '--path', 'src').stdout)['signals']
+        unit = json.loads(run('measure.py', self.repo, '--path', 'src').stdout)
+        found = unit['signals']
+        self.assertIsNone(unit['documents']['unlinked_documents'])
         self.assertEqual((found['lint'], found['secret_scan'], found['codeowners']), (False, True, 'docs/CODEOWNERS'))
 
     def test_links_resolve_like_a_reader_sees_them(self):
-        broken = {item['link'] for item in self.measure()['documents']['broken_local_links']}
-        self.assertEqual(broken, {'../readme.md', './missing.md'})
+        documents = self.measure()['documents']
+        self.assertEqual({item['link'] for item in documents['broken_local_links']}, {'../readme.md', './missing.md'})
+        self.assertEqual(documents['unlinked_documents'], ['docs/a.md'])
+        (self.repo / 'docs/self.md').write_text('[me](self.md)\n')
+        git(self.repo, 'add', '-A')
+        self.assertIn('docs/self.md', self.measure()['documents']['unlinked_documents'])
 
     def test_missing_remote_is_not_reported_as_clean_branches(self):
         result = self.measure()
@@ -232,6 +247,7 @@ class CodebaseReadinessTests(unittest.TestCase):
         work = self.repo.parent
         results = work / 'results.json'
         check = {'checkedBy': 'subagent', 'held': 20, 'rejected': [],
+                 'secondCheck': {'questions': ['1.1', '5.1'], 'held': 2},
                  'changed': [{'itemCode': '3.3', 'from': 4, 'to': 3, 'why': '<i>w</i>'}]}
         results.write_text(json.dumps({'repository': 'example/repo', 'commit': 'abc1234',
                                        'assessedAt': '2026-11-23T10:00:00+11:00', 'summary': 's',
@@ -244,6 +260,12 @@ class CodebaseReadinessTests(unittest.TestCase):
         self.assertIn('Unit: repository', page)
         self.assertIn('A second agent checked the scores against the evidence: 20 held, 1 changed', page)
         self.assertIn('3.3: level 4 to 3. &lt;i&gt;w&lt;/i&gt;', page)
+        self.assertIn('A second check looked again at 2 questions (1.1, 5.1): 2 held.', page)
+        check.pop('secondCheck')
+        results.write_text(json.dumps({'repository': 'x', 'commit': 'a', 'assessedAt': 'b', 'summary': 's',
+                                       'answers': answers, 'verification': check}), encoding='utf-8')
+        self.assertEqual(run('build_report.py', results, work / 'none.html').returncode, 0)
+        self.assertIn('No second check was recorded.', (work / 'none.html').read_text(encoding='utf-8'))
         results.write_text(json.dumps({'repository': 'x', 'commit': 'a', 'assessedAt': 'b', 'summary': 's',
                                        'answers': answers + answers[:1]}), encoding='utf-8')
         self.assertEqual(run('build_report.py', results, work / 'dup.html').returncode, 1)

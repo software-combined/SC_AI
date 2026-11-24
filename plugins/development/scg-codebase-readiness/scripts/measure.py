@@ -132,9 +132,9 @@ def live_links(root, files, symlinks):
     return live
 
 
-def doc_stats(root, docs, all_files):
+def doc_stats(root, docs, all_files, whole_repo):
     known = with_folders(all_files)
-    rows, broken, blocks, unreadable = [], [], collections.defaultdict(set), 0
+    rows, broken, blocks, unreadable, linked = [], [], collections.defaultdict(set), 0, set()
     for doc in docs:
         text = read(os.path.join(root, doc))
         if text is None:
@@ -146,15 +146,23 @@ def doc_stats(root, docs, all_files):
             resolved = os.path.normpath(os.path.join(base, target.lstrip("/"))).replace(os.sep, "/")
             if resolved not in known:
                 broken.append({"doc": doc, "link": raw})
+            # A link to a folder reaches the README a reader sees there. A link to itself does not count.
+            if resolved != doc:
+                linked.update((resolved, resolved + "/README.md"))
         for block in re.split(r"\n\s*\n", CODE_FENCE.sub("", text)):
             block = " ".join(block.split())
             if len(block) >= 200 and not block.startswith("|"):
                 blocks[block].add(doc)
     pairs = collections.Counter(tuple(sorted(found)) for found in blocks.values() if len(found) > 1)
+    # A unit's guides may be linked from outside it, so the list is measured for the whole repository only.
+    unlinked = sorted(f for _, f in rows if "/" in f and f not in linked) if whole_repo else None
     return {"files": len(rows), "unreadable_files": unreadable, "over_200_count": sum(1 for n, _ in rows if n > 200),
             "over_200_lines": [{"lines": n, "path": f} for n, f in sorted(rows, reverse=True) if n > 200][:25],
             "folders": dict(collections.Counter(os.path.dirname(f) or "." for _, f in rows).most_common(30)),
             "broken_local_links": broken[:40], "broken_local_link_count": len(broken),
+            # Root files are entry points; any other guide no document links to is hidden from an agent.
+            "unlinked_documents": None if unlinked is None else unlinked[:40],
+            "unlinked_document_count": None if unlinked is None else len(unlinked),
             "documents_sharing_paragraphs": [{"docs": list(k), "paragraphs": v} for k, v in pairs.most_common(15)]}
 
 
@@ -240,7 +248,7 @@ def main(argv):
     in_scope = [f for f in in_unit if not ({p.lower() for p in f.split("/")[:-1]} & SKIP_DIRS)]
     kept = [f for f in in_scope if not SKIP_FILE.search(f)]
     # Checks count only inside the unit, plus root files and CI or hook folders that serve every unit.
-    shared = {f for f in files if "/" not in f or f.startswith((".github/", ".husky/", ".githooks/")) or f == "docs/CODEOWNERS"}
+    shared = {f for f in files if "/" not in f or f.startswith((".github/", ".husky/", ".githooks/", ".azure/", ".azuredevops/")) or f == "docs/CODEOWNERS"}
     source = [f for f in kept if os.path.splitext(f)[1].lower() in SOURCE_EXT]
     tests = [f for f in source if TEST_FILE.search(f)]
     config = [f for f in source if not TEST_FILE.search(f) and CONFIG_FILE.search(f)]
@@ -256,7 +264,7 @@ def main(argv):
                         "top_folders": dict(collections.Counter(f.split("/")[0] for f in tests).most_common(10))},
         "structure": {"production_files_by_folder": dict(folders.most_common(60)),
                       "catch_all_folder_names": dict(collections.Counter(p for f in production for p in f.split("/")[:-1] if p.lower() in CATCH_ALL))},
-        "documents": doc_stats(root, [f for f in kept if f.lower().endswith(".md")], files + live_links(root, files, symlinks)),
+        "documents": doc_stats(root, [f for f in kept if f.lower().endswith(".md")], files + live_links(root, files, symlinks), not unit),
         "agent_files": agent_files(root, kept, symlinks),
         "ci": ci_stats(root, files, read),
         "signals": signals(root, sorted(set(in_scope) | shared), read, git),

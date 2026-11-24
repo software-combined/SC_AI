@@ -92,7 +92,18 @@ def checked(verification):
     return (f'<div class="panel"><h3>Score check</h3><p>{who} checked the scores against the evidence: '
             f'{e(str(verification.get("held", "?")))} held, {len(changed)} changed, '
             f'{len(rejected)} suggestions not accepted.</p>'
-            + (f'<ul class="notes">{"".join(rows)}</ul>' if rows else "") + '</div>')
+            + (f'<ul class="notes">{"".join(rows)}</ul>' if rows else "") + f'<p>{second(verification)}</p></div>')
+
+
+def second(verification):
+    check = verification.get("secondCheck")
+    if not isinstance(check, dict):
+        return "No second check was recorded."
+    if check.get("skipped"):
+        return "The second check did not run: " + e(str(check["skipped"]))
+    asked = check.get("questions") or []
+    return (f"A second check looked again at {len(asked)} questions ({e(', '.join(map(str, asked)))}): "
+            f"{e(str(check.get('held', '?')))} held.")
 
 
 def render(framework, results, answers):

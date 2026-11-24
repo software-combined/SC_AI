@@ -48,3 +48,4 @@ A second fresh subagent, on the model the [model table](../SKILL.md#models) give
 - It gets the same checklist and inputs as the first checker. Its copy of `results.json` holds the current scores but no `verification` block, so it never sees the first checker's verdicts.
 - It returns the same JSON, one entry per question it checked.
 - The main agent decides its items the same way, and adds them to `verification` with `"by": "second check"` on each changed or rejected entry. Where the two checkers disagree, the evidence decides, not either checker.
+- Record the second check in `verification.secondCheck` even when nothing changes: `questions` (the codes it checked) and `held` (how many it left as they were). If it did not run, record `skipped` with the reason instead. The `held` count at the top of `verification` is the first check's only.

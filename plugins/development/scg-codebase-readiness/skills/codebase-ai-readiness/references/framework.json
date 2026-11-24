@@ -144,7 +144,7 @@
             {"level": 4, "text": "Documents are grouped by domain and subdomain with an index, and most have one responsibility. A few are over 200 lines, mix responsibilities, or use different domain names from the code."},
             {"level": 5, "text": "Documents are grouped by domain and then subdomain, with the same names as the code. Each document has one responsibility, a short index lists them all, every document is 200 lines or fewer and a check enforces it."}
           ],
-          "evidenceToLookFor": "The documentation folder tree compared with the code's domain and subdomain folders, the index, documents that mix rules, design, testing and operations, line counts of every Markdown file, a doc size check.",
+          "evidenceToLookFor": "The documentation folder tree compared with the code's domain and subdomain folders, the index, documents that mix rules, design, testing and operations, line counts of every Markdown file, a doc size check, and guides that no index or other guide links to.",
           "naAllowed": false
         },
         {
