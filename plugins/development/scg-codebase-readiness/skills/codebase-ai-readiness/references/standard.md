@@ -12,6 +12,8 @@ The numbers are defaults. A repository may set different limits, but it must wri
 
 **Split by domain, then subdomain, then file.** Code lives under the business area that owns it, for example `packages/payables/src/extraction/`. A task in one area opens those files, not the whole repository.
 
+**A clean root.** The repository root holds only entry files (README, `AGENTS.md`, `CLAUDE.md`, licence), configuration and build files, and top-level folders by purpose. Notes, design documents, scripts and old plans live in their own folders, not loose at the root.
+
 **Clear service and layer boundaries.** Entry points (web, API, worker) do not import each other. Shared packages do not import apps. Pure domain rules do not import the database, HTTP or cloud code. An automatic architecture test (for example dependency-cruiser) runs as a required check, so a change that breaks a boundary cannot merge.
 
 **Small files, one job each.**
@@ -37,6 +39,8 @@ An old large file may stay on a baseline, but it cannot grow. A script in the re
 **One entry file routes each task.** `AGENTS.md` at the repository root is short (about 40 lines or fewer). It holds a table: "if the task touches X, read Y". `CLAUDE.md` contains one line that loads `AGENTS.md`. The agent reads only what the task needs.
 
 **Documents are structured like the code.** Guides sit in one documentation folder, grouped by domain and then subdomain, for example `Doc/payables/extraction/`. The folders use the same domain names as the code. Each document has one responsibility: rules, design, testing and operations are separate documents, not sections of one long guide. A short index lists every guide. Each Markdown document is 200 lines or fewer, and a longer guide is split by responsibility.
+
+**Plans are filed like the code and show their status.** Plans sit under `plans/<domain>/<subdomain>/`, with the same domain names as the code. `plans/PLAN_RULES.md` gives one template with a status line (Proposed, In progress, Done or Dropped), and `plans/README.md` lists every plan with its status. A plan's status changes in the same pull request as the work, so anyone can see what is planned, under way or finished.
 
 **Documents are accurate and say each thing once.** Every local link resolves. Commands, paths and limits in the documents match the repository. Each decision has one owning guide; other guides link to it and do not repeat it. Stale text is revised or deleted, not left beside the new text.
 

@@ -31,6 +31,15 @@ TEST_FILE = re.compile(r"(\.test\.|\.spec\.|_test\.|_spec\.|_integration\.|\.int
                        r"|(^|/)(tests?|__tests__|e2e|spec)/|\.tests?/)", re.I)
 CONFIG_FILE = re.compile(r"(^|/)[^/]*\.config\.[cm]?[jt]s$|(^|/)(setup|conftest)\.py$", re.I)
 CATCH_ALL = {"utils", "util", "helpers", "common", "misc", "lib", "shared"}
+# Files that belong at a repository root: entry documents, licences, dotfiles, manifests and configuration.
+ROOT_FILE = re.compile(r"^(\..+|(README|LICEN[CS]E[\w.-]*|COPYING|NOTICE|CHANGELOG|CONTRIBUTING|SECURITY|CODE_OF_CONDUCT|THIRD_PARTY_NOTICES"
+                       r"|AGENTS|CLAUDE|GEMINI|CODEOWNERS)(\.\w+)?|Makefile|justfile|Procfile|Gemfile|Rakefile|Jenkinsfile|Dockerfile[\w.-]*"
+                       r"|CMakeLists\.txt|requirements[\w.-]*\.txt|pom\.xml|(build|settings)\.gradle(\.kts)?|gradlew(\.bat)?|mvnw(\.cmd)?"
+                       r"|Podfile|Package\.swift|[\w.-]+\.(csproj|fsproj|vbproj|tf|hcl|nix)|NuGet\.config|Directory\.Build\.\w+|Pipfile|Brewfile|Vagrantfile"
+                       r"|config\.ru|phpunit\.xml(\.dist)?|WORKSPACE(\.bazel)?|BUILD(\.bazel)?|go\.work|mix\.exs|build\.sbt"
+                       r"|[\w.-]+\.(json|jsonc|toml|ya?ml|lock|cfg|ini|mod|sum|sln|props|properties)|[\w.-]*config\.[cm]?[jt]s)$", re.I)
+PLAN_FOLDER = re.compile(r"^(plan|planning|roadmaps?|tasks?|todos?|proposals?|rfcs?)$", re.I)
+STATUS_LINE = re.compile(r"^[ \t>*_-]*Status[*_]*[ \t]*:", re.I | re.M)
 CODE_FENCE = re.compile(r"^[ \t]*(```|~~~).*?^[ \t]*\1", re.S | re.M)
 INLINE_CODE = re.compile(r"`[^`\n]*`")
 INLINE_LINK = re.compile(r"\]\(\s*(<[^<>\n]*>|[^)\s]+)")
@@ -166,6 +175,26 @@ def doc_stats(root, docs, all_files, whole_repo):
             "documents_sharing_paragraphs": [{"docs": list(k), "paragraphs": v} for k, v in pairs.most_common(15)]}
 
 
+def layout_stats(root, files):
+    """The repository root and the plans folder: loose root files, and plans filed by domain with a status."""
+    root_files = [f for f in files if "/" not in f]
+    folders = sorted({f.split("/")[0] for f in files if "/" in f})
+    plans = [f for f in files if f.startswith("plans/") and f.endswith(".md")
+             and f not in ("plans/README.md", "plans/PLAN_RULES.md")]
+    texts = [(f, read(os.path.join(root, f))) for f in plans]
+    without_status = [f for f, text in texts if text is not None and not STATUS_LINE.search(text)]
+    # plans/<domain>/<subdomain>/<plan>.md has three slashes.
+    not_by_domain = [f for f in plans if f.count("/") < 3]
+    return {"root": {"files": len(root_files), "folders": folders,
+                     "other_files": [f for f in root_files if not (ROOT_FILE.match(f) or CONFIG_FILE.search(f))][:40]},
+            "plans": {"folder": any(f.startswith("plans/") for f in files), "rules_file": "plans/PLAN_RULES.md" in files,
+                      "index": "plans/README.md" in files, "plans": len(plans),
+                      "unreadable": sum(1 for _, text in texts if text is None),
+                      "not_by_domain_count": len(not_by_domain), "not_by_domain": not_by_domain[:20],
+                      "without_status_count": len(without_status), "without_status": without_status[:20],
+                      "other_plan_folders": [d for d in folders if PLAN_FOLDER.match(d)]}}
+
+
 def agent_files(root, files, symlinks):
     # Link text comes from the index copy, so a folder link on disk cannot redirect the read.
     result = [{"path": f, "symlink_to": git(root, "cat-file", "blob", ":" + f)} for f in symlinks
@@ -268,6 +297,7 @@ def main(argv):
         "agent_files": agent_files(root, kept, symlinks),
         "ci": ci_stats(root, files, read),
         "signals": signals(root, sorted(set(in_scope) | shared), read, git),
+        "layout": layout_stats(root, files),
         "branches": branch_stats(root, remote, state["shallow_clone"]),
     }, indent=2))
     return 0

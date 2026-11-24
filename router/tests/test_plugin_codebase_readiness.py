@@ -210,6 +210,19 @@ class CodebaseReadinessTests(unittest.TestCase):
         self.assertTrue(result['signals']['lint'])
         self.assertTrue(json.loads(run('measure.py', self.repo, '--path', 'docs').stdout)['signals']['lint'])
 
+    def test_root_and_plans_layout_are_measured(self):
+        for name, text in (('plans/PLAN_RULES.md', 'x\n'), ('plans/README.md', 'x\n'), ('planning/old.md', 'x\n'),
+                           ('plans/work/board/001-a.md', 'Status: Done\n'), ('plans/loose.md', '# Loose\n'),
+                           ('notes.txt', 'x\n'), ('setup.py', 'x\n'), ('pom.xml', 'x\n')):
+            (self.repo / name).parent.mkdir(parents=True, exist_ok=True)
+            (self.repo / name).write_text(text)
+        git(self.repo, 'add', '-A')
+        root, plans = self.measure()['layout'].values()
+        self.assertEqual(set(root['other_files']) & {'notes.txt', 'README.md', 'setup.py', 'pom.xml'}, {'notes.txt'})
+        self.assertEqual((plans['rules_file'], plans['index'], plans['plans'], plans['not_by_domain'],
+                          plans['without_status'], plans['other_plan_folders']),
+                         (True, True, 2, ['plans/loose.md'], ['plans/loose.md'], ['planning']))
+
     def test_signals_follow_the_unit(self):
         for name, text in (('src/a.ts', 'x\n'), ('docs/CODEOWNERS', '* @owner\n'),
                            ('other/package.json', '{"scripts": {"lint": "eslint ."}}\n'),

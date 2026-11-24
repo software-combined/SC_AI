@@ -1,5 +1,15 @@
 # Changelog
 
+## scg-codebase-readiness 0.1.2 (2026-11-24)
+
+- Check that the repository root holds only entry, licence, configuration and
+  build files (`layout.root`), as part of the domain split question (1.1).
+- Check that plans sit under `plans/<domain>/<subdomain>/` with a
+  `PLAN_RULES.md` template, an index and a status on every plan
+  (`layout.plans`), as part of the documentation structure question (3.2).
+- Write the fix plan as plan files in that format, with a `PLAN_RULES.md`
+  template to copy into a repository that has none.
+
 ## scg-codebase-readiness 0.1.1 (2026-11-24)
 
 - List guides that no other document links to (`unlinked_documents`), so the
