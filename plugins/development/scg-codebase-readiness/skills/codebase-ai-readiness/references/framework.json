@@ -18,10 +18,10 @@
             {"level": 1, "text": "Code is grouped by file type or not grouped at all. A task in one business area touches files across the whole repository."},
             {"level": 2, "text": "Some folders are named after business areas, but most code sits in shared catch-all folders such as utils, services or components."},
             {"level": 3, "text": "Most code sits under a named business domain, but domains are large and have no subdomains, or shared folders still hold business rules."},
-            {"level": 4, "text": "Code is split by domain, then subdomain, then file. A written rule says where new code goes. A few areas still break the rule."},
-            {"level": 5, "text": "Every source file sits under its owning domain and subdomain. The split is written down, used the same way in apps, packages and documents, and a task in one area opens only that area."}
+            {"level": 4, "text": "Code is split by domain, then subdomain, then file. A written rule says where new code goes. A few areas, or a few loose files at the repository root, still break the rule."},
+            {"level": 5, "text": "Every source file sits under its owning domain and subdomain. The split is written down, used the same way in apps, packages and documents, and a task in one area opens only that area. The repository root holds only entry files, configuration and top-level folders."}
           ],
-          "evidenceToLookFor": "Folder tree to depth 3, share of files under domain folders, catch-all folders (utils, helpers, common, misc), the written rule for where code goes.",
+          "evidenceToLookFor": "Folder tree to depth 3, share of files under domain folders, catch-all folders (utils, helpers, common, misc), the written rule for where code goes, and loose files at the repository root (measure.json layout.root).",
           "naAllowed": false
         },
         {
@@ -140,11 +140,11 @@
           "descriptors": [
             {"level": 1, "text": "Little or no documentation in the repository, or one very large README."},
             {"level": 2, "text": "Documents exist but are scattered across folders with no index. Long guides mix rules, design and operations."},
-            {"level": 3, "text": "Documents sit in one folder with some grouping, but not by domain and subdomain. Many are over 200 lines, or there is no index."},
-            {"level": 4, "text": "Documents are grouped by domain and subdomain with an index, and most have one responsibility. A few are over 200 lines, mix responsibilities, or use different domain names from the code."},
-            {"level": 5, "text": "Documents are grouped by domain and then subdomain, with the same names as the code. Each document has one responsibility, a short index lists them all, every document is 200 lines or fewer and a check enforces it."}
+            {"level": 3, "text": "Documents sit in one folder with some grouping, but not by domain and subdomain. Many are over 200 lines, or there is no index, or plans sit loose in one folder."},
+            {"level": 4, "text": "Documents are grouped by domain and subdomain with an index, and most have one responsibility. A few are over 200 lines, mix responsibilities, or use different domain names from the code. Plans are filed by domain, but some have no status, or there is no plans index or plan template."},
+            {"level": 5, "text": "Documents are grouped by domain and then subdomain, with the same names as the code. Each document has one responsibility, a short index lists them all, every document is 200 lines or fewer and a check enforces it. Plans sit under plans/<domain>/<subdomain> with a PLAN_RULES.md template, a status on every plan and an index."}
           ],
-          "evidenceToLookFor": "The documentation folder tree compared with the code's domain and subdomain folders, the index, documents that mix rules, design, testing and operations, line counts of every Markdown file, a doc size check, and guides that no index or other guide links to.",
+          "evidenceToLookFor": "The documentation folder tree compared with the code's domain and subdomain folders, the index, documents that mix rules, design, testing and operations, line counts of every Markdown file, a doc size check, and guides that no index or other guide links to, and the plans folder: PLAN_RULES.md, its index, plans not filed by domain, plans without a status and other folders that hold plans (measure.json layout.plans).",
           "naAllowed": false
         },
         {
