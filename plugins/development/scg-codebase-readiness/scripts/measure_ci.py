@@ -6,7 +6,9 @@ CONFIG_NAMES = re.compile(
     r"(^|/)(package\.json|pyproject\.toml|setup\.cfg|tox\.ini|ruff\.toml|\.coveragerc|biome\.json|Makefile|justfile|"
     r"\.pre-commit-config\.ya?ml|lefthook\.ya?ml|\.golangci\.ya?ml|Directory\.Build\.props|[^/]*\.csproj|"
     r"\.dependency-cruiser\.[cm]?js|eslint\.config\.[cm]?js|\.eslintrc[^/]*|\.gitleaks\.toml|[^/]*\.config\.[cm]?[jt]s|"
-    r"CODEOWNERS|tsconfig[^/]*\.json|mypy\.ini|\.?knip\.jsonc?|\.jscpd\.json)$|^\.github/workflows/|^\.husky/|^(azure-pipelines|bitbucket-pipelines|\.gitlab-ci)\.ya?ml$")
+    r"CODEOWNERS|tsconfig[^/]*\.json|mypy\.ini|\.?knip\.jsonc?|\.jscpd\.json)$|^\.github/workflows/|^\.husky/|"
+    r"^(azure-pipelines|bitbucket-pipelines|\.gitlab-ci)\.ya?ml$|"
+    r"^\.azure/pipelines/[^/]+\.ya?ml$|^\.azuredevops/(pipelines/)?[^/]+\.ya?ml$")
 SIGNALS = {
     "architecture_test": r"dependency-cruiser|depcruise|arch-test|archunit|import-linter|eslint-plugin-boundaries",
     "size_check": r"source-limits|max-lines|check:size|file-size-limit|check_source_limits",
@@ -71,7 +73,9 @@ def ci_stats(root, files, read):
             "unpinned_actions": len(UNPINNED.findall(jobs)),
             "deploys": bool(re.search(r"^[ \t]+environment:|^  [\w-]*deploy[\w-]*:|^[ \t]+(?:-[ \t]*)?(run|uses):(?!.*test).*deploy", jobs, re.I | re.M)),
         })
-    other = [f for f in files if re.match(r"(^|/)(azure-pipelines[^/]*|bitbucket-pipelines|\.gitlab-ci)\.ya?ml$|(^|/)Jenkinsfile$", f)]
+    other = [f for f in files if re.match(r"(^|/)(azure-pipelines[^/]*|bitbucket-pipelines|\.gitlab-ci)\.ya?ml$"
+                                          r"|(^|/)Jenkinsfile$|^\.azure/pipelines/[^/]+\.ya?ml$"
+                                          r"|^\.azuredevops/(pipelines/)?[^/]+\.ya?ml$", f)]
     return {"github_workflows": workflows, "other_ci_files": other}
 
 
