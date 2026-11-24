@@ -1,4 +1,5 @@
 """Claude Desktop discovery and saved-session routing contracts."""
+import hashlib
 import json
 from dataclasses import replace
 import unittest
@@ -9,7 +10,7 @@ from ai_router.errors import UnknownModel
 
 
 class DesktopDiscoveryTests(unittest.TestCase):
-    def test_discovery_keeps_vendor_identity_even_when_a_client_filters_it(self):
+    def test_discovery_uses_stable_ids_with_actual_vendor_names_and_capabilities(self):
         with mock.patch.object(availability, 'combined_ids', return_value=None):
             rows = claude.models_listing()['data']
         expected = {m.slug: m.display_name for m in registry.MODELS
@@ -18,18 +19,22 @@ class DesktopDiscoveryTests(unittest.TestCase):
         for row in rows:
             with self.subTest(model=row['display_name']):
                 slug = claude.resolve(row['id'])
-                self.assertEqual(row['id'], slug.removeprefix('~'))
+                expected_id = slug.removeprefix('~')
+                if not expected_id.startswith('anthropic/'):
+                    expected_id = 'claude/scg/' + hashlib.sha256(slug.encode()).hexdigest()
+                self.assertEqual(row['id'], expected_id)
                 if not row['id'].startswith('anthropic/claude-'):
                     self.assertNotIn('anthropic_family_tier', row)
                 self.assertEqual(row['display_name'], expected[slug])
 
-    def test_truthful_tracking_id_still_resolves_to_its_registered_provider(self):
+    def test_tracking_alias_and_saved_direct_id_resolve_to_the_same_provider(self):
         entry = replace(registry.by_slug('deepseek/deepseek-v4.1-flash-1017'),
                         slug='~deepseek/deepseek-v4.1-flash-1017')
         rows = {entry.slug: entry}
         identifier = claude.row_alias(entry)
-        self.assertEqual(identifier, 'deepseek/deepseek-v4.1-flash-1017')
+        self.assertEqual(identifier, 'claude/scg/' + hashlib.sha256(entry.slug.encode()).hexdigest())
         self.assertEqual(claude.resolve(identifier, rows), entry.slug)
+        self.assertEqual(claude.resolve(entry.slug.removeprefix('~'), rows), entry.slug)
         with mock.patch.object(availability, 'permitted', return_value=True):
             provider = claude.select(identifier, '/v1/messages',
                                      allowed=[entry.slug], catalogue=rows)
@@ -55,6 +60,31 @@ class DesktopDiscoveryTests(unittest.TestCase):
                 self.assertNotIn('client-secret', str(prepared.headers))
                 with self.assertRaises(UnknownModel):
                     claude.select(model, '/v1/messages', allowed=[])
+
+    def test_alias_routing_keeps_canonical_policy_and_key_availability_gates(self):
+        slug = 'deepseek/deepseek-v4.1-flash-1017'
+        identifier = 'claude/scg/caf1ef1f3bdf5452e389231c9ade544bae824aff51e08ebffbd85cd0fb65f1f0'
+        self.assertEqual(claude.claude_alias(slug), identifier)
+        with mock.patch.object(availability, 'permitted', return_value=True):
+            for allowed in ([], [identifier]):
+                with self.subTest(allowed=allowed), self.assertRaises(UnknownModel):
+                    claude.select(identifier, '/v1/messages', allowed=allowed)
+        with mock.patch.object(availability, 'permitted', return_value=False):
+            with self.assertRaises(UnknownModel):
+                claude.select(identifier, '/v1/messages', allowed=[slug])
+
+    def test_alias_resolution_uses_the_captured_generation_and_rejects_removed_rows(self):
+        slug = 'deepseek/deepseek-v4.1-flash-1017'
+        entry = registry.by_slug(slug)
+        rows = {slug: entry}
+        identifier = 'claude/scg/' + hashlib.sha256(slug.encode()).hexdigest()
+        with mock.patch.object(registry, 'BY_SLUG', {}), \
+                mock.patch.object(availability, 'permitted', return_value=True):
+            self.assertEqual(claude.resolve(identifier, rows), slug)
+            self.assertEqual(claude.select(identifier, '/v1/messages',
+                                          allowed=[slug], catalogue=rows).name, entry.provider)
+            with self.assertRaises(UnknownModel):
+                claude.select(identifier, '/v1/messages', catalogue={})
 
     def test_unknown_router_alias_cannot_fall_through_to_subscription(self):
         for model in ('claude/scg/' + '0' * 64, 'claude/deepseek/deepseek-v4.1-flash-1017'):

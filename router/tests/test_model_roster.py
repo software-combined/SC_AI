@@ -54,7 +54,7 @@ class ModelRosterTests(unittest.TestCase):
         self.assertEqual([row['effort'] for row in neon['supported_reasoning_levels']],
                          ['low', 'medium', 'high', 'xhigh'])
         with mock.patch.object(availability, 'combined_ids', return_value={slug}):
-            self.assertIn(slug, {row['id'] for row in claude.models_listing()['data']})
+            self.assertIn(slug, {claude.resolve(row['id']) for row in claude.models_listing()['data']})
 
     def test_hydrogen_pins_public_metadata_and_qualified_status(self):
         model = by_slug('google/gemini-4-hydrogen')
@@ -77,7 +77,7 @@ class ModelRosterTests(unittest.TestCase):
         for client in ('codex', 'claude'):
             self.assertIn(model, models_for(MODELS, client))
         with mock.patch.object(availability, 'combined_ids', return_value={slug}):
-            self.assertIn(slug, {row['id'] for row in claude.models_listing()['data']})
+            self.assertIn(slug, {claude.resolve(row['id']) for row in claude.models_listing()['data']})
         context = request_context.resolve(slug, request_context.capture())
         for selector, path, content in (
                 (select, '/responses', {'input': 'Synthetic routing check.'}),
@@ -105,9 +105,9 @@ class ModelRosterTests(unittest.TestCase):
             self.assertEqual([row['effort'] for row in entry['supported_reasoning_levels']],
                              ['low', 'medium', 'high', 'xhigh'])
             listing = claude.models_listing()['data']
-            self.assertEqual(next(row for row in listing if row['id'] == slug)['display_name'],
+            self.assertEqual(next(row for row in listing if claude.resolve(row['id']) == slug)['display_name'],
                              qualified.display_name)
-            self.assertNotIn(slug, {row['id'] for row in claude.models_listing(allowed=[])['data']})
+            self.assertNotIn(slug, {claude.resolve(row['id']) for row in claude.models_listing(allowed=[])['data']})
             self.assertNotIn(slug, {row['slug'] for row in merge({'models': []}, available=set())['models']})
             hidden = replace(qualified, tier='preview', listed=False)
             for client in ('codex', 'claude'):

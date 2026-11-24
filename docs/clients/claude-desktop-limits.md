@@ -28,10 +28,15 @@ Linux still require native app acceptance.
 Pointing the third-party profile at the loopback router lists every
 approved Messages-compatible registry row. The app filters non-Anthropic
 vendor words from IDs even when a valid `anthropic_family_tier` is present.
-The publication candidate reports truthful vendor IDs and does not assign a
-Claude family tier to another vendor. This removes the old picker workaround.
-Some desktop versions will hide non-Claude rows; earlier compatibility
-measurements do not verify this candidate. Attach with
+Non-Claude rows use stable `claude/scg/<hash>` gateway IDs and keep their actual
+vendor, model and provider labels. Router resolves only known IDs to their
+registered provider before checking access and forwarding the request. It
+assigns no Claude family or `behavesAs` metadata to another vendor.
+On Windows Desktop 4.4212.0.0, Router beta showed 30 models for the test account.
+DeepSeek V4.1 Flash 1017 ran the SC Documentation skill in a local Code session
+and returned a reply. The provider reported the selected model on both requests.
+The session kept its model and tool result when reopened. Managed configurations
+and other Desktop versions still need native acceptance. Attach with
 `packaging/install.py --desktop`. Without a Claude subscription
 (`claude_mode` `none`), the menu disables **Claude subscription** and the switch
 refuses to move there. Service-only install and uninstall use the strict detach

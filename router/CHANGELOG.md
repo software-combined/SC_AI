@@ -1,6 +1,11 @@
 # Changelog
 
-## Unreleased
+## 1.4.3
+
+- Restore approved Messages-compatible models in Claude's picker under their
+  actual vendor, model and provider names. Stable gateway IDs resolve to the
+  exact provider model without assigning Claude capabilities to other models.
+  Existing direct IDs, model choices, access checks and worker selection remain valid.
 
 ## 1.4.2
 

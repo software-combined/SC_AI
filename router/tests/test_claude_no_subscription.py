@@ -2,6 +2,7 @@
 
 Synthetic settings and listings only; never touches the operator's settings.
 """
+import hashlib
 import json
 import tempfile
 import unittest
@@ -67,6 +68,16 @@ class NoSubscriptionAttachTests(unittest.TestCase):
         env = self.attach(listing=listing)
         self.assertEqual(env['ANTHROPIC_DEFAULT_HAIKU_MODEL'], SONNET)
         self.assertEqual(env['ANTHROPIC_MODEL'], SONNET)
+
+    def test_compatibility_listing_keeps_the_default_and_real_claude_tiers(self):
+        listing = json.loads(json.dumps(LISTING))
+        for row in listing['data']:
+            if not row['id'].startswith('anthropic/'):
+                row['id'] = 'claude/scg/' + hashlib.sha256(row['id'].encode()).hexdigest()
+        env = self.attach(listing=listing)
+        self.assertEqual(env['ANTHROPIC_MODEL'], claude_config.DEFAULT_MODEL)
+        self.assertEqual(env['ANTHROPIC_DEFAULT_SONNET_MODEL'], SONNET)
+        self.assertEqual(env['ANTHROPIC_DEFAULT_HAIKU_MODEL'], 'anthropic/claude-haiku-5.5')
 
     def test_no_sonnet_row_or_no_listing_refuses_before_writing(self):
         for listing in (_listing('sonnet'), None):

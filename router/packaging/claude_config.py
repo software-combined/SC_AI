@@ -7,6 +7,7 @@ activation receipt handling. Loaded through the installer's explicit
 file-import pattern and shipped in the release bundle. No runtime/protocol
 import here.
 """
+import hashlib
 import json
 import os
 import subprocess
@@ -80,8 +81,10 @@ def none_env(listing):
     if sonnet is None:
         raise SystemExit('Claude Code without a Claude subscription needs Claude Sonnet '
                          'on your OpenRouter key. Check the key, then run setup again.')
-    values = {AUTH_KEY: AUTH_PLACEHOLDER, EFFORT_KEY: DEFAULT_EFFORT,
-              MODEL_KEY: DEFAULT_MODEL if DEFAULT_MODEL in ids else sonnet}
+    # Discovery may use a Desktop compatibility token; direct IDs still route.
+    default_alias = 'claude/scg/' + hashlib.sha256(DEFAULT_MODEL.encode()).hexdigest()
+    default = DEFAULT_MODEL if ids.intersection((DEFAULT_MODEL, default_alias)) else sonnet
+    values = {AUTH_KEY: AUTH_PLACEHOLDER, EFFORT_KEY: DEFAULT_EFFORT, MODEL_KEY: default}
     values.update((key, tiers.get(tier, sonnet)) for tier, key in TIER_KEYS)
     return values
 

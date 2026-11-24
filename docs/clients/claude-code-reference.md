@@ -16,15 +16,19 @@ listing from its local registry without needing any credential.
 
 ## Choosing a model
 
-Select a Claude model in `/model`. Discovery reports real upstream IDs and
-vendor/billing labels. Only Claude models carry `anthropic_family_tier`.
-Non-Claude rows may be hidden or rejected by the stock client; Anthropic does
-not support them through Claude Code. Use Codex or another compatible API
-client for those separately billed routes.
+Select a model by its vendor, model and provider label in `/model`. Other
+vendors use stable SCG gateway IDs (`claude/scg/<hash>`) so Desktop can list
+them. Router resolves each ID to the registered provider model before access
+checks and forwarding; only actual Claude models carry `anthropic_family_tier`.
+Direct provider IDs remain valid for saved settings and terminal commands.
+Unknown or removed SCG IDs and older `claude/<vendor>/<name>` IDs are refused.
+Managed client rules still apply to gateway IDs; Router independently checks
+the canonical model against its access policy and key availability.
 
-Older `claude/scg/...` and `claude/<vendor>/<name>` aliases are retired and
-refused locally. Choose the truthful ID in a fresh session. Native Claude
-requests still forward the signed-in client's own authentication unchanged.
+Anthropic documents compatible gateways but does not support non-Claude
+models through Claude Code. SCG compatibility needs verification against each
+client version. Native Claude requests still forward the signed-in client's
+own authentication unchanged.
 
 ## Attachment contract
 
