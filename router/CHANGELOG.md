@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Let the key window close on its own deadline. An idle window cancels without a repair warning, and Check setup still recognizes a working saved key after cancellation.
+- On Windows, **Help → Troubleshooting…** opens the linked guide in your browser.
+- Reopening the same Windows installer for a healthy copy of SCG Router shows one up-to-date notice.
+
 ## 1.4.0
 
 - The download page and setup guide describe the automatic setup.

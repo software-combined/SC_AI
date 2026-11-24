@@ -122,7 +122,15 @@ class BundleDocsTests(unittest.TestCase):
 
 
 class HelpGuideTests(unittest.TestCase):
-    """The tray's Troubleshooting item opens the bundled troubleshooting page."""
+    """The tray's Troubleshooting item opens a readable troubleshooting page."""
+
+    def test_windows_opens_a_linked_guide_without_a_markdown_app(self):
+        control = load(ROOT / 'packaging' / 'desktop_control.py', 'router_desktop_control_help')
+        with mock.patch.object(control.sys, 'platform', 'win32'), \
+                mock.patch.object(control.os, 'startfile', create=True) as shell_open:
+            self.assertEqual(control.execute('/home', '/resources', 'help.guide'), {'outcome': 'done'})
+        shell_open.assert_called_once_with(
+            'https://github.com/software-combined/SC_AI/blob/main/docs/troubleshooting/README.md')
 
     def _opened(self, resources):
         control = load(ROOT / 'packaging' / 'desktop_control.py', 'router_desktop_control_help')

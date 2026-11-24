@@ -84,6 +84,26 @@ class SetupHandlerTests(unittest.TestCase):
         self.assertEqual(payload['ok'], True)
         self.assertEqual(payload['mode'], 'none')
 
+    def test_cancel_is_only_available_to_the_authenticated_json_route(self):
+        home = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, home, True)
+        server = self._server(home)
+        path = '/test-token/setup/' + 'n' * 16
+        with mock.patch('ai_router.availability.current_key', return_value='synthetic-saved-key'), \
+                mock.patch('ai_router.key_store._open_without_redirects', side_effect=_key_ok()) as opener:
+            response = self._post(server.server_port, path, b'cancel=1')
+            self.assertEqual(response.status, 422)
+            response.read()
+            response = self._post(server.server_port, path.replace('test-token', 'wrong'), b'cancel=1',
+                                  accept='application/json')
+            self.assertEqual(response.status, 403)
+            response.read()
+            opener.assert_not_called()
+            response = self._post(server.server_port, path, b'cancel=1', accept='application/json')
+            self.assertEqual((response.status, json.loads(response.read())), (200, {'ok': True}))
+            opener.assert_called_once()
+        self.assertNotIn('setup', server.state)
+
     def test_json_accept_persists_the_claude_choice(self):
         home = Path(tempfile.mkdtemp())
         self.addCleanup(shutil.rmtree, home, True)

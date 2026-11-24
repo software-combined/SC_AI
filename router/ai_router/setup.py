@@ -13,6 +13,8 @@ import json
 import os
 import sys
 import time
+from contextlib import nullcontext
+from http.client import HTTPException
 from pathlib import Path
 from urllib.parse import parse_qsl
 
@@ -63,12 +65,49 @@ def handle_setup(state, home, nonce, is_post, form, _urlopen=None, _now=None):
     return status, setup_page.form(nonce, provider_id, result.get('error'))
 
 
-def handle_setup_json(state, home, nonce, form, _urlopen=None, _now=None):
+def handle_setup_json(state, home, nonce, form, _urlopen=None, _now=None, *, _lock=None):
     """(status, payload) for a popup POST; the same checks as the page."""
-    if not valid_nonce(state, nonce, _now):
+    pending = state.get('setup') if isinstance(state, dict) else None
+    if not valid_nonce({'setup': pending}, nonce, _now):
         return 404, {'ok': False, 'error': 'unknown or expired setup link; '
                                            're-run the installer'}
+    if form == b'cancel=1':
+        return _cancel_setup(state, home, pending.copy(), nonce, _urlopen, _now, _lock)
     return _submit(state, home, form, _urlopen)
+
+
+def _cancel_setup(state, home, pending, nonce, fetch, now, lock):
+    """Close a replacement window only while its existing key still verifies."""
+    from . import availability
+
+    refused = 409, {'ok': False}
+    provider = key_store.window_provider({'setup': pending})
+    definition = provider_defs.get(provider)
+    if not definition or not definition.key_info_url or definition.key_info_shape not in key_store.KEY_INFO_READERS:
+        return refused
+    try:
+        key = availability.current_key(home, provider)
+        if not isinstance(key, str) or not key:
+            return refused
+        key_store.check_key(provider, key, fetch)
+        with lock if lock is not None else nullcontext():
+            if state.get('setup') != pending:
+                return refused
+            cleared = False
+
+            def clear(doc):
+                nonlocal cleared
+                cleared = (doc.get('setup') == pending and valid_nonce(doc, nonce, now)
+                           and availability.current_key(home, provider) == key)
+                if cleared:
+                    doc.pop('setup')
+
+            if _update_state(home, clear) is None or not cleared:
+                return refused
+            state.pop('setup', None)
+    except (OSError, ValueError, HTTPException):
+        return refused
+    return 200, {'ok': True}
 
 
 def _submit(state, home, form, _urlopen):
@@ -276,7 +315,7 @@ def serve(handler, nonce, is_post):
         form = None
     # The native popup asks for JSON; browsers keep the page unchanged.
     if is_post and 'application/json' in (handler.headers.get('Accept') or ''):
-        status, payload = handle_setup_json(state, home, nonce, form)
+        status, payload = handle_setup_json(state, home, nonce, form, _lock=handler.server.lock)
         body = json.dumps(payload).encode()
         content_type = 'application/json; charset=utf-8'
     else:

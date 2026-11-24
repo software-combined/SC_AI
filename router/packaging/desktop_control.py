@@ -152,14 +152,14 @@ def execute(home, resources, action, run=subprocess.run):
             startup.configure(home, resources, not startup.enabled(home))
         return dict(outcome='done')
     if action == 'help.guide':
+        if sys.platform == 'win32':
+            os.startfile('https://github.com/software-combined/SC_AI/blob/main/docs/troubleshooting/README.md')
+            return dict(outcome='done')
         guide = resources / 'router/docs/troubleshooting/README.md'
         if not guide.exists():  # an older bundle keeps the flat page
             guide = resources / 'router/docs/troubleshooting.md'
         if sys.platform == 'darwin':
             command = ['open', str(guide)]
-        elif sys.platform == 'win32':
-            os.startfile(str(guide))
-            return dict(outcome='done')
         else:
             command = ['xdg-open', str(guide)]
         run(command, check=True, timeout=15, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)

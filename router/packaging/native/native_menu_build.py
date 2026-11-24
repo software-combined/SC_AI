@@ -27,7 +27,7 @@ def build(resources, target, run=subprocess.run):
         compiler = Path(os.environ['WINDIR']) / 'Microsoft.NET/Framework64/v4.0.30319/csc.exe'
         run([str(compiler), '/nologo', '/target:winexe', '/platform:x64', '/optimize+', '/out:' + str(binary),
              '/r:System.Windows.Forms.dll', '/r:System.Drawing.dll', '/r:System.Web.Extensions.dll',
-             str(HERE / 'windows.cs')], check=True)
+             str(HERE / 'windows.cs'), str(HERE / 'windows_repeat.cs')], check=True)
     elif target.startswith('linux/') and sys.platform.startswith('linux'):
         with tempfile.TemporaryDirectory(prefix='scg-menu-build-') as temporary:
             run(['cargo', '+1.90.0', 'build', '--release', '--locked', '--manifest-path',

@@ -8,6 +8,8 @@ import sys
 import tempfile
 import unittest
 
+from tests._platform import symlink_or_skip
+
 ROOT = Path(__file__).resolve().parents[1]
 PLUGIN = ROOT.parent / 'plugins/development/scg-codebase-readiness'
 SKILL = PLUGIN / 'skills/codebase-ai-readiness'
@@ -62,7 +64,7 @@ class CodebaseReadinessTests(unittest.TestCase):
         (outside / 'a.md').write_text('[x](./LEAK-MARKER.md)\n')
         (self.repo / 'docs/a.md').unlink()
         (self.repo / 'docs').rmdir()
-        (self.repo / 'docs').symlink_to(outside, target_is_directory=True)
+        symlink_or_skip(outside, self.repo / 'docs', target_is_directory=True)
         self.assertNotIn('LEAK-MARKER', json.dumps(self.measure()))
 
     @unittest.skipIf(os.name == 'nt', 'Git for Windows refuses these index names')
@@ -75,10 +77,10 @@ class CodebaseReadinessTests(unittest.TestCase):
 
     def test_agent_link_text_comes_from_git(self):
         (self.repo / 'AGENTS.md').write_text('# Agents\n')
-        (self.repo / 'CLAUDE.md').symlink_to('AGENTS.md')
+        symlink_or_skip('AGENTS.md', self.repo / 'CLAUDE.md')
         git(self.repo, 'add', '-A')
         (self.repo / 'CLAUDE.md').unlink()
-        (self.repo / 'CLAUDE.md').symlink_to('LEAK-MARKER')
+        symlink_or_skip('LEAK-MARKER', self.repo / 'CLAUDE.md')
         result = json.dumps(self.measure()['agent_files'])
         self.assertIn('"symlink_to": "AGENTS.md"', result)
         self.assertNotIn('LEAK-MARKER', result)
@@ -184,8 +186,8 @@ class CodebaseReadinessTests(unittest.TestCase):
                      'api/openapi.yaml'):
             (self.repo / name).parent.mkdir(parents=True, exist_ok=True)
             (self.repo / name).write_text('x\n')
-        (self.repo / 'linked.md').symlink_to('README.md')
-        (self.repo / 'gone.md').symlink_to('missing.md')
+        symlink_or_skip('README.md', self.repo / 'linked.md')
+        symlink_or_skip('missing.md', self.repo / 'gone.md')
         (self.repo / 'docs/b.md').write_text('[l](../linked.md)\n[g](../gone.md)\n')
         git(self.repo, 'add', '-A')
         result = self.measure()

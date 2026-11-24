@@ -3,7 +3,6 @@ import contextlib
 import io
 import json
 import os
-import subprocess
 import tempfile
 import time
 import tomllib
@@ -22,7 +21,7 @@ class CompletionTests(unittest.TestCase):
     def setUp(self):
         self.enterContext(mock.patch.object(install_mod, 'platform_backend'))
 
-    def test_popup_wait_is_bounded_and_url_is_only_on_stdin(self):
+    def test_installer_leaves_the_deadline_to_the_popup_and_keeps_the_url_on_stdin(self):
         owner = module('setup_completion')
         process = mock.Mock()
         process.wait.return_value = 0
@@ -31,14 +30,11 @@ class CompletionTests(unittest.TestCase):
         with mock.patch.object(owner.subprocess, 'Popen', return_value=process) as launch, \
                 contextlib.redirect_stdout(out):
             self.assertEqual(owner.open_window('python', Path('/home'), Path('/release'), url, 'codex'), 0)
-        process.wait.assert_called_once_with(timeout=900)
+        process.wait.assert_called_once_with()
         process.stdin.write.assert_called_once_with((url + '\n').encode())
         process.stdin.close.assert_called_once()
         self.assertNotIn(url, str(launch.call_args))
         self.assertNotIn(url, out.getvalue())
-        process.wait.side_effect = subprocess.TimeoutExpired('popup', 900)
-        with mock.patch.object(owner.subprocess, 'Popen', return_value=process):
-            self.assertIsNone(owner.open_window('python', Path('/home'), Path('/release'), url, 'codex'))
         process.terminate.assert_not_called()
 
     def test_cancel_unavailable_and_automatic_runs_leave_honest_pending(self):

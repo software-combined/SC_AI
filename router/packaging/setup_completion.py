@@ -88,7 +88,7 @@ def open_window(python, home, release, url, clients):
                                 stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         proc.stdin.write((url + '\n').encode())
         proc.stdin.close()
-        return proc.wait(timeout=900)
+        return proc.wait()
     except (OSError, subprocess.SubprocessError):
         return None
 

@@ -37,7 +37,7 @@ PACKAGING_FILES = (
     'packaging/agent_skills.py',
     'packaging/client_executable.py', 'packaging/setup_completion.py',
     'packaging/install_delivery.py', 'packaging/repair_ui.py', 'packaging/native_payload.py',
-    'packaging/windows_installation.py',
+    'packaging/windows_installation.py', 'packaging/windows_repeat.py',
     'packaging/native_controller.py', 'packaging/native_setup.py',
     'packaging/native_launch.py', 'packaging/native_dialog.py',
     'packaging/native_shortcuts.py', 'packaging/native_readiness.py',

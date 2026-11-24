@@ -39,7 +39,11 @@ def _control(home, resources, action=None):
                '--home', str(home), '--resources', str(resources)]
     if action:
         command += ['--action', action]
-    result = subprocess.run(command, capture_output=True, text=True, timeout=960 if action else 15,
+    # Key setup bounds its own dialogs. Killing their Python owner can leave a window open.
+    timeout = 15 if not action else 960
+    if action in ('setup.key', 'setup.status', 'setup.resume', 'setup.add'):
+        timeout = None
+    result = subprocess.run(command, capture_output=True, text=True, timeout=timeout,
                             **({'creationflags': subprocess.CREATE_NO_WINDOW} if os.name == 'nt' else {}))
     if len(result.stdout) > 65536:
         raise ValueError('Desktop response too large')
