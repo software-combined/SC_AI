@@ -79,6 +79,11 @@ class NativePackageTests(unittest.TestCase):
         self.assertIn("WizardForm.Caption := 'SCG Router'", script)
         self.assertIn('SetupIconFile=@ICON@', script)
 
+    def test_windows_extracts_into_a_build_specific_directory(self):
+        script = (ROOT / 'packaging/native/windows.iss').read_text()
+        self.assertIn(r'DefaultDirName={localappdata}\Programs\SCG Router Installer\{#ProductVersion}', script)
+        self.assertIn('UsePreviousAppDir=no', script)
+
     def test_both_windows_install_paths_require_accepting_the_runtime_terms(self):
         # Microsoft's Visual Studio licence (section 4.b) requires end users to agree
         # to terms protecting its runtime files before receiving them.
