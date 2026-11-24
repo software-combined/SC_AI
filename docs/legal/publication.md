@@ -38,12 +38,15 @@ billed profile; it does not extend a subscription entitlement.
 
 ## Provider and client support
 
-Claude gateway discovery uses real vendor IDs. Only actual Claude rows have
-Claude family metadata. The installer adds public gateway settings and never
-sets the internal first-party override. An old installer-owned override is
-removed using its receipt; hand-managed conflicts are preserved and refused.
-Older disguised aliases are refused locally. A saved session using one must
-choose a truthful ID in a new session.
+Claude gateway discovery keeps real vendor, model and provider labels.
+Non-Claude rows use stable SCG compatibility IDs, resolved to canonical
+registry rows before access checks and upstream selection. Direct IDs remain
+valid; unknown or removed compatibility IDs are refused. Only actual Claude
+rows have Claude family metadata. Compatibility IDs do not grant access,
+change provider identity or confer Claude capabilities.
+The installer adds public gateway settings and never sets the internal
+first-party override. An old installer-owned override is removed using its
+receipt; hand-managed conflicts are preserved and refused.
 
 Anthropic's [gateway guide](https://code.claude.com/docs/en/llm-gateway)
 describes saved-client OAuth forwarding when only the base URL changes, and

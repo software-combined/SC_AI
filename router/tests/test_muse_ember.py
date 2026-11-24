@@ -28,10 +28,10 @@ class MuseEmberTests(unittest.TestCase):
         self.assertNotIn(slug, {row['slug'] for row in
                                 catalogue.merge({'models': []}, available=())['models']})
         with mock.patch.object(availability, 'combined_ids', return_value={slug}):
-            self.assertIn(slug, {row['id'] for row in claude.models_listing()['data']})
-            self.assertNotIn(slug, {row['id'] for row in claude.models_listing(allowed=())['data']})
+            self.assertIn(slug, {claude.resolve(row['id']) for row in claude.models_listing()['data']})
+            self.assertNotIn(slug, {claude.resolve(row['id']) for row in claude.models_listing(allowed=())['data']})
         with mock.patch.object(availability, 'combined_ids', return_value=set()):
-            self.assertNotIn(slug, {row['id'] for row in claude.models_listing()['data']})
+            self.assertNotIn(slug, {claude.resolve(row['id']) for row in claude.models_listing()['data']})
         self.assertIsInstance(providers.select(slug, '/responses', ()),
                               providers.ExternalResponsesProvider)
         with self.assertRaises(ValueError):

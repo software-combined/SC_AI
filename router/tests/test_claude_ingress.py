@@ -242,7 +242,7 @@ class ClaudeIngressTests(unittest.TestCase):
         recorded = install_fake(self, lambda: FakeUpstream(
             200, b'{"id":"msg_3","type":"message","content":[]}', []))
         server = self._server()
-        for alias, slug in (('z-ai/glm-5.3-flash', 'z-ai/glm-5.3-flash'),
+        for alias, slug in ((claude_mod.claude_alias('z-ai/glm-5.3-flash'), 'z-ai/glm-5.3-flash'),
                             ('anthropic/claude-sonnet-5.5',
                              'anthropic/claude-sonnet-5.5')):
             with self.subTest(alias=alias):
@@ -311,7 +311,7 @@ class ClaudeIngressTests(unittest.TestCase):
         self.assertEqual(recorded[0][3].decode(), raw)
 
 
-    def test_truthful_model_preserves_the_parsed_payload(self):
+    def test_direct_body_is_unchanged_and_alias_rewrites_the_parsed_model_only(self):
         # Alias rewrite reads the already-parsed payload, never raw_body:
         # a direct slug stays byte-identical while the alias row carries
         # the registry slug.
@@ -330,12 +330,12 @@ class ClaudeIngressTests(unittest.TestCase):
 
         recorded.clear()
         response = _post(server.server_port, '/test-token/v1/messages',
-                         _messages('z-ai/glm-5.3-flash'),
+                         _messages(claude_mod.claude_alias('z-ai/glm-5.3-flash')),
                          {'Authorization': 'Bearer test-key-bearer'})
         self.assertEqual(response.status, 200)
         host, _, _, body, _ = recorded[0]
         self.assertEqual(host, 'openrouter.ai')
-        self.assertEqual(json.loads(body)['model'], 'z-ai/glm-5.3-flash')
+        self.assertEqual(json.loads(body), _messages('z-ai/glm-5.3-flash'))
 
     def test_truthful_zstd_body_is_rewritten_to_plain_json(self):
         # Previously the alias path decoded raw_body and forwarded the still-

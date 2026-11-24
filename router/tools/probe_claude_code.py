@@ -90,7 +90,8 @@ def _expected_model(home, model, rows=None):
         slug = row.get('slug')
         if not isinstance(slug, str):
             continue
-        ids = {slug, slug.removeprefix('~')}
+        ids = {slug, slug.removeprefix('~'),
+               'claude/scg/' + hashlib.sha256(slug.encode()).hexdigest()}
         if model in ids:
             return row.get('upstream_id') or slug
     return model

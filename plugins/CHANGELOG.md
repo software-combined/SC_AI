@@ -1,5 +1,10 @@
 # Changelog
 
+## scg-subagents 0.9.3 (2026-11-25)
+
+- Match Claude picker compatibility IDs to the requested provider model when
+  listing or starting router workers. Existing direct-ID listings still work.
+
 ## scg-codebase-readiness 0.1.2 (2026-11-24)
 
 - Check that the repository root holds only entry, licence, configuration and

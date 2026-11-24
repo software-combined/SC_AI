@@ -12,6 +12,7 @@ upstream with the client's own credentials, mirroring SubscriptionProvider:
 the router key never accompanies those requests and client credentials are
 never stored or logged.
 """
+import hashlib
 import json
 import sys
 
@@ -25,6 +26,7 @@ from .registry import by_slug, row_serves, upstream_id_for
 # not silently become POST-routable.
 CLAUDE_POST_PATHS = frozenset({'/v1/messages', '/v1/messages/count_tokens'})
 CLAUDE_ALIAS_PREFIX = 'claude/'
+CLAUDE_ROUTE_PREFIX = 'claude/scg/'
 
 
 def claude_alias(slug):
@@ -39,9 +41,11 @@ def row_alias(entry):
         return None
     slug = entry.slug
     bare = slug.removeprefix('~')
-    # Clients may filter models they do not support. Discovery never disguises
-    # another vendor's model as Claude to circumvent those client filters.
-    return bare
+    if bare.startswith('anthropic/'):
+        return bare
+    # Desktop accepts this stable gateway token; display_name keeps the actual
+    # vendor/model/provider. It does not confer Claude family capabilities.
+    return CLAUDE_ROUTE_PREFIX + hashlib.sha256(slug.encode()).hexdigest()
 
 
 # Tier words the desktop accepts in anthropic_family_tier (client 1.49585.0).
@@ -111,6 +115,9 @@ def resolve(model, catalogue=None):
         return slug
     if isinstance(model, str) and '~' + model in rows:
         return '~' + model  # truthful discovery IDs retain tracking-row membership
+    if isinstance(model, str) and model.startswith(CLAUDE_ROUTE_PREFIX):
+        return next((entry.slug for entry in rows.values()
+                     if row_alias(entry) == model), model)
     return model
 
 
@@ -204,7 +211,7 @@ def select(model, path, openai_mode='subscription', anthropic_mode=None,
            allowed=None, catalogue=None):
     rows = request_context.capture() if catalogue is None else catalogue
     slug = resolve(model, rows)
-    if isinstance(model, str) and model.startswith(CLAUDE_ALIAS_PREFIX):
+    if isinstance(model, str) and model.startswith(CLAUDE_ALIAS_PREFIX) and slug == model:
         raise UnknownModel(model, ())
     entry = rows.get(slug) if isinstance(model, str) else None
     defn = provider_defs.get(entry.provider) if entry is not None else None

@@ -1,6 +1,7 @@
 """Offline checks for the bounded Claude Code multi-read probe gate."""
 import importlib.util
 import argparse
+import hashlib
 import json
 import tempfile
 import unittest
@@ -211,9 +212,8 @@ class MultiReadGateTest(unittest.TestCase):
                     2, ['MARKER-1', 'MARKER-2'], report,
                     'deepseek/deepseek-v4.1-flash-1017'))
 
-    def test_truthful_id_resolves_to_served_upstream_identity(self):
+    def test_direct_and_compatibility_ids_resolve_to_served_upstream_identity(self):
         slug = 'deepseek/deepseek-v4.1-flash-1017'
-        alias = slug
         with tempfile.TemporaryDirectory() as tmp:
             home = Path(tmp)
             (home / 'current').write_text('1')
@@ -221,7 +221,9 @@ class MultiReadGateTest(unittest.TestCase):
             release.mkdir(parents=True)
             (release / 'models.json').write_text(json.dumps([
                 {'slug': slug, 'upstream_id': 'deepseek/served'}]))
+            alias = 'claude/scg/' + hashlib.sha256(slug.encode()).hexdigest()
             expected = probe._expected_model(home, alias)
+            self.assertEqual(probe._expected_model(home, slug), expected)
         self.assertEqual(expected, 'deepseek/served')
         report = {'result': 'MARKER', 'served': [expected]}
         self.assertEqual(probe._identity(expected, report), 'matched')
