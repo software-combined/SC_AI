@@ -6,7 +6,9 @@
 AppId=SCG.Router.Installer
 AppName=SCG Router
 AppVersion={#ProductVersion}
-DefaultDirName={localappdata}\Programs\SCG Router Installer
+; Old installer files must not enter a new version's retained payload.
+DefaultDirName={localappdata}\Programs\SCG Router Installer\{#ProductVersion}
+UsePreviousAppDir=no
 DefaultGroupName=SCG Router
 PrivilegesRequired=lowest
 OutputDir={#OutputDir}
