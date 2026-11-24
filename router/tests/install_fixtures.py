@@ -24,7 +24,7 @@ static_fetch = _static_fetch
 
 
 class _StubPopen:
-    def wait(self, timeout):
+    def wait(self):
         return 2  # No answer in window-launch fixtures.
 
 

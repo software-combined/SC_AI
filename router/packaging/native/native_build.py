@@ -87,6 +87,7 @@ def windows(resources, out, version, *, iscc='ISCC.exe'):
     _make_ico(resources / 'router/packaging/assets/router-icon.png', resources / 'router-icon.ico')
     with tempfile.TemporaryDirectory(dir=out) as tmp:
         tmp = Path(tmp)
+        repeat_files = _windows_repeat_inputs(resources, tmp, version)
         script = (HERE / 'windows.iss').read_text()
         fields = {
             '@RESOURCES@': str(resources.resolve()),
@@ -94,6 +95,7 @@ def windows(resources, out, version, *, iscc='ISCC.exe'):
             '@VERSION@': version,
             '@ICON@': str((resources / 'router-icon.ico').resolve()),
             '@TERMS@': str((HERE / 'windows-runtime-terms.txt').resolve()),
+            **repeat_files,
         }
         for token, value in fields.items():
             if '"' in value or '\n' in value:
@@ -107,6 +109,25 @@ def windows(resources, out, version, *, iscc='ISCC.exe'):
             raise ValueError('Inno Setup did not produce an EXE')
         shutil.move(artifact, final)
     return final
+
+
+def _windows_repeat_inputs(resources, directory, version):
+    """Give the EXE an immutable inventory from the same build as its payload."""
+    resources, directory = Path(resources), Path(directory).resolve()
+    inventory = directory / 'repeat-files.txt'
+    probe = directory / 'repeat-menu.exe'
+    icon = directory / 'repeat-icon.png'
+    shutil.copyfile(resources / 'control/scg-router-menu.exe', probe)
+    shutil.copyfile(resources / 'router/packaging/assets/router-icon.png', icon)
+    bundle_sha = json.loads((resources / 'installer.json').read_text())['sha256']
+    with inventory.open('w', encoding='utf-8', newline='\n') as stream:
+        stream.write(f'{version}\n{bundle_sha}\n')
+        for path in sorted(resources.rglob('*')):
+            relative = path.relative_to(resources)
+            if path.is_file() and '__pycache__' not in relative.parts:
+                stream.write(f'{sha256_file(path)}\t{relative.as_posix()}\n')
+    return {'@REPEAT_PROBE@': str(probe), '@REPEAT_INVENTORY@': str(inventory),
+            '@REPEAT_ICON@': str(icon)}
 
 
 def _make_ico(source, destination):

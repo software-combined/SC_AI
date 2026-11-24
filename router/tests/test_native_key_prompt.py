@@ -1,6 +1,7 @@
 """Repair must reuse a working key while first setup can still collect one."""
 import json
 import os
+import subprocess
 import tempfile
 import unittest
 from pathlib import Path
@@ -12,6 +13,45 @@ from tests.test_native_setup import module, resources
 
 
 class NativeKeyPromptTests(unittest.TestCase):
+    def test_cancelling_native_replacement_asks_to_close_only_its_link(self):
+        url = 'http://127.0.0.1:1/synthetic/setup/nonce'
+        for replace in (False, True):
+            with self.subTest(replace=replace), \
+                    mock.patch.dict(os.environ, {'ROUTER_CANCEL_REPLACEMENT': str(int(replace))}), \
+                    mock.patch.object(key_prompt, 'run_window', return_value=2), \
+                    mock.patch.object(key_prompt, 'submit') as submit:
+                self.assertEqual(key_prompt.main([url]), 2)
+            if replace:
+                submit.assert_called_once_with(url, {'cancel': '1'},
+                                               opener=key_prompt.key_store._open_without_redirects)
+            else:
+                submit.assert_not_called()
+
+    def test_dialog_timeout_cancels_without_opening_the_browser(self):
+        for work in (True, False):
+            with self.subTest(work=work):
+                run = mock.Mock(side_effect=subprocess.TimeoutExpired('dialog', 900))
+                browser, submit = mock.Mock(), mock.Mock()
+                result = key_prompt.run_window('http://127.0.0.1:1/t/setup/n',
+                    tool_path='/dialog', platform_name='win32', work=work,
+                    run=run, opener=browser, post=submit)
+                self.assertEqual(result, 2)
+                run.assert_called_once()
+                self.assertEqual(run.call_args.kwargs['timeout'], 900)
+                browser.assert_not_called()
+                submit.assert_not_called()
+
+    def test_menu_leaves_the_key_deadline_to_the_dialog(self):
+        menu = module('desktop_menu')
+        result = SimpleNamespace(stdout='{"outcome":"done"}')
+        with mock.patch.object(menu.subprocess, 'run', return_value=result) as run:
+            for action in ('setup.key', 'setup.status', 'setup.resume', 'setup.add'):
+                with self.subTest(action=action):
+                    self.assertEqual(menu._control('/home', '/resources', action), {'outcome': 'done'})
+                    self.assertIsNone(run.call_args.kwargs['timeout'])
+            menu._control('/home', '/resources')
+            self.assertEqual(run.call_args.kwargs['timeout'], 15)
+
     def test_replacement_shows_progress_until_the_key_prompt_opens(self):
         self.check_replacement_preparation(cancelled=False)
 
@@ -47,6 +87,8 @@ class NativeKeyPromptTests(unittest.TestCase):
             def prompt(*args, **kwargs):
                 self.assertTrue(context.__exit__.called)
                 self.assertIn('ai_router.key_prompt', args[0])
+                self.assertIsNone(kwargs.get('timeout'))
+                self.assertEqual(kwargs['env'].get('ROUTER_CANCEL_REPLACEMENT'), '1')
                 finished = json.loads(state.read_text())
                 finished.pop('setup')
                 state.write_text(json.dumps(finished))
