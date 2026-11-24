@@ -92,15 +92,23 @@ class NativeStageTests(unittest.TestCase):
         bundle, runtime, lock = self._inputs(target, bundle=core.read_bytes())
         resources = self.root / 'Resources'
         stage.stage(bundle, runtime, target, 'beta', resources, lock_path=lock)
-        permanent = payload.retained(resources, self.root / 'home', expected_target=target)
+        home = self.root / 'home'
+        permanent = payload.retained(resources, home, expected_target=target)
         with tarfile.open(permanent / 'payload/bundle.tar.gz', 'r:gz') as archive:
             manifest = json.load(archive.extractfile('MANIFEST.json'))
-            for name in ('client_executable.py', 'setup_completion.py'):
+            for name in ('client_executable.py', 'setup_completion.py', 'windows_repeat.py'):
                 member = 'packaging/' + name
                 expected = (ROOT / member).read_bytes()
                 self.assertEqual(archive.extractfile(member).read(), expected)
                 self.assertEqual((permanent / 'router' / member).read_bytes(), expected)
                 self.assertEqual(manifest['files'][member], hashlib.sha256(expected).hexdigest())
+        checks = module('bundle')
+        version = manifest['version']
+        checks.install_bundle(home, version, core.read_bytes(), manifest, sys.executable)
+        controller = module('native_controller').install(home, permanent / 'router').parents[1]
+        for installed in (home / 'releases' / version, controller):
+            self.assertEqual(json.loads((installed / 'MANIFEST.json').read_text()), manifest)
+            checks.check_manifest(installed, manifest)
 
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()

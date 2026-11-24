@@ -31,6 +31,15 @@ TEST_FILE = re.compile(r"(\.test\.|\.spec\.|_test\.|_spec\.|_integration\.|\.int
                        r"|(^|/)(tests?|__tests__|e2e|spec)/|\.tests?/)", re.I)
 CONFIG_FILE = re.compile(r"(^|/)[^/]*\.config\.[cm]?[jt]s$|(^|/)(setup|conftest)\.py$", re.I)
 CATCH_ALL = {"utils", "util", "helpers", "common", "misc", "lib", "shared"}
+# Files that belong at a repository root: entry documents, licences, dotfiles, manifests and configuration.
+ROOT_FILE = re.compile(r"^(\..+|(README|LICEN[CS]E[\w.-]*|COPYING|NOTICE|CHANGELOG|CONTRIBUTING|SECURITY|CODE_OF_CONDUCT|THIRD_PARTY_NOTICES"
+                       r"|AGENTS|CLAUDE|GEMINI|CODEOWNERS)(\.\w+)?|Makefile|justfile|Procfile|Gemfile|Rakefile|Jenkinsfile|Dockerfile[\w.-]*"
+                       r"|CMakeLists\.txt|requirements[\w.-]*\.txt|pom\.xml|(build|settings)\.gradle(\.kts)?|gradlew(\.bat)?|mvnw(\.cmd)?"
+                       r"|Podfile|Package\.swift|[\w.-]+\.(csproj|fsproj|vbproj|tf|hcl|nix)|NuGet\.config|Directory\.Build\.\w+|Pipfile|Brewfile|Vagrantfile"
+                       r"|config\.ru|phpunit\.xml(\.dist)?|WORKSPACE(\.bazel)?|BUILD(\.bazel)?|go\.work|mix\.exs|build\.sbt"
+                       r"|[\w.-]+\.(json|jsonc|toml|ya?ml|lock|cfg|ini|mod|sum|sln|props|properties)|[\w.-]*config\.[cm]?[jt]s)$", re.I)
+PLAN_FOLDER = re.compile(r"^(plan|planning|roadmaps?|tasks?|todos?|proposals?|rfcs?)$", re.I)
+STATUS_LINE = re.compile(r"^[ \t>*_-]*Status[*_]*[ \t]*:", re.I | re.M)
 CODE_FENCE = re.compile(r"^[ \t]*(```|~~~).*?^[ \t]*\1", re.S | re.M)
 INLINE_CODE = re.compile(r"`[^`\n]*`")
 INLINE_LINK = re.compile(r"\]\(\s*(<[^<>\n]*>|[^)\s]+)")
@@ -132,9 +141,9 @@ def live_links(root, files, symlinks):
     return live
 
 
-def doc_stats(root, docs, all_files):
+def doc_stats(root, docs, all_files, whole_repo):
     known = with_folders(all_files)
-    rows, broken, blocks, unreadable = [], [], collections.defaultdict(set), 0
+    rows, broken, blocks, unreadable, linked = [], [], collections.defaultdict(set), 0, set()
     for doc in docs:
         text = read(os.path.join(root, doc))
         if text is None:
@@ -146,16 +155,44 @@ def doc_stats(root, docs, all_files):
             resolved = os.path.normpath(os.path.join(base, target.lstrip("/"))).replace(os.sep, "/")
             if resolved not in known:
                 broken.append({"doc": doc, "link": raw})
+            # A link to a folder reaches the README a reader sees there. A link to itself does not count.
+            if resolved != doc:
+                linked.update((resolved, resolved + "/README.md"))
         for block in re.split(r"\n\s*\n", CODE_FENCE.sub("", text)):
             block = " ".join(block.split())
             if len(block) >= 200 and not block.startswith("|"):
                 blocks[block].add(doc)
     pairs = collections.Counter(tuple(sorted(found)) for found in blocks.values() if len(found) > 1)
+    # A unit's guides may be linked from outside it, so the list is measured for the whole repository only.
+    unlinked = sorted(f for _, f in rows if "/" in f and f not in linked) if whole_repo else None
     return {"files": len(rows), "unreadable_files": unreadable, "over_200_count": sum(1 for n, _ in rows if n > 200),
             "over_200_lines": [{"lines": n, "path": f} for n, f in sorted(rows, reverse=True) if n > 200][:25],
             "folders": dict(collections.Counter(os.path.dirname(f) or "." for _, f in rows).most_common(30)),
             "broken_local_links": broken[:40], "broken_local_link_count": len(broken),
+            # Root files are entry points; any other guide no document links to is hidden from an agent.
+            "unlinked_documents": None if unlinked is None else unlinked[:40],
+            "unlinked_document_count": None if unlinked is None else len(unlinked),
             "documents_sharing_paragraphs": [{"docs": list(k), "paragraphs": v} for k, v in pairs.most_common(15)]}
+
+
+def layout_stats(root, files):
+    """The repository root and the plans folder: loose root files, and plans filed by domain with a status."""
+    root_files = [f for f in files if "/" not in f]
+    folders = sorted({f.split("/")[0] for f in files if "/" in f})
+    plans = [f for f in files if f.startswith("plans/") and f.endswith(".md")
+             and f not in ("plans/README.md", "plans/PLAN_RULES.md")]
+    texts = [(f, read(os.path.join(root, f))) for f in plans]
+    without_status = [f for f, text in texts if text is not None and not STATUS_LINE.search(text)]
+    # plans/<domain>/<subdomain>/<plan>.md has three slashes.
+    not_by_domain = [f for f in plans if f.count("/") < 3]
+    return {"root": {"files": len(root_files), "folders": folders,
+                     "other_files": [f for f in root_files if not (ROOT_FILE.match(f) or CONFIG_FILE.search(f))][:40]},
+            "plans": {"folder": any(f.startswith("plans/") for f in files), "rules_file": "plans/PLAN_RULES.md" in files,
+                      "index": "plans/README.md" in files, "plans": len(plans),
+                      "unreadable": sum(1 for _, text in texts if text is None),
+                      "not_by_domain_count": len(not_by_domain), "not_by_domain": not_by_domain[:20],
+                      "without_status_count": len(without_status), "without_status": without_status[:20],
+                      "other_plan_folders": [d for d in folders if PLAN_FOLDER.match(d)]}}
 
 
 def agent_files(root, files, symlinks):
@@ -240,7 +277,7 @@ def main(argv):
     in_scope = [f for f in in_unit if not ({p.lower() for p in f.split("/")[:-1]} & SKIP_DIRS)]
     kept = [f for f in in_scope if not SKIP_FILE.search(f)]
     # Checks count only inside the unit, plus root files and CI or hook folders that serve every unit.
-    shared = {f for f in files if "/" not in f or f.startswith((".github/", ".husky/", ".githooks/")) or f == "docs/CODEOWNERS"}
+    shared = {f for f in files if "/" not in f or f.startswith((".github/", ".husky/", ".githooks/", ".azure/", ".azuredevops/")) or f == "docs/CODEOWNERS"}
     source = [f for f in kept if os.path.splitext(f)[1].lower() in SOURCE_EXT]
     tests = [f for f in source if TEST_FILE.search(f)]
     config = [f for f in source if not TEST_FILE.search(f) and CONFIG_FILE.search(f)]
@@ -256,10 +293,11 @@ def main(argv):
                         "top_folders": dict(collections.Counter(f.split("/")[0] for f in tests).most_common(10))},
         "structure": {"production_files_by_folder": dict(folders.most_common(60)),
                       "catch_all_folder_names": dict(collections.Counter(p for f in production for p in f.split("/")[:-1] if p.lower() in CATCH_ALL))},
-        "documents": doc_stats(root, [f for f in kept if f.lower().endswith(".md")], files + live_links(root, files, symlinks)),
+        "documents": doc_stats(root, [f for f in kept if f.lower().endswith(".md")], files + live_links(root, files, symlinks), not unit),
         "agent_files": agent_files(root, kept, symlinks),
         "ci": ci_stats(root, files, read),
         "signals": signals(root, sorted(set(in_scope) | shared), read, git),
+        "layout": layout_stats(root, files),
         "branches": branch_stats(root, remote, state["shallow_clone"]),
     }, indent=2))
     return 0

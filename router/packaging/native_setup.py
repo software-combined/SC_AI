@@ -93,11 +93,13 @@ def _key(resources, home, replace=False, run=subprocess.run, confirm=True):
     if clients == 'none' and 'claude-desktop' in attached:
         clients = 'claude'  # Kept for older key windows; the current window ignores --clients.
     env = dict(environment(resources), ROUTER_HOME=str(home))
+    if replace:
+        env['ROUTER_CANCEL_REPLACEMENT'] = '1'
     if not confirm:
         env['ROUTER_NO_KEY_CONFIRM'] = '1'
     result = run([str(python), '-m', 'ai_router.key_prompt', '--stdin',
                   '--clients', clients], input=url + '\n',
-                 capture_output=True, text=True, timeout=900, cwd=release, env=env)
+                 capture_output=True, text=True, cwd=release, env=env)
     if result.returncode in (1, 2):
         return result.returncode
     if result.returncode != 0:

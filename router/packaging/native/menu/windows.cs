@@ -8,7 +8,7 @@ using System.Web.Script.Serialization;
 using System.Windows.Forms;
 using Microsoft.Win32;
 
-// Native presentation only. No settings, keys, network calls or process launching.
+// The tray and dialog routes only present what their callers send.
 internal sealed class RouterMenu : ApplicationContext {
     readonly NotifyIcon icon = new NotifyIcon();
     readonly Control dispatcher = new Control();
@@ -146,6 +146,13 @@ internal sealed class RouterMenu : ApplicationContext {
         var labels = doc["labels"] as object[];
         string text = Convert.ToString(doc["text"]);
         if (labels == null || labels.Length < 1 || labels.Length > 2 || text.Length > 4000) return 2;
+        bool accepted = ShowDialog(path, text, labels, progress);
+        Console.WriteLine("SCG_ROUTER_DIALOG_RESULT=" + (accepted ? "accept" : "cancel"));
+        Console.Out.Flush();
+        return accepted ? 0 : 1;
+    }
+
+    static bool ShowDialog(string path, string text, object[] labels, bool progress) {
         using (var form = new Form())
         using (var image = new Bitmap(path)) {
             IntPtr handle = image.GetHicon();
@@ -181,10 +188,7 @@ internal sealed class RouterMenu : ApplicationContext {
                     }) { IsBackground = true };
                     form.Shown += (s, e) => watcher.Start();
                 }
-                bool accepted = form.ShowDialog() == DialogResult.OK;
-                Console.WriteLine("SCG_ROUTER_DIALOG_RESULT=" + (accepted ? "accept" : "cancel"));
-                Console.Out.Flush();
-                return accepted ? 0 : 1;
+                return form.ShowDialog() == DialogResult.OK;
             }
         }
     }
@@ -195,6 +199,12 @@ internal sealed class RouterMenu : ApplicationContext {
             Application.EnableVisualStyles();
             if (args.Length == 2 && (args[0] == "--dialog" || args[0] == "--progress"))
                 return Dialog(args[1], args[0] == "--progress");
+            if (args.Length == 3 && args[0] == "--repeat") {
+                var profile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+                if (!WindowsRepeat.Ready(args[1], profile)) return 2;
+                ShowDialog(args[2], "SCG Router is up to date.", new object[] { "OK" }, false);
+                return 0;
+            }
             if (args.Length != 1) return 2;
             Application.Run(new RouterMenu(args[0]));
             return 0;

@@ -1,5 +1,27 @@
 # Changelog
 
+## scg-codebase-readiness 0.1.2 (2026-11-24)
+
+- Check that the repository root holds only entry, licence, configuration and
+  build files (`layout.root`), as part of the domain split question (1.1).
+- Check that plans sit under `plans/<domain>/<subdomain>/` with a
+  `PLAN_RULES.md` template, an index and a status on every plan
+  (`layout.plans`), as part of the documentation structure question (3.2).
+- Write the fix plan as plan files in that format, with a `PLAN_RULES.md`
+  template to copy into a repository that has none.
+
+## scg-codebase-readiness 0.1.1 (2026-11-24)
+
+- List guides that no other document links to (`unlinked_documents`), so the
+  audit sees whether every guide can be reached from an index.
+- Find Azure Pipelines kept in `.azure/pipelines/` or `.azuredevops/`, so a
+  repository that builds there no longer reads as having no CI.
+- Record the second score check in `verification.secondCheck` even when it
+  changes nothing, and show it in the report.
+- Read branch policies, pipeline runs and pull requests on Azure DevOps with
+  read-only `az` commands. If `git fetch` cannot sign in, never pass a token:
+  carry on and say the branch may be behind.
+
 ## scg-subagents 0.9.2 (2026-11-24)
 
 - Point the router operations link in the tool guide at the Router diagnostics

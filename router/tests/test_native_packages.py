@@ -2,6 +2,7 @@
 
 import contextlib
 import hashlib
+import json
 import os
 import re
 import shutil
@@ -27,6 +28,10 @@ class NativePackageTests(unittest.TestCase):
         icon = self.resources / 'router/packaging/assets/router-icon.png'
         icon.parent.mkdir(parents=True)
         icon.write_bytes(b'PNG fixture')
+        helper = self.resources / 'control/scg-router-menu.exe'
+        helper.parent.mkdir()
+        helper.write_bytes(b'menu fixture')
+        (self.resources / 'installer.json').write_text(json.dumps({'sha256': 'a' * 64}))
 
     def _fake_python(self, path):
         path.parent.mkdir(parents=True)
@@ -74,6 +79,11 @@ class NativePackageTests(unittest.TestCase):
         self.assertIn("WizardForm.Caption := 'SCG Router'", script)
         self.assertIn('SetupIconFile=@ICON@', script)
 
+    def test_windows_extracts_into_a_build_specific_directory(self):
+        script = (ROOT / 'packaging/native/windows.iss').read_text()
+        self.assertIn(r'DefaultDirName={localappdata}\Programs\SCG Router Installer\{#ProductVersion}', script)
+        self.assertIn('UsePreviousAppDir=no', script)
+
     def test_both_windows_install_paths_require_accepting_the_runtime_terms(self):
         # Microsoft's Visual Studio licence (section 4.b) requires end users to agree
         # to terms protecting its runtime files before receiving them.
@@ -93,7 +103,7 @@ class NativePackageTests(unittest.TestCase):
 
     @unittest.skipUnless(shutil.which('pwsh') or shutil.which('powershell'), 'needs PowerShell')
     def test_setup_script_downloads_no_runtime_until_the_terms_are_accepted(self):
-        import functools, http.server, json, threading
+        import functools, http.server, threading
         feed = self.root / 'feed'
         feed.mkdir()
         (feed / 'runtimes.json').write_text(json.dumps({'targets': {'windows/x86_64': {
@@ -113,6 +123,27 @@ class NativePackageTests(unittest.TestCase):
         self.assertEqual(result.returncode, 1)
         self.assertIn('terms were not accepted', ' '.join((result.stdout + result.stderr).split()))
         self.assertNotIn('/runtimes/x.tar.gz', requested)
+
+    def test_windows_repeat_uses_build_owned_files_before_licensed_payload(self):
+        folder = self.root / 'repeat'
+        folder.mkdir()
+        cache = self.resources / '__pycache__'
+        cache.mkdir()
+        (cache / 'generated.pyc').write_bytes(b'cache')
+        inputs = build._windows_repeat_inputs(self.resources, folder, '1.4.1.1')
+        probe = Path(inputs['@REPEAT_PROBE@'])
+        menu = self.resources / 'control/scg-router-menu.exe'
+        self.assertEqual(probe.read_bytes(), menu.read_bytes())
+        header, bundle, *rows = Path(inputs['@REPEAT_INVENTORY@']).read_text().splitlines()
+        self.assertEqual((header, bundle), ('1.4.1.1', 'a' * 64))
+        self.assertEqual(dict(row.split('\t')[::-1] for row in rows), {
+            path.relative_to(self.resources).as_posix(): hashlib.sha256(path.read_bytes()).hexdigest()
+            for path in self.resources.rglob('*') if path.is_file() and cache not in path.parents})
+        script = (ROOT / 'packaging/native/windows.iss').read_text()
+        self.assertLess(script.index('Source: "@REPEAT_PROBE@"'), script.index('DestDir: "{app}"'))
+        self.assertIn('if WizardSilent or (ParamCount > 0)', script)
+        self.assertIn("ExtractTemporaryFile('repeat-menu.exe')", script)
+        self.assertIn('Result := Code <> 0', script)
 
     def test_uruntime_architecture_and_automatic_fallback(self):
         elf = bytearray(32)

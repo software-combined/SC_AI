@@ -24,7 +24,7 @@ import urllib.parse
 import urllib.request
 import webbrowser
 
-from . import key_dialog, provider_defs, setup_page, work_account
+from . import key_dialog, key_store, provider_defs, setup_page, work_account
 
 
 def submit(url, fields, opener=None):
@@ -101,6 +101,9 @@ def run_window(url, tool_path=None, platform_name=None, which=None, run=None,
         except work_account.SignInFailed as exc:
             key_dialog.message(tool_path, str(exc), platform_name=platform_name, run=run)
             return 1
+        except subprocess.TimeoutExpired:
+            # The dialog runner has already closed the window. Treat inactivity as Cancel.
+            return 2
         except (OSError, subprocess.SubprocessError):
             _open_page(url, opener, label)
             return 3
@@ -195,7 +198,13 @@ def main(argv=None):
               file=sys.stderr)
         return 1
     # Native setup shows its own closing notice, so it skips this confirmation.
-    return run_window(url, work=True, confirm=os.environ.get('ROUTER_NO_KEY_CONFIRM') != '1')
+    result = run_window(url, work=True, confirm=os.environ.get('ROUTER_NO_KEY_CONFIRM') != '1')
+    if result == 2 and os.environ.get('ROUTER_CANCEL_REPLACEMENT') == '1':
+        try:
+            submit(url, {'cancel': '1'}, opener=key_store._open_without_redirects)
+        except (OSError, ValueError):
+            pass  # An unavailable check leaves setup pending without changing the key.
+    return result
 
 
 if __name__ == '__main__':
