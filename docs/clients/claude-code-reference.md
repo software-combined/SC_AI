@@ -16,15 +16,19 @@ listing from its local registry without needing any credential.
 
 ## Choosing a model
 
-Select a Claude model in `/model`. Discovery reports real upstream IDs and
-vendor/billing labels. Only Claude models carry `anthropic_family_tier`.
-Non-Claude rows may be hidden or rejected by the stock client; Anthropic does
-not support them through Claude Code. Use Codex or another compatible API
-client for those separately billed routes.
+Select a model by its vendor, model and provider label in `/model`. Other
+vendors use stable SCG gateway IDs (`claude/scg/<hash>`) so Desktop can list
+them. Router resolves each ID to the registered provider model before access
+checks and forwarding; only actual Claude models carry `anthropic_family_tier`.
+Direct provider IDs remain valid for saved settings and terminal commands.
+Unknown or removed SCG IDs and older `claude/<vendor>/<name>` IDs are refused.
+Managed client rules still apply to gateway IDs; Router independently checks
+the canonical model against its access policy and key availability.
 
-Older `claude/scg/...` and `claude/<vendor>/<name>` aliases are retired and
-refused locally. Choose the truthful ID in a fresh session. Native Claude
-requests still forward the signed-in client's own authentication unchanged.
+Anthropic documents compatible gateways but does not support non-Claude
+models through Claude Code. SCG compatibility needs verification against each
+client version. Native Claude requests still forward the signed-in client's
+own authentication unchanged.
 
 ## Attachment contract
 
@@ -60,10 +64,11 @@ hand-edited conflict instead of overwriting it.
 
 ## Behaviour and limits
 
-- OpenRouter-bound requests reach OpenRouter's Anthropic-compatible
-  endpoint unchanged except for the repairs below, so thinking blocks and
-  `cache_control` keep full fidelity, and `count_tokens` follows the same
-  split. The router gives each streamed `tool_use` a fresh client-visible ID.
+- OpenRouter-bound messages reach its Anthropic-compatible endpoint with
+  thinking blocks and `cache_control` intact, subject to the repairs below.
+  OpenRouter does not serve `count_tokens`. The router answers that optional
+  request locally with HTTP 404, so Claude Code uses its own estimate.
+  The router gives each streamed `tool_use` a fresh client-visible ID.
   DeepSeek V4.1 Flash otherwise returns `call_0` for every tool call; Claude
   Code collapses duplicate IDs and keeps only one earlier `tool_result`, which
   makes later reads look empty. The same repair applies to top-level tool calls
