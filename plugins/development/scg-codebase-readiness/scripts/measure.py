@@ -39,6 +39,14 @@ ROOT_FILE = re.compile(r"^(\..+|(README|LICEN[CS]E[\w.-]*|COPYING|NOTICE|CHANGEL
                        r"|config\.ru|phpunit\.xml(\.dist)?|WORKSPACE(\.bazel)?|BUILD(\.bazel)?|go\.work|mix\.exs|build\.sbt"
                        r"|[\w.-]+\.(json|jsonc|toml|ya?ml|lock|cfg|ini|mod|sum|sln|props|properties)|[\w.-]*config\.[cm]?[jt]s)$", re.I)
 PLAN_FOLDER = re.compile(r"^(plan|planning|roadmaps?|tasks?|todos?|proposals?|rfcs?)$", re.I)
+SCREEN_EXT = {".tsx", ".jsx", ".vue", ".svelte", ".astro", ".css", ".scss", ".sass", ".less", ".html", ".cshtml", ".razor", ".xaml"}
+THEME_PATH = re.compile(r"(theme|design-?tokens|palette|colou?rs|design-system|tailwind\.config)", re.I)
+# Theme variable declarations (--name:, $name:, @name:) define colours rather than hard-code them.
+VAR_DECL = re.compile(r"(--|[$@])[\w-]+\s*:[^;\n}]*")
+# ponytail: a hex-looking anchor such as href="#add" also counts; the agent samples the top files before scoring.
+COLOUR = re.compile(r"(?<![\w&])#(?:[0-9a-f]{8}|[0-9a-f]{6}|[0-9a-f]{3,4})\b|\b(?:rgba?|hsla?)\(", re.I)
+# Design rules by file name only: a rules file named for its folder (docs/design/rules.md) is not found; the agent looks.
+DESIGN_DOC = re.compile(r"(^|/)(\d+[-_])?(ui[-_]ux|(ui|ux)[-_]design|design|ui|ux|brand([-_]and[-_]ui)?)([-_](rules|system|guide|guidelines|principles|standards|language))?\.md$", re.I)
 STATUS_LINE = re.compile(r"^[ \t>*_-]*Status[*_]*[ \t]*:", re.I | re.M)
 CODE_FENCE = re.compile(r"^[ \t]*(```|~~~).*?^[ \t]*\1", re.S | re.M)
 INLINE_CODE = re.compile(r"`[^`\n]*`")
@@ -195,6 +203,31 @@ def layout_stats(root, files):
                       "other_plan_folders": [d for d in folders if PLAN_FOLDER.match(d)]}}
 
 
+def ui_stats(root, kept, files):
+    """Screens: hard-coded colours outside the theme, and design rules that the entry files route to."""
+    screens = [f for f in kept if os.path.splitext(f)[1].lower() in SCREEN_EXT and not TEST_FILE.search(f) and ".stories." not in f]
+    colours, unreadable = collections.Counter(), 0
+    for f in screens:
+        text = read(os.path.join(root, f))
+        if text is None:
+            unreadable += 1
+        elif hits := len(COLOUR.findall(VAR_DECL.sub("", text))):
+            colours[f] = hits
+    design = [f for f in files if DESIGN_DOC.search(f) and not f.startswith("plans/")]
+    entry = [(f, read(os.path.join(root, f))) for f in ("AGENTS.md", "CLAUDE.md") if f in files]
+    routed = any(posixpath.normpath(posixpath.join("" if t.startswith("/") else posixpath.dirname(f), t.lstrip("/"))) in design
+                 for f, text in entry if text for _, t in link_targets(text))
+    # A shared theme often sits outside a --path unit, so it is looked for in the whole repository.
+    theme = [f for f in files if THEME_PATH.search(f) and not TEST_FILE.search(f) and not {p.lower() for p in f.split("/")[:-1]} & SKIP_DIRS
+             and os.path.splitext(f)[1].lower() in SCREEN_EXT | {".ts", ".js", ".json"}]
+    in_unit = set(kept)
+    theme.sort(key=lambda f: f not in in_unit)  # the unit's own theme files first
+    return {"screen_files": len(screens), "theme_file_count": len(theme), "theme_files": theme[:20],
+            "files_with_hardcoded_colours": len(colours), "hardcoded_colours": sum(colours.values()),
+            "top_colour_files": dict(colours.most_common(10)), "unreadable": unreadable,
+            "design_docs": design[:20], "entry_file_links_design_doc": routed}
+
+
 def agent_files(root, files, symlinks):
     # Link text comes from the index copy, so a folder link on disk cannot redirect the read.
     result = [{"path": f, "symlink_to": git(root, "cat-file", "blob", ":" + f)} for f in symlinks
@@ -298,6 +331,7 @@ def main(argv):
         "ci": ci_stats(root, files, read),
         "signals": signals(root, sorted(set(in_scope) | shared), read, git),
         "layout": layout_stats(root, files),
+        "ui": ui_stats(root, kept, files),
         "branches": branch_stats(root, remote, state["shallow_clone"]),
     }, indent=2))
     return 0

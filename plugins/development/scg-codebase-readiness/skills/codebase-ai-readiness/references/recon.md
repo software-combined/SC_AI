@@ -28,6 +28,7 @@ Each lane is defined by paths and rules, so two runs split the work the same way
 - Read imports from three files per domain only: the largest, the most recently changed (newest commit date), and the first entry point in path order. Break any tie by path order.
 - Sample for pattern consistency: the largest production file, plus the largest file in each of the three biggest domains.
 - In the same sampled files, record where database, HTTP, cloud and vendor SDK calls happen: in adapter folders or inside business rules. Note interfaces, factories or wrappers with only one implementation or caller.
+- Screens: the theme or token files, the design rules document, and hard-coded colours outside the theme (`ui` in `measure.json`). Open the files in `ui.top_colour_files` and do not count colours that define the theme. Theme variable declarations are already left out of the count. In the three largest screen files, record whether buttons, dialogs, menus and the page frame come from shared components or are built in place.
 - Record the contracts package or schema folder, which apps import it, and whether API entry points check input against it.
 
 - The repository root: loose files (`layout.root.other_files` in `measure.json`) and the top-level folders. Check each listed file: a manifest or configuration file that a tool needs at the root is not loose. The root and plans are measured for the whole repository, even for a `--path` unit.

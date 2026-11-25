@@ -34,6 +34,8 @@ An old large file may stay on a baseline, but it cannot grow. A script in the re
 
 **The machine enforces the rules.** One command (for example `pnpm check`) runs lint, type checks, the architecture test, the size check and the build. CI runs the same command, and it is a required check, so a failing change cannot merge.
 
+**Screens look and work the same everywhere.** One design rules document says how screens stay clear, consistent, aligned and simple for a person who is not technical, and `AGENTS.md` routes screen work to it. One theme holds the colours, spacing and type. Screens reuse shared components (buttons, dialogs, row menus, the page frame) instead of building their own, and a check stops hard-coded colours.
+
 ## 3. Documentation
 
 **One entry file routes each task.** `AGENTS.md` at the repository root is short (about 40 lines or fewer). It holds a table: "if the task touches X, read Y". `CLAUDE.md` contains one line that loads `AGENTS.md`. The agent reads only what the task needs.
