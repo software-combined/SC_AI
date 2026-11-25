@@ -4,7 +4,7 @@ import threading
 import unittest
 from unittest import mock
 
-from ai_router import outcome, router
+from ai_router import outcome, provider_defs, router
 from tests.fakes import FakeUpstream, install_fake
 from tests.harness import auth_file, post, start_server, test_state
 from tests.test_messages_stream_contract import START, ending, frame
@@ -81,6 +81,7 @@ class MessagesRecoveryTests(unittest.TestCase):
                          ['stream_replay:approved', 'stream_replay:budget'])
 
     def test_token_counting_does_not_gain_a_generation_retry(self):
+        self.enterContext(mock.patch.object(provider_defs.OPENROUTER, 'messages_token_count', True))
         _, wire, sends, _ = self.turn([response(START + OVERLOAD)],
                                      path='/v1/messages/count_tokens')
         self.assertEqual((wire, len(sends)), (START + OVERLOAD, 1))

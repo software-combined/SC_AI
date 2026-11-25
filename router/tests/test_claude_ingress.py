@@ -80,14 +80,19 @@ class ClaudeIngressTests(unittest.TestCase):
         self.assertNotIn('subscription-secret', json.dumps(headers) + body.decode())
         self.assertNotIn('client-key', json.dumps(headers) + body.decode())
 
-    def test_count_tokens_follows_the_same_split(self):
+    def test_count_tokens_is_optional_for_openrouter_and_passes_through_for_anthropic(self):
         recorded = install_fake(self, lambda: FakeUpstream(200, b'{"input_tokens":3}', []))
         server = self._server()
-        response = _post(server.server_port, '/test-token/v1/messages/count_tokens',
-                         _messages(), {'Authorization': 'Bearer test-key-bearer'})
-        self.assertEqual(response.status, 200)
-        host, _, path, _, _ = recorded[0]
-        self.assertEqual((host, path), ('openrouter.ai', '/api/v1/messages/count_tokens'))
+        path = '/test-token/v1/messages/count_tokens?beta=true'
+        headers = {'Authorization': 'Bearer subscription-secret'}
+        for model in ('z-ai/glm-5.3-flash', claude_mod.claude_alias('z-ai/glm-5.3-flash')):
+            self.assertEqual(_post(server.server_port, path, _messages(model), headers).status, 404)
+        self.assertEqual(recorded, [])
+        response = _post(server.server_port, path, _messages('claude-opus-4-6'), headers)
+        self.assertEqual((response.status, json.load(response)), (200, {'input_tokens': 3}))
+        host, _, upstream_path, _, sent_headers = recorded[0]
+        self.assertEqual((host, upstream_path), ('api.anthropic.com', '/v1/messages/count_tokens'))
+        self.assertEqual(sent_headers['Authorization'], headers['Authorization'])
 
     def test_subscription_model_forwards_client_auth_and_betas_untouched(self):
         recorded = install_fake(self, lambda: FakeUpstream(
