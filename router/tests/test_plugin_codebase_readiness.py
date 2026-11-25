@@ -210,10 +210,14 @@ class CodebaseReadinessTests(unittest.TestCase):
         self.assertTrue(result['signals']['lint'])
         self.assertTrue(json.loads(run('measure.py', self.repo, '--path', 'docs').stdout)['signals']['lint'])
 
-    def test_root_and_plans_layout_are_measured(self):
+    def test_root_plans_and_ui_are_measured(self):
         for name, text in (('plans/PLAN_RULES.md', 'x\n'), ('plans/README.md', 'x\n'), ('planning/old.md', 'x\n'),
                            ('plans/work/board/001-a.md', 'Status: Done\n'), ('plans/loose.md', '# Loose\n'),
-                           ('notes.txt', 'x\n'), ('setup.py', 'x\n'), ('pom.xml', 'x\n')):
+                           ('notes.txt', 'x\n'), ('setup.py', 'x\n'), ('pom.xml', 'x\n'), ('docs/DESIGN.md', 'x\n'),
+                           ('docs/database-design.md', 'x\n'), ('docs/ui-guidelines.md', 'x\n'),
+                           ('AGENTS.md', '[db](docs/database-design.md)\n'),
+                           ('web/page.tsx', 'a{color:#fff;b:rgb(1,2,3)} id=x#a1'), ('ui/theme.css', '#000'),
+                           ('web/globals.css', ':root{--a:#123456} .x{color:#fff}')):
             (self.repo / name).parent.mkdir(parents=True, exist_ok=True)
             (self.repo / name).write_text(text)
         git(self.repo, 'add', '-A')
@@ -222,6 +226,13 @@ class CodebaseReadinessTests(unittest.TestCase):
         self.assertEqual((plans['rules_file'], plans['index'], plans['plans'], plans['not_by_domain'],
                           plans['without_status'], plans['other_plan_folders']),
                          (True, True, 2, ['plans/loose.md'], ['plans/loose.md'], ['planning']))
+        ui = json.loads(run('measure.py', self.repo, '--path', 'web').stdout)['ui']
+        self.assertEqual((ui['screen_files'], ui['theme_files'], ui['hardcoded_colours'], ui['design_docs']),
+                         (2, ['ui/theme.css'], 3, ['docs/DESIGN.md', 'docs/ui-guidelines.md']))
+        self.assertFalse(ui['entry_file_links_design_doc'])
+        (self.repo / 'AGENTS.md').write_text('| Screens | [design rules](docs/DESIGN.md) |\n')
+        git(self.repo, 'add', '-A')
+        self.assertTrue(self.measure()['ui']['entry_file_links_design_doc'])
 
     def test_signals_follow_the_unit(self):
         for name, text in (('src/a.ts', 'x\n'), ('docs/CODEOWNERS', '* @owner\n'),
@@ -293,7 +304,7 @@ class CodebaseReadinessTests(unittest.TestCase):
     def test_framework_allows_not_applicable_only_where_intended(self):
         framework = json.loads((SKILL / 'references/framework.json').read_text(encoding='utf-8'))
         allowed = [item['code'] for dim in framework['dimensions'] for item in dim['items'] if item['naAllowed']]
-        self.assertEqual(allowed, ['4.4', '5.3', '6.1', '6.2', '7.2'])
+        self.assertEqual(allowed, ['2.4', '4.4', '5.3', '6.1', '6.2', '7.2'])
 
 
 if __name__ == '__main__':

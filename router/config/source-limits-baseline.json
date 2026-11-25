@@ -49,6 +49,7 @@
   "tests/test_notice.py": 376,
   "tests/test_notice_delivery.py": 414,
   "tests/test_operator_surface.py": 451,
+  "tests/test_plugin_codebase_readiness.py": 311,
   "tests/test_plugin_router_workers.py": 314,
   "tests/test_probe_harness.py": 469,
   "tests/test_provider_swap.py": 343,

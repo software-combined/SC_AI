@@ -107,6 +107,21 @@
           ],
           "evidenceToLookFor": "The scripts in the package or build file, a single check command, whether CI runs that same command, and whether its CI job is a required check on every branch that leads to production. Which checks it contains is scored in 1.2 and 1.3.",
           "naAllowed": false
+        },
+        {
+          "code": "2.4",
+          "subCapability": "Interface consistency",
+          "shortLabel": "Interface consistency",
+          "scale": "maturity-1-5",
+          "descriptors": [
+            {"level": 1, "text": "Each screen styles itself. Colours, spacing, buttons and layouts are set page by page."},
+            {"level": 2, "text": "Some shared components exist, but many screens use their own buttons, colours and layouts."},
+            {"level": 3, "text": "A shared theme and shared components exist, but there are no written design rules, or many screens still hard-code colours or rebuild controls."},
+            {"level": 4, "text": "Written design rules exist and most screens use the shared theme and components, but the entry file does not route to the rules, or some one-off styles remain."},
+            {"level": 5, "text": "One design rules document says how screens stay clear, consistent, aligned and simple for a non-technical user, and the entry file routes screen work to it. One theme holds the colours, spacing and type, shared components (buttons, dialogs, menus, page frame) are used everywhere, and a check stops hard-coded colours."}
+          ],
+          "evidenceToLookFor": "The design rules document and whether AGENTS.md routes screen work to it, the theme or token files, hard-coded colours outside them (ui in measure.json), and three sampled screens: do they use the shared button, dialog, menu and page frame, or build their own? Not applicable for a repository with no screens.",
+          "naAllowed": true
         }
       ]
     },
@@ -417,7 +432,8 @@
       "prerequisites": [],
       "need": {
         "questions": [
-          {"itemCode": "2.2", "target": 4}
+          {"itemCode": "2.2", "target": 4},
+          {"itemCode": "2.4", "target": 4}
         ],
         "activities": ["List the competing patterns for the same job.", "Write the chosen pattern in the rules document.", "Move one area at a time when it is next changed."],
         "goalRequired": false

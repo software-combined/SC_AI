@@ -5,6 +5,17 @@
 - Match Claude picker compatibility IDs to the requested provider model when
   listing or starting router workers. Existing direct-ID listings still work.
 
+## scg-codebase-readiness 0.1.3 (2026-11-25)
+
+- Add question 2.4, interface consistency: one design rules document that
+  `AGENTS.md` routes screen work to, one theme for colours, spacing and type,
+  shared components on every screen, and a check against hard-coded colours.
+  It is not applicable to a repository with no screens. The audit now has
+  22 questions.
+- `measure.py` reports screen files, theme files, hard-coded colours outside
+  the theme, design rules documents and whether an entry file links to them
+  (`ui`).
+
 ## scg-codebase-readiness 0.1.2 (2026-11-24)
 
 - Check that the repository root holds only entry, licence, configuration and
