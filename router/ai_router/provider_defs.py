@@ -69,7 +69,7 @@ class ProviderDef:
                  'key_info_url', 'key_info_shape', 'dialect', 'native_prefixes',
                  'request_headers', 'subscription_label', 'decisions_path',
                  'decisions_model', 'availability_path', 'required',
-                 'regional')
+                 'regional', 'messages_token_count')
 
     def __init__(self, id, label, kind, host, responses_path=None,
                  messages_path=None, images_path=None, videos_path=None,
@@ -79,7 +79,7 @@ class ProviderDef:
                  subscription_label=None,
                  decisions_path=None, decisions_model=None,
                  native_prefixes=(), request_headers=(),
-                 availability_path=None, required=True, regional=False):
+                 availability_path=None, required=True, regional=False, messages_token_count=True):
         if kind not in (EXTERNAL, SUBSCRIPTION):
             raise ValueError(f'{id}: bad kind {kind!r}')
         dialect = dialect or id
@@ -123,7 +123,7 @@ class ProviderDef:
         # An optional provider's missing key never blocks an install.
         self.required = bool(required)
         # A regional provider's host is built per region, never stored.
-        self.regional = bool(regional)
+        self.regional, self.messages_token_count = bool(regional), messages_token_count
         if self.regional and host is not None:
             raise ValueError(f'{id}: a regional provider declares no host')
         if not self.regional and not host:
@@ -165,7 +165,7 @@ OPENROUTER = ProviderDef(
     catalogue_url='https://openrouter.ai/api/v1/models',
     catalogue_shape='openrouter',
     key_info_url='https://openrouter.ai/api/v1/auth/key',
-    dialect=DIALECT_OPENROUTER,
+    dialect=DIALECT_OPENROUTER, messages_token_count=False,
     decisions_path='/api/alpha/decisions',
     decisions_model='typesafe/jev-1.13-20260917',
     request_headers=(('X-OpenRouter-Metadata', 'enabled'),),

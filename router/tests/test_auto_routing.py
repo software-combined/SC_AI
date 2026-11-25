@@ -8,7 +8,6 @@ from ai_router import auto_routing, candidate_evidence, claude, registry, reques
 from ai_router.catalogue import merge
 from ai_router.providers import select
 from tests.candidate_fixtures import proof
-from tests.fakes import FakeUpstream
 from tests.harness import post
 from tests.model_route_fixtures import RouteHarness, payload, success
 from tools.claude_probe_report import identity
@@ -34,20 +33,17 @@ class AutoRoutingTests(unittest.TestCase):
         self.assertEqual(status, 400)
         self.assertEqual(sends, [])
 
-    def test_managed_count_tokens_uses_the_same_approved_pool(self):
+    def test_managed_count_tokens_keeps_model_access_checks(self):
         harness = RouteHarness(self)
         approved = 'deepseek/deepseek-v4.1-flash-1017'
         for slug in ('openrouter/auto', 'openrouter/auto-code'):
-            harness.server.state['allowed_models'] = [slug, approved]
-            harness.responses = iter([FakeUpstream(200, b'{"input_tokens":3}', [])])
-            harness.sends.clear()
-            response = post(harness.server.server_port, '/test-token/v1/messages/count_tokens',
-                            {'model': slug, 'messages': [{'role': 'user', 'content': 'Synthetic'}]})
-            self.assertEqual(response.status, 200)
-            response.read()
-            response.close()
-            self.assertEqual(json.loads(harness.sends[0][3])['plugins'], [
-                {'id': 'auto-router', 'allowed_models': [approved]}])
+            for allowed, expected in (([slug, approved], 404), ([approved], 400)):
+                harness.server.state['allowed_models'] = allowed
+                response = post(harness.server.server_port, '/test-token/v1/messages/count_tokens',
+                                {'model': slug, 'messages': [{'role': 'user', 'content': 'Synthetic'}]})
+                self.assertEqual(response.status, expected)
+                response.close()
+            self.assertEqual(harness.sends, [])
 
     def test_managed_routes_restrict_upstream_pool_and_refuse_empty_pool(self):
         harness = RouteHarness(self)

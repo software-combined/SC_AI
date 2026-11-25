@@ -64,10 +64,11 @@ hand-edited conflict instead of overwriting it.
 
 ## Behaviour and limits
 
-- OpenRouter-bound requests reach OpenRouter's Anthropic-compatible
-  endpoint unchanged except for the repairs below, so thinking blocks and
-  `cache_control` keep full fidelity, and `count_tokens` follows the same
-  split. The router gives each streamed `tool_use` a fresh client-visible ID.
+- OpenRouter-bound messages reach its Anthropic-compatible endpoint with
+  thinking blocks and `cache_control` intact, subject to the repairs below.
+  OpenRouter does not serve `count_tokens`. The router answers that optional
+  request locally with HTTP 404, so Claude Code uses its own estimate.
+  The router gives each streamed `tool_use` a fresh client-visible ID.
   DeepSeek V4.1 Flash otherwise returns `call_0` for every tool call; Claude
   Code collapses duplicate IDs and keeps only one earlier `tool_result`, which
   makes later reads look empty. The same repair applies to top-level tool calls

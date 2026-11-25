@@ -17,7 +17,7 @@ import json
 import sys
 
 from . import claude_compat, messages_events, outbound, provider_defs, request_context, transport
-from .errors import ClaudeSubscriptionRequired, PreparationError, UnknownModel
+from .errors import ClaudeSubscriptionRequired, PreparationError, UnknownModel, unsupported_route
 from . import registry
 from .clients import registry as client_table
 from .registry import by_slug, row_serves, upstream_id_for
@@ -139,6 +139,9 @@ class ExternalMessagesProvider:
                 context=None):
         if path not in CLAUDE_POST_PATHS:
             raise PreparationError('Claude ingress serves messages only')
+        if path == '/v1/messages/count_tokens' and not self.defn.messages_token_count:
+            # Claude Code estimates locally when this optional endpoint is absent.
+            raise unsupported_route()
         body = raw_body
         if context is None:  # a direct call; routed requests resolved at ingress
             context = request_context.resolve(model, request_context.capture(), resolve(model))
