@@ -1,6 +1,6 @@
 ---
 name: codebase-ai-readiness
-description: Audit a code repository against the Software Combined standard for an AI-optimised codebase, and score it on 21 questions in seven dimensions (structure, consistency, documentation, verification, safe delivery, contracts and API, hygiene). Use when someone asks how ready, friendly or optimised a codebase is for AI agents, asks to audit or assess a repository against our standard, or asks if non-engineers could safely build in a repository. Never changes the audited code or its settings. Not for fixing the findings and not for a security review.
+description: Audit a code repository against the Software Combined standard for an AI-optimised codebase, and score it on 22 questions in seven dimensions (structure, consistency, documentation, verification, safe delivery, contracts and API, hygiene). Use when someone asks how ready, friendly or optimised a codebase is for AI agents, asks to audit or assess a repository against our standard, or asks if non-engineers could safely build in a repository. Never changes the audited code or its settings. Not for fixing the findings and not for a security review.
 ---
 
 # Codebase AI readiness
@@ -8,7 +8,7 @@ description: Audit a code repository against the Software Combined standard for 
 This skill ships with the SCG router; see [automatic updates](../../references/updates.md).
 There is no per-plugin updater or schedule to configure.
 
-Point this skill at one repository. It maps the repository, scores 21 questions from 1 to 5 with evidence, has a second agent check the scores, and builds a report that anyone can read.
+Point this skill at one repository. It maps the repository, scores 22 questions from 1 to 5 with evidence, has a second agent check the scores, and builds a report that anyone can read.
 
 The question behind every score: could a person who is not an engineer ask an agent for a change here and ship it without worry? Would an engineer be comfortable letting them?
 
@@ -23,7 +23,7 @@ Git itself can run programs that a repository's local settings name, for example
 | When | Read |
 |---|---|
 | Always | [The standard](references/standard.md): what "good" looks like and why |
-| Always | [The framework](references/framework.json): the 21 questions, level descriptors and evidence to look for |
+| Always | [The framework](references/framework.json): the 22 questions, level descriptors and evidence to look for |
 | Before mapping | [Recon](references/recon.md): how to map the repository, split the work and merge it |
 | Before the report | [Verify](references/verify.md): how a second agent checks the scores |
 
@@ -56,7 +56,7 @@ The main agent is the session itself. If it runs on another model, tell the user
    On Windows, use `py -3 -I` in place of `python3 -I`.
 
 4. **Map.** Follow [Recon](references/recon.md): pick the size tier, run the three lanes (yourself or with subagents), and merge them into `<output>/recon.json`.
-5. **Score** each of the 21 questions with the rules below, and write a draft `results.json` (see Output).
+5. **Score** each of the 22 questions with the rules below, and write a draft `results.json` (see Output).
 6. **Verify the scores.** Give the draft `results.json`, `recon.json` and `measure.json` to one fresh subagent that did not score, with [Verify](references/verify.md). It checks every question read-only and returns `holds`, `adjust` or `unsupported`. Decide each item yourself, apply what you accept, and record the outcome in `verification`. Then give a second fresh subagent only these questions: any the checker marked `adjust` or `unsupported`, every score of 1 or 2, and the questions behind the three actions. It follows [the second check](references/verify.md#second-check). If the host cannot start a subagent, run the same checklist yourself and say so.
 7. **Build the report.**
 
@@ -77,7 +77,7 @@ The main agent is the session itself. If it runs on another model, tell the user
 - **Proportionate, not strict.** Judge each practice by what the repository needs. A small tool does not need the machinery of a large product, and a needless layer is a cost, not a credit.
 - Score what is in the repository at the audited commit. Plans and intentions do not count. An automatic check counts for more than a written rule, and a written rule counts for more than a habit.
 - Generated files, lockfiles, fixtures and vendored code are outside the size limits.
-- Use "not applicable" only where the framework allows it (`naAllowed`), for example automatic deployment for a library that is never deployed, API conventions for a repository with no API, or dependencies for one with no third-party packages, third-party CI actions or lockfiles (if any of those exist, score dependencies on them). A product shipped as releases (installers, packages or app builds) is still deployed: score automatic deployment on its release path, with a beta or pre-release channel as staging and the stable release as production. An interface the repository defines for other programs, such as an HTTP endpoint, a proxy, a command line or a file format, is an API for the contracts and API questions.
+- Use "not applicable" only where the framework allows it (`naAllowed`), for example automatic deployment for a library that is never deployed, API conventions for a repository with no API, interface consistency for a repository with no screens, or dependencies for one with no third-party packages, third-party CI actions or lockfiles (if any of those exist, score dependencies on them). A product shipped as releases (installers, packages or app builds) is still deployed: score automatic deployment on its release path, with a beta or pre-release channel as staging and the stable release as production. An interface the repository defines for other programs, such as an HTTP endpoint, a proxy, a command line or a file format, is an API for the contracts and API questions.
 - Colours: 1 or 2 is red, 3 is amber, 4 or 5 is green.
 
 ## Output
