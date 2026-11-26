@@ -73,9 +73,11 @@ class AcceptancePipelineTests(unittest.TestCase):
         for name, job in jobs().items():
             self.assertIn('\n  ' + name + ':', diagnostic)
             if name not in ('changes', 'windows-standard', 'unit-suite', 'test'):
-                # Unchanged native commands and full platform matrix remain present.
                 for line in job.splitlines():
-                    if line.lstrip().startswith(('run:', '- {target:', 'os:')):
+                    stripped = line.lstrip()
+                    if name == 'desktop-menus' and stripped == '- {target: windows/arm64, runner: windows-11-arm}':
+                        continue  # Frozen diagnostic workflow also tests source from before ARM64 support.
+                    if stripped.startswith(('run:', '- {target:', 'os:')):
                         self.assertIn(line, diagnostic)
 
 

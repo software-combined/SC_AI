@@ -184,6 +184,7 @@ class DesktopControlsTests(unittest.TestCase):
             (home / 'installer.json').write_text('{"version":"1.3.7"}')
             with mock.patch.object(menu, '_events', side_effect=events), \
                     mock.patch.object(menu, '_control', side_effect=control), \
+                    mock.patch.object(menu.load('native_payload'), 'windows_helper_env', return_value=None), \
                     mock.patch.object(menu.subprocess, 'Popen', return_value=shell):
                 self.assertEqual(menu.run_menu(home, home), 74)  # Synthetic helper EOF.
         self.assertEqual(calls, ['codex.openrouter'])
@@ -215,6 +216,7 @@ class DesktopControlsTests(unittest.TestCase):
             (home / 'installer.json').write_text('{"version":"1.3.7"}')
             with mock.patch.object(menu, '_events', side_effect=events), \
                     mock.patch.object(menu, '_control', side_effect=lambda *args: next(answers)), \
+                    mock.patch.object(menu.load('native_payload'), 'windows_helper_env', return_value=None), \
                     mock.patch.object(menu.subprocess, 'Popen', return_value=shell):
                 self.assertEqual(menu.run_menu(home, home), 74)  # Synthetic helper EOF.
         self.assertEqual(documents[-1]['status'], 'Needs attention')

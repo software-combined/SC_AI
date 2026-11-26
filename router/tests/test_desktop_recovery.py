@@ -19,6 +19,7 @@ class DesktopRecoveryTests(unittest.TestCase):
         self.home = Path(temp.name)
         self.menu = module('desktop_menu')
         self.args = ['--home', str(self.home), '--resources', str(self.home)]
+        self.enterContext(mock.patch.object(self.menu.load('native_payload'), 'windows_helper_env', return_value=None))
         original = self.menu.load
         self.enterContext(mock.patch.object(self.menu, 'load', side_effect=lambda name:
             SimpleNamespace(environment=lambda _: {}) if name == 'native_setup' else original(name)))

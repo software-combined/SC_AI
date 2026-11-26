@@ -11,7 +11,7 @@ from pathlib import Path, PurePosixPath
 
 ROOT = Path(__file__).resolve().parents[2]
 LOCK_PATH = ROOT / 'packaging' / 'runtime.lock'
-TARGETS = ('darwin/arm64', 'darwin/x86_64', 'windows/x86_64',
+TARGETS = ('darwin/arm64', 'darwin/x86_64', 'windows/x86_64', 'windows/arm64',
            'linux/arm64', 'linux/x86_64')
 MAX_BUNDLE_BYTES = 200 * 1024 * 1024
 MAX_UNPACKED_BYTES = 600 * 1024 * 1024
@@ -137,7 +137,7 @@ def stage(bundle, runtime, target, channel, resources, *, lock_path=LOCK_PATH):
     with tarfile.open(runtime, 'r:gz') as tar:
         _member_names(tar, links=True)
         tar.extractall(private_runtime, filter='data')
-    runtime_exec = ('python/pythonw.exe' if target == 'windows/x86_64'
+    runtime_exec = ('python/pythonw.exe' if target.startswith('windows/')
                     else entry['exec'])
     if not (private_runtime / entry['exec']).is_file():
         raise ValueError('pinned runtime interpreter is missing')

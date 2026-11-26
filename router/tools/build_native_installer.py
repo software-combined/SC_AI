@@ -67,9 +67,9 @@ def _package(args, resources, metadata):
     if target.startswith('darwin/'):
         return native_build.mac(resources, args.out, metadata['version'],
                                 target.split('/')[1])
-    if target == 'windows/x86_64':
+    if target.startswith('windows/'):
         return native_build.windows(resources, args.out, metadata['version'],
-                                    iscc=args.windows_iscc)
+                                    target.split('/')[1], iscc=args.windows_iscc)
     return native_build.linux(
         resources, args.out, metadata['version'], target.split('/')[1],
         appimagetool=args.linux_appimagetool,

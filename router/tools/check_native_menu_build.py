@@ -1,6 +1,7 @@
-"""Compile this runner's native menu; do not open a desktop or change setup."""
+"""Compile this runner's native menu and check its native desktop protocol."""
 import argparse
 import json
+import os
 import subprocess
 import sys
 import tempfile
@@ -23,6 +24,12 @@ def main():
             subprocess.run(['dbus-run-session', '--', 'cargo', '+1.90.0', 'test', '--locked',
                 '--manifest-path', str(native_menu_build.HERE / 'linux/Cargo.toml'),
                 '--target-dir', str(resources / 'tests'), '--', '--ignored'], check=True)
+        if args.target == 'windows/arm64':
+            env = dict(os.environ, SCG_TEST_NATIVE_MENU_HELPER=str(helper))
+            subprocess.run([sys.executable, '-m', 'unittest',
+                'tests.test_windows_native_lifecycle.WindowsNativeLifecycleTests.'
+                'test_compiled_progress_protocol_closes_when_its_parent_pipe_closes'],
+                cwd=Path(__file__).resolve().parents[1], env=env, check=True)
 
 
 if __name__ == '__main__':

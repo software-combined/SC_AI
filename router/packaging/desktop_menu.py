@@ -248,8 +248,10 @@ def run_menu(home, resources, *, autostart=False, after_update=False, offer_warn
             shell = subprocess.Popen([str(helper), str(icon)], stdin=subprocess.PIPE,
                                      stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
                                      text=True, bufsize=1,
-                                     **({'creationflags': subprocess.CREATE_NO_WINDOW} if os.name == 'nt' else {}))
-        except OSError as exc:
+                                     **({'creationflags': subprocess.CREATE_NO_WINDOW,
+                                         'env': load('native_payload').windows_helper_env(home, resources)}
+                                        if os.name == 'nt' else {}))
+        except (OSError, ValueError, SystemExit) as exc:
             _log(home, 'helper_launch_failed', error=type(exc).__name__)
             if not quiet:
                 fallback(home, resources)

@@ -5,6 +5,7 @@ import concurrent.futures
 import json
 import subprocess
 import sys
+import sysconfig
 import tempfile
 import time
 import unittest
@@ -113,15 +114,21 @@ class WindowsNativeLifecycleTests(unittest.TestCase):
               (len(pids), bool(elevated.value), elapsed * 1000))
 
     def test_compiled_progress_protocol_closes_when_its_parent_pipe_closes(self):
+        cpu = {'win-amd64': 'x86_64', 'win-arm64': 'arm64'}[sysconfig.get_platform()]
+        supplied = os.environ.get('SCG_TEST_NATIVE_MENU_HELPER') if cpu == 'arm64' else None
+        if cpu == 'arm64' and not supplied:
+            self.skipTest('ARM64 helper is built by the explicit native menu check')
         from tests.test_native_menu_build import build
         with tempfile.TemporaryDirectory() as temporary:
             resources = Path(temporary)
             (resources / 'installer.json').write_text('{}')
-            helper = build.build(resources, 'windows/x86_64')
+            helper = Path(supplied) if supplied else build.build(resources, 'windows/' + cpu)
+            self.assertTrue(helper.is_file())
             icon = Path(__file__).resolve().parents[1] / 'packaging/assets/router-icon.png'
             child = subprocess.Popen([str(helper), '--progress', str(icon)],
                 stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                text=True, encoding='utf-8', creationflags=0x08000000)
+                text=True, encoding='utf-8', creationflags=0x08000000,
+                env=dict(os.environ, DOTNET_BUNDLE_EXTRACT_BASE_DIR=temporary))
             try:
                 child.stdin.write(json.dumps(dict(text='Waiting for a test operation.', labels=['Cancel'])) + '\n')
                 child.stdin.flush()

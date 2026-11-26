@@ -2,6 +2,7 @@
 import unittest
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -185,6 +186,15 @@ class NativeReleaseWorkflowTests(unittest.TestCase):
             with self.subTest(step=name):
                 verbose = run.replace('python -m unittest ', 'python -m unittest -v ', 1)
                 self.assertEqual(steps.get(name), ['        shell: pwsh', '        run: ' + verbose])
+
+    def test_native_ci_and_release_cover_the_published_targets(self):
+        for path in (WORKFLOW, WORKFLOW.with_name('check.yml')):
+            with self.subTest(workflow=path.name):
+                rows = re.findall(r'\{target: ([\w/]+), runner: ([\w.-]+)\}', path.read_text())
+                self.assertCountEqual([target for target, _ in rows], NATIVE_NAMES.keys())
+                self.assertEqual(dict(rows)['windows/arm64'], 'windows-11-arm')
+        windows = WORKFLOW.with_name('check.yml').read_text().split('  installer-windows:\n', 1)[1]
+        self.assertIn('runner: [windows-latest, windows-11-arm]', windows.split('  windows-standard:', 1)[0])
 
     def test_native_builds_stay_out_of_public_actions_artifacts(self):
         text = WORKFLOW.read_text()

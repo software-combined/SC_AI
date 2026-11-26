@@ -133,6 +133,8 @@ class NativeStageTests(unittest.TestCase):
                 meta = stage.stage(bundle, runtime, target, 'stable',
                                    resources, lock_path=lock)
                 self.assertEqual(meta['target'], target)
+                if target.startswith('windows/'):
+                    self.assertEqual(meta['runtime_exec'], 'python/pythonw.exe')
                 self.assertEqual(meta['native_signature'], 'unsigned')
                 self.assertEqual(meta['runtime_sha256'],
                                  hashlib.sha256(runtime.read_bytes()).hexdigest())

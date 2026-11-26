@@ -1,4 +1,4 @@
-"""A signed Resources map covers five untampered targets from one core bundle."""
+"""A signed Resources map covers six untampered targets from one core bundle."""
 import hashlib
 import importlib.util
 import io
@@ -30,7 +30,7 @@ class ResourcesPublicationTests(unittest.TestCase):
                 sha256=hashlib.sha256(data).hexdigest(), size=len(data))))
         return latest
 
-    def test_five_exact_archives_become_public_descriptors(self):
+    def test_six_exact_archives_become_public_descriptors(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             latest = self.fixture(root)
@@ -42,7 +42,7 @@ class ResourcesPublicationTests(unittest.TestCase):
                 self.assertNotIn('file', row)
 
     def test_tampered_missing_and_wrong_core_archives_are_refused(self):
-        for defect in ('tampered', 'missing', 'wrong-core'):
+        for defect in ('tampered', 'missing', 'missing-arm64', 'wrong-core'):
             with self.subTest(defect=defect), tempfile.TemporaryDirectory() as temporary:
                 root = Path(temporary)
                 latest = self.fixture(root)
@@ -52,6 +52,8 @@ class ResourcesPublicationTests(unittest.TestCase):
                     (root / doc['file']).write_bytes(b'changed')
                 elif defect == 'missing':
                     receipt.unlink()
+                elif defect == 'missing-arm64':
+                    (root / 'scg-router-resources-1.3.0.9-windows-arm64.tar.gz.resources.json').unlink()
                 else:
                     doc['bundle_sha256'] = 'b' * 64
                     receipt.write_text(json.dumps(doc))
@@ -88,7 +90,7 @@ class ResourcesPublicationTests(unittest.TestCase):
             pointer = next(i for i, call in enumerate(runner.calls) if 's3://fixture/beta/latest.json' in call)
             uploads = [(i, call[call.index('--key') + 1]) for i, call in enumerate(runner.calls)
                        if 'put-object' in call]
-            self.assertEqual(len(uploads), 6)
+            self.assertEqual(len(uploads), 7)
             self.assertTrue(all(i < pointer for i, _ in uploads))
             self.assertEqual({key for _, key in uploads}, {'bundles/' + name} |
                              {'bundles/' + row['url'].rsplit('/', 1)[1] for row in rows.values()})

@@ -6,7 +6,7 @@ const path = require('node:path');
 const root = path.join(__dirname, '../packaging/download-page');
 const origin = 'https://dist.softwarecombined.com';
 const manifest = () => ({version: '1.2.3.4', channel: 'stable', packages:
-  ['darwin/arm64', 'darwin/x86_64', 'windows/x86_64', 'linux/arm64', 'linux/x86_64'].map((target, i) => ({
+  ['darwin/arm64', 'darwin/x86_64', 'windows/x86_64', 'windows/arm64', 'linux/arm64', 'linux/x86_64'].map((target, i) => ({
     target, url: origin + '/installers/1.2.3.4/' + i + '.bin', sha256: 'a'.repeat(64)}))});
 
 function browser(fetch) {
@@ -59,11 +59,26 @@ const notReady = app => assert.deepEqual(Array.from(app.element('packages').chil
       const tiles = app.element('packages').children;
       assert.equal(tiles.length, 3);
       assert.deepEqual(Array.from(tiles, tile => tile.children[0].src), ['apple.svg', 'microsoft.svg', 'linux.svg']);
-      assert.equal(tiles.flatMap(tile => tile.children.slice(2)).length, 5);
+      assert.equal(tiles.flatMap(tile => tile.children.slice(2)).length, 6);
       assert.equal(tiles[2].children[2]['aria-label'], 'Download for Ubuntu · arm64');
+      assert.equal(tiles[1].children[2].textContent, 'x64');
+      assert.equal(tiles[1].children[3].textContent, 'ARM64');
+      assert.equal(tiles[1].children[3]['aria-label'], 'Download for Windows · ARM64');
       assert.equal(app.element('downloads').hidden, false);
     }
   }
+  const incomplete = manifest();
+  incomplete.packages = incomplete.packages.filter(item => item.target !== 'windows/arm64');
+  const missing = browser(async () => ({ok: true, json: async () => incomplete}));
+  execute(missing, 'downloads.js'); await settled();
+  assert.match(missing.element('status').textContent, /needs attention/);
+  notReady(missing);
+  const inherited = manifest();
+  inherited.packages[0].target = 'toString';
+  const wrongTarget = browser(async () => ({ok: true, json: async () => inherited}));
+  execute(wrongTarget, 'downloads.js'); await settled();
+  assert.match(wrongTarget.element('status').textContent, /needs attention/);
+  notReady(wrongTarget);
   const unavailable = browser(async () => ({ok: false, status: 404}));
   execute(unavailable, 'downloads.js');
   await settled();

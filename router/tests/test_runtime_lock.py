@@ -30,7 +30,7 @@ def _doc():
 class RuntimeLockTests(unittest.TestCase):
     def test_shipped_lock_validates(self):
         doc = runtime_lock.validate(_doc())
-        self.assertEqual(len(doc['targets']), 5)
+        self.assertEqual(len(doc['targets']), 6)
 
     def test_missing_targets_fails_closed(self):
         doc = _doc()
@@ -87,6 +87,8 @@ class RuntimeLockTests(unittest.TestCase):
                                  'python/lib/python3.14/LICENSE.txt'),
             ('linux', 'x86_64'): ('python/bin/python3.14',
                                   'python/lib/python3.14/LICENSE.txt'),
+            ('windows', 'arm64'): ('python/python.exe',
+                                   'python/LICENSE.txt'),
             ('windows', 'x86_64'): ('python/python.exe',
                                     'python/LICENSE.txt'),
         }
@@ -102,7 +104,7 @@ class RuntimeLockTests(unittest.TestCase):
         doc = _doc()
         for os_name, cpu in (('darwin', 'arm64'), ('darwin', 'x86_64'),
                              ('linux', 'arm64'), ('linux', 'x86_64'),
-                             ('windows', 'x86_64')):
+                             ('windows', 'x86_64'), ('windows', 'arm64')):
             entry = runtime_lock.select(doc, os_name, cpu)
             self.assertIsNotNone(entry, (os_name, cpu))
             self.assertEqual((entry['os'], entry['cpu']), (os_name, cpu))

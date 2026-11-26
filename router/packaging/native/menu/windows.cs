@@ -4,7 +4,11 @@ using System.Drawing;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Threading;
+#if NET10_0_OR_GREATER
+using System.Text.Json;
+#else
 using System.Web.Script.Serialization;
+#endif
 using System.Windows.Forms;
 using Microsoft.Win32;
 
@@ -12,7 +16,7 @@ using Microsoft.Win32;
 internal sealed class RouterMenu : ApplicationContext {
     readonly NotifyIcon icon = new NotifyIcon();
     readonly Control dispatcher = new Control();
-    readonly JavaScriptSerializer json = new JavaScriptSerializer { MaxJsonLength = 65536 };
+    readonly MenuJson json = new MenuJson();
     readonly string iconPath;
     [DllImport("user32.dll")] static extern bool DestroyIcon(IntPtr value);
     [DllImport("user32.dll")] static extern bool SetProcessDPIAware();
@@ -138,7 +142,7 @@ internal sealed class RouterMenu : ApplicationContext {
             new System.Text.UTF8Encoding(false)));
         Console.SetOut(new System.IO.StreamWriter(Console.OpenStandardOutput(),
             new System.Text.UTF8Encoding(false)) { AutoFlush = true });
-        var parser = new JavaScriptSerializer { MaxJsonLength = 65536 };
+        var parser = new MenuJson();
         string line = Console.ReadLine();
         if (line == null || line.Length > 65536) return 2;
         var doc = parser.DeserializeObject(line) as Dictionary<string, object>;
@@ -210,4 +214,36 @@ internal sealed class RouterMenu : ApplicationContext {
             return 0;
         } catch (Exception) { return 2; }
     }
+}
+
+// Keep the Framework and modern .NET serializers behind the same menu protocol.
+internal sealed class MenuJson {
+#if NET10_0_OR_GREATER
+    static object ConvertElement(JsonElement value) {
+        switch (value.ValueKind) {
+            case JsonValueKind.Object:
+                var result = new Dictionary<string, object>();
+                foreach (var item in value.EnumerateObject()) result[item.Name] = ConvertElement(item.Value);
+                return result;
+            case JsonValueKind.Array:
+                var list = new List<object>();
+                foreach (var item in value.EnumerateArray()) list.Add(ConvertElement(item));
+                return list.ToArray();
+            case JsonValueKind.String: return value.GetString();
+            case JsonValueKind.Number: return value.GetInt32();
+            case JsonValueKind.True: return true;
+            case JsonValueKind.False: return false;
+            case JsonValueKind.Null: return null;
+            default: throw new FormatException();
+        }
+    }
+    internal object DeserializeObject(string value) {
+        using (var document = JsonDocument.Parse(value)) return ConvertElement(document.RootElement);
+    }
+    internal string Serialize(object value) { return JsonSerializer.Serialize(value); }
+#else
+    readonly JavaScriptSerializer serializer = new JavaScriptSerializer { MaxJsonLength = 65536 };
+    internal object DeserializeObject(string value) { return serializer.DeserializeObject(value); }
+    internal string Serialize(object value) { return serializer.Serialize(value); }
+#endif
 }

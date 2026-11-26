@@ -58,6 +58,40 @@ class NativeMenuBuildTests(unittest.TestCase):
                              hashlib.sha256(helper.read_bytes()).hexdigest())
             self.assertTrue((resources / 'control/THIRD_PARTY_NOTICES.txt').is_file())
 
+    def test_windows_arm64_compiles_both_sources_and_checks_architecture(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            resources = Path(temporary)
+            (resources / 'installer.json').write_text('{}')
+            commands = []
+            def run(command, **kwargs):
+                commands.append(command)
+                output = Path(command[command.index('-o') + 1])
+                pe = bytearray(128)
+                pe[:2] = b'MZ'
+                pe[60:64] = (64).to_bytes(4, 'little')
+                pe[64:68] = b'PE\0\0'
+                pe[68:70] = (0xaa64).to_bytes(2, 'little')
+                (output / 'scg-router-menu.exe').write_bytes(pe)
+                packages = output / 'packages'
+                for package, names in (
+                    ('microsoft.netcore.app.runtime.win-arm64', ('LICENSE.TXT', 'THIRD-PARTY-NOTICES.TXT')),
+                    ('microsoft.windowsdesktop.app.runtime.win-arm64', ('LICENSE',)),
+                ):
+                    folder = packages / package / '10.0.0'
+                    folder.mkdir(parents=True)
+                    for name in names:
+                        (folder / name).write_text('notice')
+            with mock.patch.object(build.sys, 'platform', 'win32'), \
+                    mock.patch.object(build.sysconfig, 'get_platform', return_value='win-arm64'):
+                helper = build.build(resources, 'windows/arm64', run)
+            self.assertEqual(helper.read_bytes()[68:70], b'\x64\xaa')
+            self.assertEqual(commands[0][0:2], ['dotnet', 'publish'])
+            self.assertEqual(len(list((resources / 'control/dotnet-notices').iterdir())), 3)
+            project = (build.HERE / 'windows-arm64.csproj').read_text()
+            self.assertIn('windows.cs', project)
+            self.assertIn('windows_repeat.cs', project)
+            self.assertIn('<PublishSingleFile>true</PublishSingleFile>', project)
+
     def test_export_retains_runtime_links_and_binds_the_exact_core(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)

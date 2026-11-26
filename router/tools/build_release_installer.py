@@ -37,6 +37,7 @@ def main(argv=None):
     parser.add_argument('--dist', type=Path, default=Path('dist'))
     parser.add_argument('--out', type=Path, default=Path('native-artifacts'))
     parser.add_argument('--download-config', type=Path)
+    parser.add_argument('--windows-iscc', type=Path, help='path to the Inno Setup compiler')
     args = parser.parse_args(argv)
     latest = json.loads((args.dist / 'latest.json').read_text())
     if args.download_config:
@@ -57,7 +58,8 @@ def main(argv=None):
                    '--bundle', str(bundle), '--runtime', str(runtime), '--target', args.target,
                    '--channel', latest['channel'], '--out', str(args.out)]
         if system == 'windows':
-            compiler = Path(os.environ.get('ProgramFiles(x86)', 'C:/Program Files (x86)')) / 'Inno Setup 6/ISCC.exe'
+            compiler = args.windows_iscc or (
+                Path(os.environ.get('ProgramFiles(x86)', 'C:/Program Files (x86)')) / 'Inno Setup 6/ISCC.exe')
             command += ['--windows-iscc', str(compiler)]
         if system == 'linux':
             tools = json.loads((ROOT / 'packaging/native/build-tools.json').read_text())[args.target]

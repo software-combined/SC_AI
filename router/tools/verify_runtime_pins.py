@@ -27,6 +27,8 @@ EXPECTED = {
                           'python/lib/python3.14/LICENSE.txt'),
     ('linux', 'arm64'): (95970257, 'python/bin/python3.14',
                          'python/lib/python3.14/LICENSE.txt'),
+    ('windows', 'arm64'): (46380638, 'python/python.exe',
+                           'python/LICENSE.txt'),
     ('windows', 'x86_64'): (49587410, 'python/python.exe',
                             'python/LICENSE.txt'),
 }

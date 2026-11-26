@@ -1136,6 +1136,121 @@
       "missing_from_full_archive_recovered_from_pinned_sources": [
         "licenses/LICENSE.zstd.txt"
       ]
+    },
+    {
+      "platform": "windows-arm64",
+      "full_url": "https://github.com/astral-sh/python-build-standalone/releases/download/20260814/cpython-3.14.7%2B20260814-aarch64-pc-windows-msvc-pgo-full.tar.zst",
+      "full_sha256": "368bd537ac1750117b059a8020f98495804f9fbe23b27eee74acf797c8a3f2bb",
+      "full_bytes": 47178678,
+      "install_url": "https://github.com/astral-sh/python-build-standalone/releases/download/20260814/cpython-3.14.7+20260814-aarch64-pc-windows-msvc-install_only.tar.gz",
+      "install_sha256": "727ed4a64b21921847b913550f2b33e408ba9eb112a6802c6ec3735ee1aaa92c",
+      "install_bytes": 46380638,
+      "install_files_compared": 2132,
+      "install_matches_full": true,
+      "crt_features": [
+        "vcruntime:140"
+      ],
+      "native_components": [
+        {
+          "extensions": [
+            "_bz2"
+          ],
+          "licenses": [
+            "bzip2-1.0.6"
+          ],
+          "public_domain": null,
+          "notice_sections": [
+            "LICENSE.bzip2.txt"
+          ]
+        },
+        {
+          "extensions": [
+            "_ctypes"
+          ],
+          "licenses": [
+            "MIT"
+          ],
+          "public_domain": null,
+          "notice_sections": [
+            "LICENSE.libffi.txt"
+          ]
+        },
+        {
+          "extensions": [
+            "_hashlib",
+            "_ssl"
+          ],
+          "licenses": [
+            "Apache-2.0"
+          ],
+          "public_domain": null,
+          "notice_sections": [
+            "LICENSE.openssl-3.txt"
+          ]
+        },
+        {
+          "extensions": [
+            "_lzma"
+          ],
+          "licenses": [
+            "0BSD"
+          ],
+          "public_domain": null,
+          "notice_sections": [
+            "LICENSE.liblzma.txt"
+          ]
+        },
+        {
+          "extensions": [
+            "_sqlite3"
+          ],
+          "licenses": [],
+          "public_domain": true,
+          "notice_sections": [
+            "LICENSE.sqlite.txt"
+          ]
+        },
+        {
+          "extensions": [
+            "_tkinter"
+          ],
+          "licenses": [
+            "TCL"
+          ],
+          "public_domain": null,
+          "notice_sections": [
+            "LICENSE.tcl.txt",
+            "LICENSE.tix.txt"
+          ]
+        },
+        {
+          "extensions": [
+            "_uuid"
+          ],
+          "licenses": [
+            "BSD-3-Clause"
+          ],
+          "public_domain": null,
+          "notice_sections": [
+            "LICENSE.libuuid.txt"
+          ]
+        },
+        {
+          "extensions": [
+            "_zstd"
+          ],
+          "licenses": [
+            "BSD-3-Clause"
+          ],
+          "public_domain": null,
+          "notice_sections": [
+            "LICENSE.zstd.txt"
+          ]
+        }
+      ],
+      "missing_from_full_archive_recovered_from_pinned_sources": [
+        "licenses/LICENSE.zstd.txt"
+      ]
     }
   ],
   "release_conditions": {

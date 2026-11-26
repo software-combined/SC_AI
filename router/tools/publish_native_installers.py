@@ -9,11 +9,12 @@ import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-TARGETS = {'darwin/arm64', 'darwin/x86_64', 'windows/x86_64',
+TARGETS = {'darwin/arm64', 'darwin/x86_64', 'windows/x86_64', 'windows/arm64',
            'linux/arm64', 'linux/x86_64'}
 ORIGIN = 'https://dist.softwarecombined.com'
 SUFFIXES = {'darwin/arm64': 'macOS-arm64.dmg', 'darwin/x86_64': 'macOS-x86_64.dmg',
-            'windows/x86_64': 'Windows.exe', 'linux/arm64': 'Linux-aarch64.AppImage',
+            'windows/x86_64': 'Windows.exe', 'windows/arm64': 'Windows-arm64.exe',
+            'linux/arm64': 'Linux-aarch64.AppImage',
             'linux/x86_64': 'Linux-x86_64.AppImage'}
 
 
@@ -61,7 +62,7 @@ def packages(directory, channel, *, expected=None):
         bundles.add(doc['sha256'])
         records[target] = {'target': target, 'name': name, 'sha256': doc['artifact_sha256']}
     if set(records) != TARGETS or len(versions) != 1 or len(bundles) != 1:
-        raise ValueError('five packages from one exact release are required')
+        raise ValueError('six packages from one exact release are required')
     version = versions.pop()
     rows = [records[target] for target in sorted(records)]
     for row in rows:
@@ -127,7 +128,7 @@ def stage_beta(args):
         (stage / 'SHA256SUMS').write_bytes(checksums)
         (stage / 'SHA256SUMS.sig').write_bytes(signature)
         stage.rename(output)
-    print('Staged five beta native installers ' + latest['version'])
+    print('Staged six beta native installers ' + latest['version'])
     return 0
 
 

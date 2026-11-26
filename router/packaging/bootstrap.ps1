@@ -27,7 +27,13 @@ if ($Channel -notin @('stable', 'beta')) {
 $feedOrigin = if ($env:FEED_ORIGIN) { $env:FEED_ORIGIN } else { 'https://dist.softwarecombined.com' }
 New-Item -ItemType Directory -Force -Path $homeDir | Out-Null
 Invoke-RestMethod -Uri "$feedOrigin/runtimes.json" -OutFile (Join-Path $homeDir 'runtimes.json')
-$rt = (Get-Content (Join-Path $homeDir 'runtimes.json') | ConvertFrom-Json).targets.'windows/x86_64'
+# OSArchitecture reports the native OS even when PowerShell is emulated.
+$architecture = [System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture.ToString().ToLowerInvariant()
+$pythonArchitecture = if ($architecture -eq 'x64') { 'win-amd64' } else { 'win-arm64' }
+$cpu = switch ($architecture) { 'arm64' { 'arm64' } 'x64' { 'x86_64' } default { throw 'This Windows computer is not supported.' } }
+$target = 'windows/' + $cpu
+$rt = (Get-Content (Join-Path $homeDir 'runtimes.json') | ConvertFrom-Json).targets.$target
+if (-not $rt) { throw 'The required Windows runtime is unavailable.' }
 # Percent-encode the URL path: a raw '+' in an S3 key is decoded as a space
 # at the edge and denied, and upstream runtime names carry '+' (3.14.7+DATE).
 $mirrorUrl = (($rt.mirror -split '/') | ForEach-Object { [uri]::EscapeDataString($_) }) -join '/'
@@ -35,7 +41,7 @@ $py = Join-Path $homeDir ("runtime\" + $rt.exec)
 function Test-RouterPython([string]$candidate) {
   if (-not (Test-Path -LiteralPath $candidate -PathType Leaf)) { return $false }
   try {
-    & $candidate -c "import sys,compression.zstd;assert sys.version_info >= (3,14)" 2>$null
+    & $candidate -c "import sys,sysconfig,compression.zstd;assert sys.version_info >= (3,14);assert sysconfig.get_platform().lower() == sys.argv[1]" $pythonArchitecture 2>$null
     return $LASTEXITCODE -eq 0
   } catch { return $false }
 }

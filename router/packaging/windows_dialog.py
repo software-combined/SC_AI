@@ -17,22 +17,23 @@ _dialog = _load('client_dialog')
 
 def command(home, mode, text, labels):
     resources = _load('native_resources').current(home)
-    metadata = _load('native_payload').metadata(resources, 'windows/x86_64')
+    metadata = _load('native_payload').metadata(resources)
     helper = resources / 'control/scg-router-menu.exe'
     icon = resources / 'router/packaging/assets/router-icon.png'
     if not metadata.get('menu_sha256') or not icon.is_file():
         raise OSError('The switch window is unavailable')
     if tuple(map(int, metadata['version'].split('.')[:3])) < (1, 3, 17):
-        return _powershell(text, len(labels) > 1, labels), ''
+        return _powershell(text, len(labels) > 1, labels), '', resources, metadata
     request = json.dumps(dict(text=text, labels=list(labels)), ensure_ascii=False) + '\n'
-    return [str(helper), mode, str(icon)], request
+    return [str(helper), mode, str(icon)], request, resources, metadata
 
 
 def show(text, home, confirm, run=subprocess.run, *, labels=('Continue', 'Cancel')):
-    args, request = command(home, '--dialog', text, labels if confirm else labels[-1:])
+    args, request, resources, doc = command(home, '--dialog', text, labels if confirm else labels[-1:])
     try:
+        env = _load('native_payload').windows_helper_env(home, resources, doc)
         result = run(args, input=request, capture_output=True, text=True, encoding='utf-8',
-                     timeout=120, creationflags=0x08000000)
+                     timeout=120, creationflags=0x08000000, env=env)
     except OSError:
         # Endpoint protection can refuse the helper; the styled script keeps the action available.
         result = run(_powershell(text, confirm, labels), capture_output=True, text=True,
@@ -47,10 +48,11 @@ def show(text, home, confirm, run=subprocess.run, *, labels=('Continue', 'Cancel
 
 
 def progress(home, text, button):
-    args, request = command(home, '--progress', text, (button,))
+    args, request, resources, doc = command(home, '--progress', text, (button,))
     try:
+        env = _load('native_payload').windows_helper_env(home, resources, doc)
         child = subprocess.Popen(args, stdin=subprocess.PIPE, stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL, text=True, encoding='utf-8', creationflags=0x08000000)
+            stderr=subprocess.DEVNULL, text=True, encoding='utf-8', creationflags=0x08000000, env=env)
     except OSError:
         return subprocess.Popen(_powershell(text, False, (button,)), stdin=subprocess.DEVNULL,
             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, text=True, encoding='utf-8',

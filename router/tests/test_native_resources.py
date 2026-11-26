@@ -281,7 +281,6 @@ class WindowsPreparationTests(unittest.TestCase):
                 owner.stage(home, latest, 'file:///latest.json', lambda _: data + b'broken')
             self.assertEqual({p.name: p.read_bytes() for p in home.iterdir() if p.is_file()}, before)
 
-
     def test_embedded_native_code_version_must_match_its_resource_identity(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
@@ -295,8 +294,9 @@ class WindowsPreparationTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             source = resources(Path(temporary) / 'Resources')
             doc = json.loads((source / 'installer.json').read_text())
-            doc['target'] = 'windows/x86_64'
-            (source / 'installer.json').write_text(json.dumps(doc))
             (source / 'runtime/python/bin/pythonw.exe').unlink()
-            with self.assertRaisesRegex(ValueError, 'Python'):
-                module('native_payload').metadata(source, 'windows/x86_64')
+            for target in ('windows/x86_64', 'windows/arm64'):
+                doc['target'] = target
+                (source / 'installer.json').write_text(json.dumps(doc))
+                with self.subTest(target=target), self.assertRaisesRegex(ValueError, 'Python'):
+                    module('native_payload').metadata(source, target)
