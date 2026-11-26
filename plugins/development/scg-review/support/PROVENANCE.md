@@ -50,6 +50,10 @@ The export resolves amendments from matching branch reflog evidence and checks
 that the replaced and amended commits have the same parents. Missing or
 ambiguous evidence stops export without changing saved receipts.
 
+The merge carry-over check in `scg_review_receipts.py` verifies the incoming
+commit receipts, disjoint paths and exact staged result. The reliability
+tests use disposable Git repositories to exercise the shared hooks.
+
 `support/git-hooks/tests/test_gitleaks_pin_portability.py` and
 `support/git-hooks/tests/test_interpreter_selection.py` are new in this
 repository rather than imported; they are the portability and
@@ -63,13 +67,15 @@ directories. Their plugin copies change only packaging and dependency routing.
 | --- | --- |
 | `support/git-hooks/bin/scg-review-state` | `0963d64953ef111793352370dd2886b995132e9ea97261276e53ed86b788e869` |
 | `support/git-hooks/commit-msg` | `2cbaa16377d52c890c3d64488d7e8b404859f44f059420388ae0c599a3528362` |
-| `support/git-hooks/lib/scg_agent_git_hooks.py` | `ed143dfe219caca31f338eabf77f0b2c7220042f3cf5f4664d80ef90aae80857` |
+| `support/git-hooks/lib/scg_agent_git_hooks.py` | `249ee8c34783deebfda47fa53b399f60a4c4452f98d89200016b384153671d61` |
+| `support/git-hooks/lib/scg_review_receipts.py` | `051aabe818adabd19d63e4a1e9b49704da7f108a57594952964ca26485ce055c` |
 | `support/git-hooks/pre-commit` | `2b33623f31fc1acddba480987fbd6769d88e232b2bd3494145d0723be741d98b` |
 | `support/git-hooks/pre-merge-commit` | `388c1103d3fa84b870cc5bf8a108cc141335e19b1995702c7fb52bf7adb79efe` |
 | `support/git-hooks/tests/test_review_gate.py` | `3bb1db985898559c78cb56988cda8b079fec669afaf8efdcfda3cea2c5b2558d` |
-| `support/git-hooks/tests/test_gitleaks_pin_portability.py` | `14dede90f90ceddb2fee67e33b5f9b84bf29a9aac44d535eb364d92b161d8004` |
+| `support/git-hooks/tests/test_gitleaks_pin_portability.py` | `020d58163e5de5c349733d7297373ed4cbf34eebd8b594cc52c06207494436a5` |
 | `support/git-hooks/tests/test_interpreter_selection.py` | `6ee93ee55dfc9b0c2f47681c1089bc0163d25be4fb293e98e507d9de281506e5` |
-| `support/git-hooks/tests/test_review_reliability.py` | `365ee15d125c30a5339b8a9e53816ed5856781be34601108d9e55a5d99432414` |
+| `support/git-hooks/tests/test_review_reliability.py` | `6cd0a8b144dfb3865c6072886f08a678b6cadbaab210f56c1f3de9d2e824ac64` |
+| `support/git-hooks/tests/test_review_worktree_provenance.py` | `89231c6971345e57c97c53bcb6b1366e82a60532a39db45efc97c84f113196d4` |
 
 Every row is the current content of this repository. The helper was imported as
 `cdfd1a571df8eff2f37e9466fba01ca04684525ef92400094c19ca483c72266d`.

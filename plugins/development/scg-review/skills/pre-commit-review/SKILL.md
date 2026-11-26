@@ -1,6 +1,6 @@
 ---
 name: pre-commit-review
-description: Run the required staged-diff review (a simplification pass, a secret scan, then four read-only review lanes) before every git commit, and record the approved staged-tree state for the shared Git hook. Use when an agent is about to commit, runs /pre-commit-review, reviews staged commit scope, or decides whether a commit may proceed after code, workflow, documentation, test, configuration or infrastructure edits.
+description: Validate receipt reuse for a prepared merge or run the required staged-diff review (simplification, secret scan and four review lanes) before committing. Use when about to commit, running /pre-commit-review or deciding whether staged changes can proceed.
 ---
 
 # Pre-Commit Review
@@ -9,7 +9,11 @@ These skills ship with the SCG router, which delivers and refreshes them; see
 [automatic updates](../../references/updates.md). There is no per-plugin updater
 to configure. Respect explicit read-only scope.
 
-This skill is the gate before every commit. You, the main agent, prepare the staged change, run a simplification pass, scan for secrets, run the required checks once, have four read-only reviewer subagents inspect the exact staged tree, decide on their findings, and record one approval for that tree. The shared Git hook refuses a commit without that approval. If this process does not run, the task is incomplete and you must not commit.
+This skill is the gate before every commit. For a prepared merge, check
+[receipt reuse](#prepared-merge) after setup. For all other changes, prepare
+the staged change, run simplification, scan for secrets, run the required
+checks once and have four independent reviewers inspect the exact staged tree.
+Resolve their findings and record one approval for that tree before committing.
 
 **Materiality over coverage.** The gate catches realistic failures that this change causes. Report, fix and block only on failures with a plausible path in normal or demonstrably reachable use, never on speculative edge cases. A proportionate review that finishes is success; an exhaustive review that never converges is a failed review.
 
@@ -121,6 +125,18 @@ run setup with an absolute interpreter, for example the router's runtime:
 ```
 
 A failure is `❌ Block`. Use [review-setup](../review-setup/SKILL.md) to diagnose it. Installing never counts as a review or an approval.
+
+## Prepared merge
+
+Apply the repository's review requirements first. When they permit reuse,
+prepare a two-parent merge with `git merge --no-commit --no-ff <branch>`.
+After setup, run `~/.config/scg-agent-git-hooks/bin/scg-review-state status`.
+If it prints `Review state: merge carry-over`, capture the staged tree and
+both parents. Run the pinned secret scan and the required project checks for
+that tree. Verify that the tree, parents and status still match, then commit
+without dispatching reviewers or writing a new receipt. The hook checks the
+proof again during the commit. If the status does not confirm reuse, follow
+the full review from Step 2. See [merge receipt requirements](../../references/setup.md#prepared-merge-receipts).
 
 ## Step 2: Stage only the intended change
 
@@ -271,16 +287,14 @@ Confirm the staged tree and HEAD still match the final reviewed pair before
 recording approval. A changed base needs a new scope assessment and review;
 never stamp the new base onto an old review.
 
-The commit, automatic-merge and commit-message hooks require an approved
-receipt for this repository, branch, exact tree and base, required lanes and
-maximum age. They check scope again after chained repository hooks. A hook
-that stages changes blocks the commit until those changes are reviewed.
+The hooks require approval for the exact tree and base or validate receipt
+reuse for a prepared merge. Direct receipts also bind the repository, branch,
+required lanes and maximum age. The hooks check scope again after running any
+chained repository hooks. A staged change during that step blocks the commit.
 The hooks do not run the review or scan. Rescan after every staged-tree change,
 including mechanical deltas.
 
-To prepare a merge commit for review, use `git merge --no-commit --no-ff <branch>`.
-Review and approve the staged result, then run `git commit`. Automatic merges
-also need matching approval. Version 3 receipts retain the base explicitly,
+Automatic merges need matching approval for the staged result. Version 3 receipts retain the base explicitly,
 including an unborn repository. Older receipts remain saved but cannot pass
 the refreshed gate; follow the [adapter refresh guide](../../references/setup.md#refresh-an-existing-installation).
 
