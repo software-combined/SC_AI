@@ -78,9 +78,8 @@ jobs:
       matrix:
         runner: [windows-latest, windows-11-arm]
     runs-on: ${{ matrix.runner }}
-    # The Windows ARM64 runner takes about five times as long as x64 for the
-    # installer jobs, so it needs more than the x64 15-minute budget.
-    timeout-minutes: 40
+    # Each real Task Scheduler operation starts a fresh PowerShell process.
+    timeout-minutes: ${{ matrix.runner == 'windows-11-arm' && 90 || 15 }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:

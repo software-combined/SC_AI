@@ -159,7 +159,7 @@ def plugin_files(root):
             # A shipped skill reads, links and runs more than skills/: the
             # review gate reads references/ and runs setup and review export. The
             # git updater is withheld, because the router is the channel now.
-            if rel.startswith(prefix + 'scripts/') and path.name not in ('setup.py', 'export_review.py'):
+            if rel in (prefix + 'scripts/updater.py', prefix + 'scripts/scheduling.py'):
                 continue
             wanted.add(rel)
     return sorted(wanted)
