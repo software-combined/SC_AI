@@ -58,6 +58,39 @@ class ReviewReliabilityTest(unittest.TestCase):
         self.fixture.git("add", "main.txt")
         self.fixture.git("commit", "-m", "test: main fixture")
 
+    def reviewed_commit(self, name, text, runner):
+        (self.fixture.repo / name).write_text(text)
+        self.fixture.git("add", "--", name)
+        tree = self.fixture.tree()
+        base = self.fixture.git("rev-parse", "HEAD").stdout.strip()
+        approved = self.fixture.helper("approve", "--runner", runner, *gate_fixture.LANE_ARGS)
+        self.assertEqual(approved.returncode, 0, approved.stderr)
+        self.fixture.git("commit", "-m", "test: reviewed fixture")
+        return self.fixture.state_dir() / f"{tree}.{base}.review.json"
+
+    def prepare_reviewed_merge(self, *, linked=False, overlap=False):
+        git = self.fixture.git
+        self.fixture.git("commit", "-m", "test: initial fixture")
+        self.install_hooks()
+        base_text = "start\nkeep 1\nkeep 2\nkeep 3\nkeep 4\nkeep 5\nend\n"
+        self.reviewed_commit("shared.txt", base_text, "codex")
+        topic = self.fixture.repo
+        if linked:
+            topic = topic.parent / "linked topic"
+            git("worktree", "add", "-b", "other", str(topic))
+        else:
+            git("switch", "-c", "other")
+        with mock.patch.object(self.fixture, "repo", topic):
+            first = self.reviewed_commit("shared.txt", base_text.replace("start", "topic"), "codex")
+            self.reviewed_commit("other.txt", "topic content\n", "claude-code")
+        if not linked:
+            git("switch", "main")
+        self.reviewed_commit("main.txt", "target content\n", "claude-code")
+        if overlap:
+            self.reviewed_commit("shared.txt", base_text.replace("end", "target"), "claude-code")
+        git("merge", "--no-ff", "--no-commit", "other")
+        return first
+
     def test_unborn_receipt_records_explicit_base(self):
         self.assertEqual(self.fixture.approve().returncode, 0)
         receipt, = self.fixture.state_dir().glob("*.review.json")
@@ -134,6 +167,93 @@ class ReviewReliabilityTest(unittest.TestCase):
         done = self.run_git("commit", "-m", "test: reviewed fixture")
         self.assertNotEqual(done.returncode, 0, done.stdout + done.stderr)
         self.assertIn("scope changed", done.stderr)
+
+    def test_prepared_merge_reuses_both_clients_receipts_from_linked_worktree(self):
+        self.prepare_reviewed_merge(linked=True)
+        git = self.fixture.git
+        before = git("rev-parse", "HEAD", "other").stdout.split()
+        tree = self.fixture.tree()
+        status = self.fixture.helper("status")
+        self.assertIn("Review state: merge carry-over", status.stdout)
+        first = self.run_git("commit", "-m", "Merge other")
+        self.assertEqual(first.returncode, 0, first.stdout + first.stderr)
+        self.assertEqual(git("log", "-1", "--format=%P").stdout.split(), before)
+        self.assertEqual(git("rev-parse", "HEAD^{tree}").stdout.strip(), tree)
+        merge_receipt = self.fixture.state_dir() / f"{tree}.{before[0]}.review.json"
+        self.assertFalse(merge_receipt.exists())
+
+    def test_each_incoming_commit_needs_a_valid_receipt(self):
+        receipt = self.prepare_reviewed_merge()
+        before = self.fixture.git("rev-parse", "HEAD").stdout
+        data = json.loads(receipt.read_text())
+        cases = {
+            "missing": None,
+            "wrong base": {**data, "base_commit": "wrong"},
+            "expired": {**data, "created_at_epoch": 1},
+            "blocked": {**data, "decision": "BLOCK", "approved": False},
+            "wrong repository": {**data, "repo_id": "different"},
+            "missing repository identity": {key: value for key, value in data.items() if key != "git_repository_id"},
+            "malformed": [],
+            "missing security": {**data, "passes": {"correctness": "c", "quality": "q", "adversarial": "a"}},
+        }
+        for name, invalid in cases.items():
+            with self.subTest(name=name):
+                if invalid is None:
+                    receipt.unlink()
+                else:
+                    receipt.write_text(json.dumps(invalid))
+                done = self.run_git("commit", "-m", "Merge other")
+                self.assertNotEqual(done.returncode, 0, done.stdout + done.stderr)
+                self.assertIn("blocked this commit", done.stderr)
+                self.assertEqual(self.fixture.git("rev-parse", "HEAD").stdout, before)
+        receipt.write_text(json.dumps(data))
+        self.fixture.git("commit", "-m", "Merge other")
+
+    def test_clean_merge_with_overlapping_paths_requires_full_review(self):
+        self.prepare_reviewed_merge(overlap=True)
+        done = self.run_git("commit", "-m", "Merge other")
+        self.assertIn("blocked this commit", done.stderr)
+        self.assertNotEqual(done.returncode, 0, done.stdout + done.stderr)
+        self.assertEqual(self.fixture.approve().returncode, 0)
+        self.fixture.git("commit", "-m", "Merge other")
+
+    def test_explicit_block_for_the_staged_merge_prevents_receipt_reuse(self):
+        self.prepare_reviewed_merge()
+        blocked = self.fixture.helper("approve", "--decision", "BLOCK", *gate_fixture.LANE_ARGS)
+        self.assertEqual(blocked.returncode, 0, blocked.stderr)
+        self.assertNotIn("Review state: merge carry-over", self.fixture.helper("status").stdout)
+        done = self.run_git("commit", "-m", "Merge other")
+        self.assertNotEqual(done.returncode, 0, done.stdout + done.stderr)
+        self.assertIn("decision 'BLOCK' is not approved", done.stderr)
+
+    def test_prepared_merge_requires_exact_incoming_paths_and_staged_contents(self):
+        self.prepare_reviewed_merge()
+        tree = self.fixture.tree()
+        for name in ("other.txt", "main.txt", "extra.txt"):
+            with self.subTest(name=name):
+                (self.fixture.repo / name).write_text("unreviewed content\n")
+                self.fixture.git("add", "--", name)
+                done = self.run_git("commit", "-m", "Merge other")
+                self.assertNotEqual(done.returncode, 0, done.stdout + done.stderr)
+                self.assertIn("blocked this commit", done.stderr)
+                self.fixture.git("read-tree", tree)
+
+    def test_chained_commit_message_hook_cannot_change_reviewed_merge(self):
+        self.prepare_reviewed_merge()
+        self.local_hook("commit-msg", "import pathlib, subprocess\n"
+                        "pathlib.Path('other.txt').write_text('late change\\n')\n"
+                        "subprocess.run(['git', 'add', 'other.txt'], check=True)\n")
+        done = self.run_git("commit", "-m", "Merge other")
+        self.assertNotEqual(done.returncode, 0, done.stdout + done.stderr)
+        self.assertIn("merge tree, parents or review receipts changed", done.stderr)
+
+    def test_squash_commit_requires_its_own_review(self):
+        self.prepare_reviewed_merge()
+        self.fixture.git("merge", "--abort")
+        self.fixture.git("merge", "--squash", "other")
+        done = self.run_git("commit", "-m", "feat: squash other")
+        self.assertNotEqual(done.returncode, 0, done.stdout + done.stderr)
+        self.assertIn("blocked this commit", done.stderr)
 
     @unittest.skipIf(os.name == "nt", "uses a POSIX scanner fixture")
     def test_corrupt_copy_cannot_activate_fresh_hooks(self):
