@@ -160,11 +160,11 @@ class ShowPendingTests(unittest.TestCase):
             doc = json.loads((home / 'update-notice.json').read_text())
             self.assertEqual(doc['names'], names)
 
+    @unittest.skipIf(sys.platform == 'win32', 'Windows serialises notices with the worker lock')
     def test_recycled_pid_is_not_mistaken_for_a_dialog(self):
         # A live process that is not one of our dialogs must not swallow a
         # notice: the liveness probe checks the recorded command line.
-        # Sleepers outlive the poll's worst case (6 x 5 s probe
-        # timeouts): a stalled probe must observe live processes.
+        # Sleepers outlive all six bounded probes.
         foreign = subprocess.Popen(
             [sys.executable, '-c', 'import time; time.sleep(45)'])
         ours = subprocess.Popen(
@@ -181,10 +181,6 @@ class ShowPendingTests(unittest.TestCase):
             ours.wait()
 
     def _poll_alive(self, pid):
-        # One Windows probe is a cold powershell plus a CIM query, and
-        # under CI load a single attempt can time out for a live dialog.
-        # Production treats that as "unsure, show again", so poll the
-        # steady-state answer; a broken probe still fails every attempt.
         for _ in range(6):
             if notice_mod._pid_alive(pid):
                 return True

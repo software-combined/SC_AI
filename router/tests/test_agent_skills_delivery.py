@@ -138,19 +138,20 @@ class DeliveryTest(unittest.TestCase):
         # Both install commands turn a plugin back on. Codex also moves off the
         # old Git source here, and hides its plugins once that is removed, so
         # the choice has to be read before anything changes.
-        installed = [{'id': 'scg-finance@scg-agent-plugins', 'enabled': False},
-                     {'id': 'scg-review@scg-agent-plugins', 'enabled': True}]
+        installed = [{'id': 'scg-finance@scg-agent-plugins', 'enabled': False, 'scope': 'user'},
+                     {'id': 'scg-review@scg-agent-plugins', 'enabled': True, 'scope': 'user'},
+                     {'id': 'scg-review@scg-agent-plugins', 'enabled': True, 'scope': 'project'}]
         git = {'sourceType': 'git',
                'source': 'https://github.com/software-combined/SC_AI_Router.git'}
-        for client, verb in (('codex', 'add'), ('claude', 'install')):
+        for client, verb in (('codex', 'add'), ('claude', 'update')):
             with self.subTest(client=client):
                 run = _Client(git, installed=installed)
                 line = skills.sync({'clients': client}, self.plugins, base=self.base,
                                    run=run, which=_found)
-                self.assertNotIn([client, 'plugin', verb, 'scg-finance@scg-agent-plugins'],
-                                 run.calls)
-                self.assertIn([client, 'plugin', verb, 'scg-review@scg-agent-plugins'],
-                              run.calls)
+                self.assertFalse(any(c[3:4] == ['scg-finance@scg-agent-plugins'] for c in run.calls))
+                scope = ['--scope', 'user'] if client == 'claude' else []
+                self.assertIn([client, 'plugin', verb, 'scg-review@scg-agent-plugins', *scope], run.calls)
+                self.assertNotIn(['claude', 'plugin', 'install', 'scg-review@scg-agent-plugins'], run.calls)
                 self.assertIn(f'{client}: 2 plugin(s), 1 left disabled', line)
                 # One list per client: each call may wait up to its timeout.
                 self.assertEqual(len([c for c in run.calls if c[2] == 'list']), 1)

@@ -18,6 +18,8 @@ SHELL = shutil.which('pwsh') or shutil.which('powershell')
 class WindowsShellTests(unittest.TestCase):
     def setUp(self):
         self.shell = load('packaging/windows_shell.py')
+        self.live_env = os.environ.copy()
+        self.live_shell = self.shell.executable() if os.name == 'nt' else SHELL
         self.root = Path(self.enterContext(tempfile.TemporaryDirectory())).resolve() / 'Windows'
         self.enterContext(mock.patch.dict(os.environ, {'SystemRoot': str(self.root)}))
         self.exe = str(self.root / 'System32/WindowsPowerShell/v1.0/powershell.exe')
@@ -68,13 +70,13 @@ class WindowsShellTests(unittest.TestCase):
         self.assertIn('-LiteralPath ' + self.shell.ps_quote(target), script)
         self.assertNotIn('O\u2019Brien \u2018x\u2019', script)
 
-    @unittest.skipUnless(SHELL, 'requires PowerShell to parse the quoted literal')
+    @unittest.skipUnless(os.name == 'nt' or SHELL, 'requires PowerShell to parse the quoted literal')
     def test_quoted_typographic_path_survives_powershell(self):
         value = 'C:\\O\u2019Brien\\\u2018a\u2019 \u201ab\u201b \'c\' $env:X `n'
         script = ('[Console]::OutputEncoding=[Text.UTF8Encoding]::new($false);'
                   '[Console]::Out.Write(%s)' % self.shell.ps_quote(value))
-        result = subprocess.run([SHELL, '-NoProfile', '-NonInteractive', '-Command', script],
-                                capture_output=True, timeout=60)
+        result = subprocess.run([self.live_shell, '-NoProfile', '-NonInteractive', '-Command', script],
+                                capture_output=True, timeout=60, env=self.live_env)
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(result.stdout.decode('utf-8'), value)
 

@@ -39,6 +39,8 @@ Both Windows installer runners run the real Task Scheduler checks. On ARM64,
 successive PowerShell calls can outlast the x64 job budget and the test child's
 watchdog. The ARM64 job has a longer budget, and the tests release each child
 through a gate file after checking its process state.
+The Windows notice tests check that a held worker lock prevents a second
+dialog. The live process-ID reuse check covers the macOS and Linux path.
 
 ## Why overlap these jobs
 
