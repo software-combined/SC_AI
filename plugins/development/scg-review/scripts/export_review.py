@@ -8,6 +8,7 @@ import importlib.util
 import json
 from pathlib import Path
 import re
+import sys
 
 
 def reviewed_base(hook, commit: str, branch: str) -> str | None:
@@ -39,7 +40,11 @@ def export_review(verification_urls: list[str]) -> dict:
     source = Path(__file__).resolve().parents[1] / "support/git-hooks/lib/scg_agent_git_hooks.py"
     spec = importlib.util.spec_from_file_location("scg_review_export_hook", source)
     hook = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(hook)
+    sys.path.insert(0, str(source.parent))
+    try:
+        spec.loader.exec_module(hook)
+    finally:
+        sys.path.pop(0)
     config = hook.load_config()
     info = hook.repo_info()
     commit = hook.git(["rev-parse", "HEAD"])
@@ -53,7 +58,7 @@ def export_review(verification_urls: list[str]) -> dict:
         hook.fail("No readable review receipt exists for the committed tree.")
     state = candidates[0][1]
     valid, reason = hook.state_is_valid(
-        state, info, config, int(config.get("review_state_ttl_seconds", 86400)),
+        state, info, hook.required_lanes(config), int(config.get("review_state_ttl_seconds", 86400)),
     )
     if not valid:
         hook.fail(f"Review export refused: {reason}.")

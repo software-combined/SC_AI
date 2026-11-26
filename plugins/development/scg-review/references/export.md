@@ -26,6 +26,10 @@ age, decision and required lanes as the hook. Commit the final reviewed change
 first. A later tracked edit or an expired receipt requires the applicable review procedure;
 the exporter cannot approve or refresh evidence.
 
+For a merge that will reuse receipts, save each incoming commit's export while
+it is HEAD on the reviewed branch and in the reviewed worktree. Use the full
+review procedure if your workflow requires an export for the merge commit.
+
 Keep the relevant reflog until export is complete. If it is missing, ambiguous
 or lacks a valid amendment predecessor, export stops. Preserve the receipts and
 ensure this repository records a readable Git reflog. Review the current tree
