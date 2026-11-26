@@ -74,6 +74,7 @@ models and billing. These pages go deeper.
 | [Verification pipeline](release/ci-pipeline.md) | Parallel main acceptance, required checks and diagnostic comparisons |
 | [Compatibility](release/compatibility.md) | Current client versions, latest release checks, their limits and the Codex upgrade check |
 | [Installed runtime files](release/runtime-files.md) | What the release bundle contains |
+| [Changelog archive](changelog-archive.md) | Older Router release notes kept outside the active changelog |
 
 ## Architecture detail
 
