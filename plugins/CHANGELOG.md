@@ -1,5 +1,9 @@
 # Changelog
 
+## scg-codebase-readiness 0.1.4 (2026-11-26)
+
+- Ship the measurement and report scripts with Router installations and updates.
+
 ## scg-subagents 0.9.3 (2026-11-25)
 
 - Match Claude picker compatibility IDs to the requested provider model when

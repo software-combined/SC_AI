@@ -35,6 +35,11 @@ Diagnostic runs cannot produce the required `Test` check. The production
 matrix needs no diagnostic native aggregate: the matrix dependency makes `Test`
 wait for all four selections.
 
+Both Windows installer runners run the real Task Scheduler checks. On ARM64,
+successive PowerShell calls can outlast the x64 job budget and the test child's
+watchdog. The ARM64 job has a longer budget, and the tests release each child
+through a gate file after checking its process state.
+
 ## Why overlap these jobs
 
 The offline suite and the native checks consume no shared generated output,

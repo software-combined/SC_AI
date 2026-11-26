@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## 1.5.2
+
+- Include the Codebase Readiness measurement and report scripts in Router updates.
+
 ## 1.5.1
 
 - Link the changelog archive from the documentation index, so the shipped page is reachable.
