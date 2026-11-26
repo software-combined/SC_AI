@@ -1,6 +1,6 @@
 {
   "name": "scg-openrouter",
-  "version": "1.5.0",
+  "version": "1.5.1",
   "description": "SCG OpenRouter Setup: install, check, update, and remove the local mixed-model router through the canonical installer.",
   "author": {
     "name": "Software Combined"
