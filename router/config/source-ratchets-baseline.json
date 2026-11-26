@@ -97,7 +97,6 @@
     "tests/test_windows_switch_transaction.py": 1,
     "tests/test_windows_task_diagnostics.py": 1,
     "tests/test_windows_task_migration.py": 1,
-    "tests/test_windows_task_ownership.py": 1,
     "tests/test_windows_task_state.py": 2,
     "tests/test_workflows.py": 4,
     "tools/appserver_probe.py": 1,

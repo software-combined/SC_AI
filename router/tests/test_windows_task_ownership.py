@@ -8,17 +8,14 @@ import tempfile
 import time
 import unittest
 import uuid
+from contextlib import contextmanager
 from pathlib import Path
 from types import SimpleNamespace
 from unittest import mock
 
 from tests.test_windows_backend import _backend, _install, _query, _state_file, _verbs, backend, service
 from tests.test_windows_task_state import _CurrentInstallerFixture
-from tests.windows_native_fixture import NativeChild, cleanup, task_diagnostics, write_launcher
-
-# Tests release children with their gate files. The watchdog allows for many
-# real PowerShell calls on ARM64 and stays within the updater's 30-minute limit.
-FIXTURE_LIFETIME = 1500
+from tests.windows_native_fixture import FIXTURE_LIFETIME, NativeChild, cleanup, task_diagnostics, write_launcher
 
 
 class OwnershipTests(unittest.TestCase):
@@ -77,7 +74,8 @@ class ExplicitStopTests(_CurrentInstallerFixture, unittest.TestCase):
 
 @unittest.skipUnless(sys.platform == 'win32', 'requires the real Windows Task Scheduler')
 class NativeTaskTests(unittest.TestCase):
-    def test_real_ownership_instances_and_parent_survival(self):
+    @contextmanager
+    def scheduler(self):
         obj = backend.Backend(service, subprocess.run)
         sid = obj._identity()
         base = 'SCG-CI-' + uuid.uuid4().hex
@@ -98,197 +96,138 @@ class NativeTaskTests(unittest.TestCase):
                 return backend._tasks.invoke(obj._call, changes.get('sid', sid), name,
                     changes.get('arguments', arguments), operation, changes.get('xml', xml),
                     executable=changes.get('executable'))
-            def wait_running():
-                deadline = time.monotonic() + 15
-                while time.monotonic() < deadline:
-                    result = call()
-                    if result and result['instances'] and heartbeat.exists():
-                        return result
-                    time.sleep(0.2)
-                self.fail('disposable task did not start: ' + json.dumps(task_diagnostics(
-                    obj._call, name, heartbeat, home / 'logs' / backend.ROUTER_LOG)))
+            self.obj, self.home, self.base, self.sid, self.name = obj, home, base, sid, name
+            self.call, self.arguments, self.xml = call, arguments, xml
+            self.gate, self.heartbeat, self.children = gate, heartbeat, children
             try:
-                self.assertIsNone(call())
-                self.assertEqual(call('register')['state'], 1)
-                self.assertEqual(call('register')['state'], 1)
-                self.assertFalse(call()['enabled'])
-                self.assertTrue(call()['pending'])  # Every call starts a fresh PowerShell process.
-                saved = call('snapshot')
-                self.assertEqual(saved['executable'], backend._pythonw(sys.executable))
-                call('rebind', executable=sys.executable)
-                self.assertEqual(call()['executable'], sys.executable)
-                self.assertFalse(call()['enabled'])
-                self.assertTrue(call()['pending'])
-                call('restore', xml=saved['xml'])
-                self.assertEqual(call()['executable'], saved['executable'])
-                self.assertEqual(call('snapshot')['xml'], saved['xml'])
-                for changes in ({'sid': 'S-1-5-18'}, {'arguments': arguments + ' foreign'}):
-                    for operation in ('register', 'rebind', 'restore', 'snapshot', 'handover', 'run', 'complete', 'enable', 'disable', 'stop', 'delete'):
-                        with self.assertRaises(backend._tasks.OwnershipError):
-                            call(operation, **changes)
-                self.assertIn(call('enable')['state'], (2, 3, 4))
-                self.assertTrue(call()['enabled'])
-                self.assertFalse(call()['pending'])
-                call('run')
-                original = wait_running()['instances']
-                call('register')
-                self.assertTrue(set(original) & set(call()['instances']))
-                with mock.patch.object(backend, 'ROUTER_TASK', base), \
-                        mock.patch.object(backend, '_post_shutdown', return_value=False), \
-                        mock.patch.object(backend, 'DRAIN_TIMEOUT_S', 0):
-                    call('stop')
-                    self.assertTrue(obj._wait_stopped(base, 10, home))
-                    self.assertEqual(call()['state'], 3)  # Refresh preserved Enabled, not just instances.
-                    call('disable')
-                    self.assertEqual(call('register')['state'], 1)
-                    self.assertFalse(call()['pending'])  # Deliberately disabled; never pending again.
-                    call('run')
-                    original = wait_running()['instances']
-                    # Only health is simulated; marker and instance transitions use the real API.
-                    with mock.patch.object(service, 'wait_version', return_value=False):
-                        with self.assertRaisesRegex(SystemExit, '0.0.0'):
-                            obj.restart(home)
-                    self.assertTrue(call()['pending'])
-                    self.assertTrue(call('run')['pending'])  # Run cannot acknowledge health.
-                    with mock.patch.object(service, 'wait_version', return_value=True):
-                        obj.restart(home)
-                    self.assertFalse(call()['pending'])
-                self.assertTrue(set(original).isdisjoint(wait_running()['instances']))
-                call('handover')
-                self.assertTrue(call()['pending'])
-                self.assertFalse(call()['enabled'])
-                self.assertTrue(call()['instances'])  # Disabled is independent of an active invocation.
-                call('disable')  # An explicit stop cancels pending recovery.
-                self.assertFalse(call()['pending'])
-                call('run')
-                # Start this phase with a fresh, bounded child, not an aging heartbeat.
+                yield
+            finally:
+                gate.unlink(missing_ok=True)
+                cleanup(obj._call, [name], children)
+
+    def wait_running(self):
+        deadline = time.monotonic() + 15
+        while time.monotonic() < deadline:
+            result = self.call()
+            if result and result['instances'] and self.heartbeat.exists():
+                return result
+            time.sleep(0.2)
+        self.fail('disposable task did not start: ' + json.dumps(task_diagnostics(
+            self.obj._call, self.name, self.heartbeat, self.home / 'logs' / backend.ROUTER_LOG)))
+
+    def test_registration_restore_and_foreign_identity(self):
+        with self.scheduler():
+            call = self.call
+            self.assertIsNone(call())
+            self.assertEqual(call('register')['state'], 1)
+            self.assertEqual(call('register')['state'], 1)
+            status = call()
+            self.assertFalse(status['enabled'])
+            self.assertTrue(status['pending'])  # Read back from a fresh PowerShell process.
+            saved = call('snapshot')
+            self.assertEqual(saved['executable'], backend._pythonw(sys.executable))
+            call('rebind', executable=sys.executable)
+            status = call()
+            self.assertEqual(status['executable'], sys.executable)
+            self.assertFalse(status['enabled'])
+            self.assertTrue(status['pending'])
+            call('restore', xml=saved['xml'])
+            restored = call('snapshot')
+            self.assertEqual(restored['executable'], saved['executable'])
+            self.assertEqual(restored['xml'], saved['xml'])
+            for changes in ({'sid': 'S-1-5-18'}, {'arguments': self.arguments + ' foreign'}):
+                for operation in ('register', 'rebind', 'restore', 'snapshot', 'handover',
+                                  'run', 'complete', 'enable', 'disable', 'stop', 'delete'):
+                    with self.assertRaises(backend._tasks.OwnershipError):
+                        call(operation, **changes)
+            self.assertEqual(call('snapshot')['xml'], saved['xml'])
+
+    def test_restart_and_pending_state(self):
+        with self.scheduler():
+            call, obj, home = self.call, self.obj, self.home
+            call('register')
+            self.assertIn(call('enable')['state'], (2, 3, 4))
+            status = call()
+            self.assertTrue(status['enabled'])
+            self.assertFalse(status['pending'])
+            call('run')
+            original = self.wait_running()['instances']
+            call('register')
+            self.assertTrue(set(original) & set(call()['instances']))
+            with mock.patch.object(backend, 'ROUTER_TASK', self.base), \
+                    mock.patch.object(backend, '_post_shutdown', return_value=False), \
+                    mock.patch.object(backend, 'DRAIN_TIMEOUT_S', 0):
                 call('stop')
-                with mock.patch.object(backend, 'ROUTER_TASK', base):
-                    self.assertTrue(obj._wait_stopped(base, 10, home))
-                    heartbeat.unlink(missing_ok=True)
-                    call('run')
-                    wait_running()
-                    child = NativeChild.capture(heartbeat)
-                    children.append(child)
-                    child.assert_alive('before-delete')
-                    call('delete')
-                    child.assert_alive('before-metadata-check')
-                    # Deletion need not retain Scheduler metadata. Missing data cannot prove exit.
-                    with self.assertRaisesRegex(SystemExit, 'exit is unverified|cannot verify Windows task') as refused:
-                        obj._wait_stopped(base, 0, home)
-                    reason = 'missing' if 'disappeared' in str(refused.exception) else 'unverified'
-                    print('Windows fixture metadata refusal: ' + reason, flush=True)
-                    child.assert_alive('after-metadata-refusal')
-                gate.unlink()
-                self.assertTrue(child.wait_exit(15), 'the deleted task child did not exit')
-                print('Windows fixture deleted child: exited=True', flush=True)
-                deadline = time.monotonic() + 15
-                while time.monotonic() < deadline:
-                    try:
-                        self.assertIsNone(call())
-                        break
-                    except SystemExit:
-                        pass
-                    time.sleep(0.2)
-                self.assertIsNone(call())
-                call('register')
-                # Matching home arguments cannot make a different executable ours.
-                foreign = xml.replace(backend._pythonw(sys.executable), os.environ['COMSPEC'])
-                replace = r'''
+                self.assertTrue(obj._wait_stopped(self.base, 10, home))
+                self.assertEqual(call()['state'], 3)
+                call('disable')
+                self.assertEqual(call('register')['state'], 1)
+                self.assertFalse(call()['pending'])
+                call('run')
+                original = self.wait_running()['instances']
+                # Only health is simulated; marker and instance transitions use the real API.
+                with mock.patch.object(service, 'wait_version', return_value=False):
+                    with self.assertRaisesRegex(SystemExit, '0.0.0'):
+                        obj.restart(home)
+                self.assertTrue(call()['pending'])
+                self.assertTrue(call('run')['pending'])  # Run cannot acknowledge health.
+                with mock.patch.object(service, 'wait_version', return_value=True):
+                    obj.restart(home)
+                self.assertFalse(call()['pending'])
+            self.assertTrue(set(original).isdisjoint(self.wait_running()['instances']))
+            call('handover')
+            status = call()
+            self.assertTrue(status['pending'])
+            self.assertFalse(status['enabled'])
+            self.assertTrue(status['instances'])
+            call('disable')  # An explicit stop cancels pending recovery.
+            self.assertFalse(call()['pending'])
+            call('run')
+
+    def test_deleted_task_keeps_child_and_missing_metadata_cannot_prove_exit(self):
+        with self.scheduler():
+            call = self.call
+            call('register')
+            call('disable')
+            call('run')
+            self.wait_running()
+            child = NativeChild.capture(self.heartbeat)
+            self.children.append(child)
+            child.assert_alive('before-delete')
+            call('delete')
+            child.assert_alive('before-metadata-check')
+            with mock.patch.object(backend, 'ROUTER_TASK', self.base):
+                with self.assertRaisesRegex(SystemExit, 'exit is unverified|cannot verify Windows task') as refused:
+                    self.obj._wait_stopped(self.base, 0, self.home)
+            reason = 'missing' if 'disappeared' in str(refused.exception) else 'unverified'
+            print('Windows fixture metadata refusal: ' + reason, flush=True)
+            child.assert_alive('after-metadata-refusal')
+            self.gate.unlink()
+            self.assertTrue(child.wait_exit(15), 'the deleted task child did not exit')
+            print('Windows fixture deleted child: exited=True', flush=True)
+            deadline = time.monotonic() + 15
+            while time.monotonic() < deadline:
+                try:
+                    self.assertIsNone(call())
+                    break
+                except SystemExit:
+                    pass
+                time.sleep(0.2)
+            self.assertIsNone(call())
+
+    def test_matching_arguments_do_not_own_a_foreign_executable(self):
+        with self.scheduler():
+            self.call('register')
+            foreign = self.xml.replace(backend._pythonw(sys.executable), os.environ['COMSPEC'])
+            replace = r'''
 $ErrorActionPreference = 'Stop'
 $r = [Console]::In.ReadToEnd() | ConvertFrom-Json
 $s = New-Object -ComObject Schedule.Service; $s.Connect()
 $d = $s.NewTask(0); $d.XmlText = $r.xml; $d.Settings.Enabled = $false
 $null = $s.GetFolder('\').RegisterTaskDefinition($r.name, $d, 4, $r.sid, $null, 3, $null)
 '''
-                backend._shell.run_json(replace, dict(name=name, sid=sid, xml=foreign),
-                                        obj._call, timeout=60, check=True)
-                for operation in ('query', 'register', 'handover', 'run', 'complete', 'stop', 'delete'):
-                    with self.assertRaises(backend._tasks.OwnershipError):
-                        call(operation)
-            finally:
-                gate.unlink(missing_ok=True)
-                cleanup(obj._call, [name], children)
-
-    def test_native_migration_keeps_parent_until_exit_and_preserves_disabled_schedule(self):
-        obj = backend.Backend(service, subprocess.run)
-        sid = obj._identity()
-        prefix = 'SCG-CI-' + uuid.uuid4().hex
-        names = [prefix + suffix for suffix in ('', '-Update', '-Express')]
-        with tempfile.TemporaryDirectory(prefix='router migration ') as tmp, \
-                mock.patch.multiple(backend, ROUTER_TASK=names[0], UPDATE_TASK=names[1],
-                                    EXPRESS_TASK=names[2], DRAIN_TIMEOUT_S=0), \
-                mock.patch.object(backend, '_post_shutdown', return_value=False):
-            home = Path(tmp)
-            _state_file(home)
-            children = []
-            for script in ('router_launch.py', 'update_launch.py', 'express_launch.py'):
-                write_launcher(home, script, FIXTURE_LIFETIME)
-            service.install_task_launcher(home, Path(__file__).resolve().parents[1])
-            def task(name, operation='query', **kwargs):
-                return obj._task_state(name, home, operation, **kwargs)
-            def running(name, legacy=False):
-                deadline = time.monotonic() + 15
-                while time.monotonic() < deadline:
-                    result = task(name, legacy=legacy)
-                    if result and result['instances']:
-                        return result
-                    time.sleep(0.2)
-                self.fail('disposable migration task did not start')
-            try:
-                renderers = (backend.render_router_xml, backend.render_update_xml, backend.render_express_xml)
-                for index, name in enumerate(names):
-                    args = (sys.executable, home, sid)
-                    task(name, 'register', legacy=True, xml=renderers[index](*args))
-                    if index != 2:
-                        task(name, 'run', legacy=True)
-                        running(name, legacy=True)
-                        task(name, 'complete', legacy=True)
-                router = task(names[0], legacy=True)['instances']
-                parent = task(names[1], 'disable', legacy=True)['instances']
-                parent_child = NativeChild.capture(home / 'update_launch.alive')
-                children.append(parent_child)
-                parent_child.assert_alive('before-migration')
-                run = obj._run
-                def failed_registration(cmd, **kwargs):
-                    request = json.loads(kwargs.get('input', '{}'))
-                    if request.get('name') == names[2] + '-' + sid and request['operation'] == 'register':
-                        request['xml'] = '<Task>'  # The real Scheduler API must reject this definition.
-                        kwargs['input'] = json.dumps(request)
-                    return run(cmd, **kwargs)
-                obj._run = failed_registration
-                with self.assertRaises(SystemExit):
-                    obj.install(sys.executable, home, {}, Path(__file__).resolve().parents[1], None)
-                obj._run = run
-                self.assertEqual(task(names[0], legacy=True)['instances'], router)
-                self.assertEqual(task(names[1], legacy=True)['instances'], parent)
-                def healthy(state, version):
-                    self.assertEqual(version, '1.0.0')
-                    running(names[0])
-                    return True  # Native API proof; HTTP health is the external test boundary.
-                with mock.patch.object(service, 'wait_version', side_effect=healthy), \
-                        mock.patch.object(service, 'health', return_value={'version': '1.0.0'}):
-                    obj.install(sys.executable, home, {}, Path(__file__).resolve().parents[1],
-                                None, expected_version='1.0.0')
-                    self.assertFalse(task(names[1])['enabled'])
-                    self.assertFalse(task(names[1])['pending'])
-                    self.assertTrue(task(names[2])['enabled'])
-                    self.assertFalse(task(names[2])['pending'])
-                    parent_child.assert_alive('after-migration')
-                    self.assertFalse(task(names[1], legacy=True)['enabled'])
-                    self.assertEqual(task(names[1], legacy=True)['instances'], parent)
-                    heartbeat = home / 'update_launch.alive'
-                    before = heartbeat.read_text()
-                    time.sleep(0.3)
-                    self.assertNotEqual(heartbeat.read_text(), before)
-                    self.assertTrue(obj.ensure_serving(home, {}, '1.0.0'))
-                    (home / 'update_launch.gate').unlink()
-                    self.assertTrue(obj._wait_stopped(names[1], 15, home, legacy=True))
-                    obj.recover_pending(sys.executable, home, Path(__file__).resolve().parents[1], '1.0.0')
-                    self.assertIsNone(task(names[1], legacy=True))
-                    self.assertFalse(task(names[1])['enabled'])
-            finally:
-                obj._run = subprocess.run
-                for gate in home.glob('*.gate'):
-                    gate.unlink(missing_ok=True)
-                cleanup(obj._call, names + [name + '-' + sid for name in names], children)
+            backend._shell.run_json(replace, dict(name=self.name, sid=self.sid, xml=foreign),
+                                    self.obj._call, timeout=60, check=True)
+            for operation in ('query', 'register', 'handover', 'run', 'complete', 'stop', 'delete'):
+                with self.assertRaises(backend._tasks.OwnershipError):
+                    self.call(operation)
