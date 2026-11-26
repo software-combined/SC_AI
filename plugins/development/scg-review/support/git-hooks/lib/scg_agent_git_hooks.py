@@ -6,6 +6,7 @@ import datetime as dt
 import hashlib
 import json
 import os
+from os import fsdecode
 from pathlib import Path
 import re
 import runpy
@@ -15,14 +16,19 @@ import time
 import tempfile
 from typing import Any
 
+if __name__ == "__main__" and sys.flags.safe_path:
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+
+from scg_review_receipts import (
+    ALLOW_DECISIONS, STATE_VERSION, git_repository_id, load_candidate_states, repo_identity,
+    reusable_merge, state_is_valid, state_path,
+)
+
 
 HOME = Path.home()
 BASE_DIR = HOME / ".config" / "scg-agent-git-hooks"
 CONFIG_PATH = BASE_DIR / "config.json"
-REVIEW_ROOT = HOME / ".cache" / "scg-agent-git-hooks" / "reviews"
-ALLOW_DECISIONS = {"ALL_CLEAR", "PROCEED_WITH_NOTES"}
 VALID_DECISIONS = ALLOW_DECISIONS | {"BLOCK"}
-STATE_VERSION = 3
 
 
 def fail(message: str, code: int = 1) -> None:
@@ -39,18 +45,18 @@ def load_config() -> dict[str, Any]:
         fail(f"SCG git hook config is invalid JSON: {CONFIG_PATH}: {exc}")
 
 
-def git(args: list[str], *, check: bool = True) -> str:
+def git(args: list[str], *, check: bool = True, verbatim: bool = False) -> str:
     proc = subprocess.run(
         ["git", *args],
-        text=True,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         check=False,
     )
     if check and proc.returncode != 0:
-        detail = proc.stderr.strip() or proc.stdout.strip()
+        detail = fsdecode(proc.stderr or proc.stdout).strip()
         fail(f"git {' '.join(args)} failed: {detail}")
-    return proc.stdout.strip()
+    output = fsdecode(proc.stdout)
+    return output if verbatim else output.strip()
 
 
 def current_branch() -> str:
@@ -73,25 +79,16 @@ def repo_info() -> dict[str, Any]:
     branch = current_branch()
     tree = git(["write-tree"])
     base_commit = git(["rev-parse", "--verify", "HEAD"], check=False) or None
-    staged_raw = git(["diff", "--cached", "--name-only", "-z"])
+    staged_raw = git(["diff", "--cached", "--name-only", "-z"], verbatim=True)
     staged_files = [item for item in staged_raw.split("\0") if item]
-    repo_id = hashlib.sha256(root.encode("utf-8")).hexdigest()
     return {
         "repo_root": root,
-        "repo_id": repo_id,
+        "repo_id": repo_identity(root),
         "branch": branch,
         "tree": tree,
         "base_commit": base_commit,
         "staged_files": staged_files,
     }
-
-
-def state_dir(repo_id: str) -> Path:
-    return REVIEW_ROOT / repo_id
-
-
-def state_path(repo_id: str, tree: str, base_commit: str | None) -> Path:
-    return state_dir(repo_id) / f"{tree}.{base_commit or 'unborn'}.review.json"
 
 
 def required_lanes(config: dict[str, Any]) -> list[str]:
@@ -155,6 +152,7 @@ def write_state(args: argparse.Namespace) -> None:
         "created_at_utc": dt.datetime.fromtimestamp(now, dt.UTC).isoformat(),
         "repo_root": info["repo_root"],
         "repo_id": info["repo_id"],
+        "git_repository_id": git_repository_id(),
         "branch": info["branch"],
         "tree": info["tree"],
         "base_commit": info["base_commit"],
@@ -177,56 +175,6 @@ def write_state(args: argparse.Namespace) -> None:
     print(f"  branch: {info['branch']}")
     print(f"  tree: {info['tree']}")
     print(f"  state: {target}")
-
-
-def state_is_valid(
-    state: dict[str, Any],
-    info: dict[str, Any],
-    config: dict[str, Any],
-    ttl_seconds: int,
-) -> tuple[bool, str]:
-    if state.get("version") != STATE_VERSION:
-        return False, f"state version {state.get('version')!r} is not supported"
-    if state.get("repo_root") != info["repo_root"]:
-        return False, "repo root mismatch"
-    if state.get("repo_id") != info["repo_id"]:
-        return False, "repo id mismatch"
-    if state.get("branch") != info["branch"]:
-        return False, "branch mismatch"
-    if state.get("tree") != info["tree"]:
-        return False, "tree mismatch"
-    if "base_commit" not in state or state["base_commit"] != info["base_commit"]:
-        return False, "base commit mismatch"
-    if state.get("decision") not in ALLOW_DECISIONS or state.get("approved") is not True:
-        return False, f"decision {state.get('decision')!r} is not approved"
-    try:
-        created_at = int(state.get("created_at_epoch"))
-    except (TypeError, ValueError):
-        return False, "created_at_epoch missing or invalid"
-    if int(time.time()) - created_at > ttl_seconds:
-        return False, "review state expired"
-    lanes = required_lanes(config)
-    raw_passes = state.get("passes")
-    if not isinstance(raw_passes, dict):
-        return False, "passes missing or invalid"
-    recorded = {str(k): str(v).strip() for k, v in raw_passes.items()}
-    if set(recorded) != set(lanes):
-        return False, "recorded review lanes do not match required lanes"
-    if any(not recorded[lane] for lane in lanes):
-        return False, "one or more recorded review models are empty"
-    return True, "ok"
-
-
-def load_candidate_states(info: dict[str, Any]) -> list[tuple[Path, dict[str, Any], str]]:
-    path = state_path(info["repo_id"], info["tree"], info["base_commit"])
-    if not path.exists():
-        return []
-    loaded: list[tuple[Path, dict[str, Any], str]] = []
-    try:
-        loaded.append((path, json.loads(path.read_text()), "loaded"))
-    except json.JSONDecodeError as exc:
-        loaded.append((path, {}, f"invalid JSON: {exc}"))
-    return loaded
 
 
 def chain_local_hook(hook_name: str, extra_args: list[str]) -> int:
@@ -280,26 +228,38 @@ def required_review_message(info: dict[str, Any], config: dict[str, Any], reason
 def reviewed_hook(hook_name: str, extra_args: list[str]) -> None:
     config = load_config()
     info = repo_info()
-    required_lanes(config)
+    lanes = required_lanes(config)
     ttl_seconds = int(config.get("review_state_ttl_seconds", 86400))
     states = load_candidate_states(info)
     reasons: list[str] = []
+    receipt = None
+    incoming = None
     for path, state, load_status in states:
         if load_status != "loaded":
             reasons.append(f"{path}: {load_status}")
             continue
-        valid, reason = state_is_valid(state, info, config, ttl_seconds)
+        valid, reason = state_is_valid(state, info, lanes, ttl_seconds)
         if valid:
-            chained = chain_local_hook(hook_name, extra_args)
-            if chained:
-                raise SystemExit(chained)
-            valid, reason = state_is_valid(state, repo_info(), config, ttl_seconds)
-            if not valid:
-                fail(f"SCG review scope changed after the chained {hook_name} hook: {reason}. "
-                     "Run /pre-commit-review again.")
-            raise SystemExit(0)
+            receipt = state
+            break
         reasons.append(f"{path.name}: {reason}")
-    fail(required_review_message(info, config, reasons))
+    if receipt is None:
+        incoming = reusable_merge(info, lanes, ttl_seconds)
+        if incoming is None:
+            fail(required_review_message(info, config, reasons))
+
+    chained = chain_local_hook(hook_name, extra_args)
+    if chained:
+        raise SystemExit(chained)
+    current = repo_info()
+    if receipt is not None:
+        valid, reason = state_is_valid(receipt, current, lanes, ttl_seconds)
+    else:
+        valid = current == info and reusable_merge(current, lanes, ttl_seconds) == incoming
+        reason = "merge tree, parents or review receipts changed"
+    if not valid:
+        fail(f"SCG review scope changed after the chained {hook_name} hook: {reason}. "
+             "Run /pre-commit-review again.")
 
 
 def pre_commit(args: argparse.Namespace) -> None:
@@ -428,19 +388,21 @@ def _scan_staged(pin, info, root, binary, report):
 def status(_: argparse.Namespace) -> None:
     config = load_config()
     info = repo_info()
+    lanes = required_lanes(config)
     ttl_seconds = int(config.get("review_state_ttl_seconds", 86400))
     states = load_candidate_states(info)
     print(f"Repo: {info['repo_root']}")
     print(f"Branch: {info['branch']}")
     print(f"Staged tree: {info['tree']}")
-    if not states:
+    if reusable_merge(info, lanes, ttl_seconds) is not None:
+        print("Review state: merge carry-over")
+    elif not states:
         print("Review state: none")
-        return
     for path, state, load_status in states:
         if load_status != "loaded":
             print(f"{path}: {load_status}")
             continue
-        valid, reason = state_is_valid(state, info, config, ttl_seconds)
+        valid, reason = state_is_valid(state, info, lanes, ttl_seconds)
         print(f"{path}: {'valid' if valid else 'invalid'} ({reason})")
 
 

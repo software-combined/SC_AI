@@ -91,10 +91,34 @@ Version 3 receipts use `<tree>.<base>.review.json`, with `unborn` for a reposito
 that has no HEAD. Earlier receipt files remain untouched but cannot approve
 new commits. Run a new genuine review after refreshing the adapter.
 
-Commit, automatic-merge and commit-message hooks all require matching approval.
-Each checks scope again after its chained repository hook. If a hook stages
-changes, review the changed result before retrying. To prepare a merge commit,
-use `git merge --no-commit --no-ff <branch>`, review the result, then commit.
+Each hook checks its approval again after running any chained repository hook.
+Review a changed staged result before retrying.
+
+### Prepared merge receipts
+
+Use `git merge --no-commit --no-ff <branch>` to prepare a two-parent merge.
+Run `scg-review-state status` to check whether it can reuse approval. The
+adapter prints `Review state: merge carry-over` when all these conditions hold.
+
+- Every commit the merge brings in has a current approved receipt for its tree
+  and first parent. It must identify the receiving Git repository. The
+  updated adapter records that identity in new receipts from the current
+  worktree or another registered worktree of the same repository.
+- The target branch and incoming branch changed disjoint sets of paths since
+  their common base.
+- The staged tree keeps the incoming version of every path the incoming
+  branch changed and keeps the target version everywhere else.
+
+Shallow history, multiple incoming parents, overlapping paths and missing or
+expired receipts require a full review. A GitHub approval alone does not
+supply the local receipts. If Git starts the merge and commit in one command,
+its early hook requires a direct receipt because the merge parent is not yet
+available. Follow the [prepared merge procedure](../skills/pre-commit-review/SKILL.md#prepared-merge)
+for the secret scan and project checks.
+
+Receipts recorded before this change contain a checkout path only. They
+continue to support direct approval. Merge reuse starts with receipts that
+record the Git repository identity.
 
 ## Owner-managed non-secret adjudications
 
@@ -223,6 +247,7 @@ cp "<plugin-root>/support/git-hooks/pre-commit" \
    "<plugin-root>/support/git-hooks/commit-msg" ~/.config/scg-agent-git-hooks/
 cp "<plugin-root>/support/git-hooks/bin/scg-review-state" ~/.config/scg-agent-git-hooks/bin/
 cp "<plugin-root>/support/git-hooks/lib/scg_agent_git_hooks.py" \
+   "<plugin-root>/support/git-hooks/lib/scg_review_receipts.py" \
    "<plugin-root>/support/git-hooks/lib/scg_scan_adjudications.py" ~/.config/scg-agent-git-hooks/lib/
 chmod +x ~/.config/scg-agent-git-hooks/pre-commit \
          ~/.config/scg-agent-git-hooks/pre-merge-commit \

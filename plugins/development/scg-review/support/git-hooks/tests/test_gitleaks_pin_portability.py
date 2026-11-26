@@ -13,6 +13,7 @@ import hashlib
 import importlib.util
 import os
 from pathlib import Path
+import sys
 import tempfile
 import unittest
 from unittest import mock
@@ -24,7 +25,8 @@ HELPER = Path(__file__).resolve().parents[1] / "lib" / "scg_agent_git_hooks.py"
 def load_helper_module():
     spec = importlib.util.spec_from_file_location("scg_agent_git_hooks", HELPER)
     module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
+    with mock.patch.object(sys, "path", [str(HELPER.parent), *sys.path]):
+        spec.loader.exec_module(module)
     return module
 
 

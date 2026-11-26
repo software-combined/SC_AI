@@ -1,5 +1,13 @@
 # Changelog
 
+## scg-review 0.7.7 (2026-11-27)
+
+- Reuse current review receipts for a clean prepared merge when every incoming
+  commit has approval, the branches changed disjoint paths, and the staged tree
+  matches the expected result. Receipts now bind to the Git repository, so a
+  reused checkout path cannot transfer approval. The merge workflow still runs
+  the pinned secret scan and project checks.
+
 ## scg-codebase-readiness 0.1.4 (2026-11-26)
 
 - Ship the measurement and report scripts with Router installations and updates.
