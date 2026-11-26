@@ -45,7 +45,8 @@ fallbacks in their local Git hook configuration; see
 The shared skill keeps the same review and secret-scanning gates.
 
 Installing the router later moves that Codex registration to the router's own
-copy. A plugin you turned off in Codex or Claude Code stays off.
+copy. Router updates refresh enabled plugins in both clients. A plugin you
+turned off in Codex or Claude Code stays off.
 
 Plugin releases ride `plugin.json` versions plus `plugins/CHANGELOG.md`,
 separate from the router tag train (`packaging/VERSION` never moves for a

@@ -201,9 +201,8 @@ $s = New-Object -ComObject Schedule.Service; $s.Connect()
 $d = $s.NewTask(0); $d.XmlText = $r.xml; $d.Settings.Enabled = $false
 $null = $s.GetFolder('\').RegisterTaskDefinition($r.name, $d, 4, $r.sid, $null, 3, $null)
 '''
-                obj._call(['powershell', '-NoProfile', '-NonInteractive', '-Command', replace],
-                          input=json.dumps(dict(name=name, sid=sid, xml=foreign)), text=True,
-                          capture_output=True, timeout=20, check=True)
+                backend._shell.run_json(replace, dict(name=name, sid=sid, xml=foreign),
+                                        obj._call, timeout=60, check=True)
                 for operation in ('query', 'register', 'handover', 'run', 'complete', 'stop', 'delete'):
                     with self.assertRaises(backend._tasks.OwnershipError):
                         call(operation)

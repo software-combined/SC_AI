@@ -127,14 +127,17 @@ def attached_clients(state):
     return [] if clients == 'none' else [clients]
 
 
-def _commands(client, root, names, marketplace):
-    if client == 'codex':
-        return ([['codex', 'plugin', 'marketplace', 'add', str(root)]] +
-                [['codex', 'plugin', 'add', f'{n}@{marketplace}'] for n in names])
-    if client == 'claude':
-        return ([['claude', 'plugin', 'marketplace', 'add', str(root)]] +
-                [['claude', 'plugin', 'install', f'{n}@{marketplace}'] for n in names])
-    return []
+def _commands(client, root, names, marketplace, installed):
+    if client not in ('codex', 'claude'):
+        return []
+    commands = [[client, 'plugin', 'marketplace', 'add', str(root)]]
+    default_verb = 'add' if client == 'codex' else 'install'
+    for name in names:
+        plugin_id = f'{name}@{marketplace}'
+        verb = 'update' if client == 'claude' and plugin_id in installed else default_verb
+        scope = ['--scope', 'user'] if verb == 'update' else []
+        commands.append([client, 'plugin', verb, plugin_id, *scope])
+    return commands
 
 
 def _ascii(text):
@@ -189,8 +192,8 @@ def _old_codex_source(call, marketplace):
     return False
 
 
-def _switched_off(client, call):
-    """Plugin ids a person turned off in this client.
+def _plugin_choices(client, call):
+    """Router-managed installed plugin ids and any ids a person turned off.
 
     Both clients' install commands turn a plugin back on, so running them on
     every router update undid that choice. These plugins are skipped instead,
@@ -207,7 +210,8 @@ def _switched_off(client, call):
                 or not isinstance(entry.get(key), str) or not entry[key]
                 or type(entry.get('enabled')) is not bool for entry in entries):
             return None
-        return {entry[key] for entry in entries if entry.get('enabled') is False}
+        return ({entry[key] for entry in entries if client == 'codex' or entry.get('scope') == 'user'},
+                {entry[key] for entry in entries if entry['enabled'] is False})
     except (LookupError, TypeError, AttributeError):
         return None
 
@@ -237,17 +241,21 @@ def register(client, root, names, run=subprocess.run, which=shutil.which, market
                    timeout=180, env=env)
 
     # Read before any change: removing the old Codex source hides its plugins.
-    disabled = _switched_off(client, call)
-    if disabled is None:
+    choices = _plugin_choices(client, call)
+    if choices is None:
         return f'{client}: plugin choices unavailable; registration deferred', 1
+    installed, disabled = choices
     off = {n for n in names if f'{n}@{marketplace}' in disabled}
-    commands = _commands(client, root, [n for n in names if n not in off], marketplace)
+    commands = _commands(client, root, [n for n in names if n not in off], marketplace, installed)
     if client == 'codex' and _old_codex_source(call, marketplace):
         commands.insert(0, ['codex', 'plugin', 'marketplace', 'remove', marketplace])
     refused = 0
     failures = []
     moved = False
-    for command in commands:
+    for index, command in enumerate(commands):
+        # Claude resolves the plugin ID through the marketplace it already knows.
+        if index == 1 and client == 'claude' and refused:
+            break  # The registration failed, so the source could still be elsewhere.
         label = _one_line(' '.join(command))
         try:
             done = call(command)
