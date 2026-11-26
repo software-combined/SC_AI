@@ -41,9 +41,10 @@ class CleanHistoryScopeTests(unittest.TestCase):
     def scope(self, base):
         if base:
             self.git('update-ref', 'refs/remotes/origin/main', base)
-        block = run_block('Installer scope', CHECK.read_text()).replace('${{ github.base_ref }}', 'main')
+        block = run_block('Installer scope', CHECK.read_text())
         result = subprocess.run(['bash', '-e', '-c', block], cwd=self.component,
-                                env=self.env, capture_output=True, text=True)
+                                env=dict(self.env, VERIFICATION_BASE='origin/main'),
+                                capture_output=True, text=True)
         output = Path(self.env['GITHUB_OUTPUT'])
         return result, output.read_text() if output.exists() else ''
 

@@ -8,6 +8,7 @@ singleton installer test file reaches the native jobs.
 import subprocess
 import sys
 import unittest
+from collections import Counter
 from pathlib import Path
 
 from tests.loading import load
@@ -90,6 +91,29 @@ class InstallerScopeTests(unittest.TestCase):
         self.assertIn('tests.test_windows_client_discovery', module.installer_tests(windows=True))
         for name in ('model_access_flow', 'codex_subscription_defaults', 'setup_completion'):
             self.assertIn('tests.test_' + name, module.installer_tests(windows=True))
+
+    def test_arm64_shards_execute_each_windows_test_occurrence(self):
+        module = scope_module()
+
+        def inventory(suite):
+            for test in suite:
+                if isinstance(test, unittest.TestSuite):
+                    yield from inventory(test)
+                else:
+                    yield test.id()
+
+        def selected(shard):
+            loader = unittest.TestLoader()
+            suite = loader.loadTestsFromNames(module.installer_tests(windows=True, shard=shard))
+            self.assertFalse(loader.errors, loader.errors)
+            self.assertGreater(suite.countTestCases(), 0)
+            return Counter(inventory(suite))
+
+        parallel = sum((selected(shard) for shard in ('general', *module.ARM_INSTALLER_SHARDS)),
+                       Counter())
+        self.assertEqual(parallel, selected('all'))
+        with self.assertRaisesRegex(ValueError, 'unknown installer shard'):
+            module.installer_tests(windows=True, shard='misspelled')
 
 
 if __name__ == '__main__':

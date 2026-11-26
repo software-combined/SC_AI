@@ -160,7 +160,7 @@ class InstallerCiGateTests(unittest.TestCase):
                          'shell-script git stub; the gate itself runs on Ubuntu')
     def test_the_scope_step_fails_closed_and_writes_the_output(self):
         # A failed diff must not silently skip the native checks.
-        block = run_block('Installer scope', self.CHECK).replace('${{ github.base_ref }}', 'main')
+        block = run_block('Installer scope', self.CHECK)
         with tempfile.TemporaryDirectory() as tmp:
             bin_dir = Path(tmp) / 'bin'
             bin_dir.mkdir()
@@ -170,6 +170,7 @@ class InstallerCiGateTests(unittest.TestCase):
             stub.chmod(0o700)
             out = Path(tmp) / 'scope.out'
             env = {**os.environ, 'PATH': f'{bin_dir}{os.pathsep}{os.environ["PATH"]}',
+                   'VERIFICATION_BASE': 'origin/main',
                    'GIT_STUB_OUTPUT': 'packaging/install.py',
                    'GIT_STUB_STATUS': '0', 'GITHUB_OUTPUT': str(out)}
             subprocess.run(['bash', '-e', '-c', block], cwd=ROOT, env=env,
@@ -179,6 +180,10 @@ class InstallerCiGateTests(unittest.TestCase):
             failed = subprocess.run(['bash', '-e', '-c', block], cwd=ROOT, env=env,
                                     capture_output=True)
             self.assertNotEqual(failed.returncode, 0)
+            env.update(VERIFICATION_BASE='', GIT_STUB_STATUS='0')
+            missing = subprocess.run(['bash', '-e', '-c', block], cwd=ROOT, env=env,
+                                     capture_output=True)
+            self.assertNotEqual(missing.returncode, 0)
 
     def test_installer_jobs_are_scope_selected_for_main_acceptance(self):
         for job in ('installer-macos', 'installer-windows'):
@@ -221,10 +226,15 @@ class InstallerCiGateTests(unittest.TestCase):
                         RELEASE.index('name: Build bundle'))
 
     def test_release_acceptance_runs_only_for_pull_requests_into_main(self):
-        self.assertIn('    branches: [development]\n', self.CHECK.split('  push:\n', 1)[1])
-        for name in ('changes', 'plugin-schedulers', 'hook-adapter', 'unit-suite'):
+        proof = "github.event_name == 'push' && startsWith(github.ref_name, 'cyril/windows-arm-ci-proof-')"
+        self.assertIn("    branches: [development, 'cyril/windows-arm-ci-proof-*']\n",
+                      self.CHECK.split('  push:\n', 1)[1])
+        self.assertIn(f'if: &acceptance {NOT_A_TEXT_EDIT} && (({MAIN_ACCEPTANCE}) || ({proof}))',
+                      self.CHECK)
+        self.assertIn(f"({proof}) && 'Diagnostic acceptance (Windows ARM64)'", self.CHECK)
+        for name in ('plugin-schedulers', 'hook-adapter', 'unit-suite'):
             job = re.split(r'\n  \S', self.CHECK.split(f'  {name}:\n', 1)[1], maxsplit=1)[0]
-            self.assertIn(f'if: {NOT_A_TEXT_EDIT} && ({MAIN_ACCEPTANCE})', job)
+            self.assertIn('if: *acceptance', job)
 
     @unittest.skipUnless(shutil.which('git') and shutil.which('bash'), 'requires git and bash')
     def test_release_requires_an_accepted_commit_for_its_channel(self):
@@ -317,7 +327,7 @@ class WorkflowBoundaryTests(unittest.TestCase):
         # A title or body edit must not cancel running checks, and a skipped
         # gate must not carry the required name Test (skipped reads as passed).
         self.assertIn("!github.event.changes.base && format('-text-edit-{0}', github.run_id) || '' }}", check)
-        self.assertIn("name: ${{ " + NOT_A_TEXT_EDIT + " && 'Test' || 'Skipped for a title or body edit' }}\n", check)
+        self.assertIn("|| (" + NOT_A_TEXT_EDIT + " && 'Test' || 'Skipped for a title or body edit') }}\n", check)
         self.assertNotIn('pull_request_target:', check)
 
 if __name__ == '__main__':

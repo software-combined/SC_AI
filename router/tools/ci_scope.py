@@ -2,7 +2,7 @@
 
 Usage:
   git diff --name-only BASE HEAD | python tools/ci_scope.py --installer
-  python tools/ci_scope.py --installer-tests
+  python tools/ci_scope.py --installer-tests [SHARD]
 
 `--installer` prints `installer=true|false`, whether a pull request can reach
 the installer, its platform backends or its tests. Only then do the macOS and
@@ -27,6 +27,7 @@ INSTALLER_PATHS = (
     'tests/install_fixtures.py',
     'tests/loading.py',
     'tests/windows_native_fixture.py',
+    'tests/test_windows_migration_native.py',
     'tests/windows_shutdown_fixture.py',
     'tests/test_bootstrap.py',
     'tests/test_bootstrap_interpreter.py',
@@ -132,6 +133,9 @@ INSTALLER_PATHS = (
     'tools/run_windows_standard.ps1',
     'tools/windows_standard.py',
 )
+
+TASK_OWNERSHIP = 'tests.test_windows_task_ownership'
+TASK_MIGRATION = 'tests.test_windows_migration_native'
 
 INSTALLER_TESTS = (
     'tests.test_update_status',
@@ -261,7 +265,8 @@ INSTALLER_TESTS = (
     'tests.test_windows_backend',
     'tests.test_windows_runtime_rebind',
     'tests.test_windows_native_fixture',
-    'tests.test_windows_task_ownership',
+    TASK_OWNERSHIP,
+    TASK_MIGRATION,
     'tests.test_windows_task_diagnostics',
     'tests.test_windows_task_cohort',
     'tests.test_windows_installation',
@@ -297,9 +302,33 @@ MACOS_ONLY_TESTS = frozenset((
 ))
 
 
-def installer_tests(windows=os.name == 'nt'):
-    """The native job's test modules; Windows leaves out the macOS-only suites."""
-    return [name for name in INSTALLER_TESTS if not (windows and name in MACOS_ONLY_TESTS)]
+ARM_INSTALLER_SHARDS = {
+    'ownership': (
+        TASK_OWNERSHIP + '.NativeTaskTests.test_registration_restore_and_foreign_identity',
+        TASK_OWNERSHIP + '.NativeTaskTests.test_matching_arguments_do_not_own_a_foreign_executable',
+        TASK_OWNERSHIP + '.NativeTaskTests.test_deleted_task_keeps_child_and_missing_metadata_cannot_prove_exit',
+    ),
+    'lifecycle': (TASK_OWNERSHIP + '.NativeTaskTests.test_restart_and_pending_state',),
+    'migration': (TASK_MIGRATION + '.NativeMigrationTests.test_migration_recovers_after_the_disabled_parent_exits',),
+    'retry': (
+        TASK_MIGRATION + '.NativeMigrationTests.test_failed_registration_preserves_running_tasks_and_allows_retry',
+    ),
+}
+
+
+def installer_tests(windows=os.name == 'nt', shard='all'):
+    modules = [name for name in INSTALLER_TESTS if not (windows and name in MACOS_ONLY_TESTS)]
+    if shard == 'all':
+        return modules
+    if not windows:
+        raise ValueError('installer shards require Windows')
+    if shard == 'general':
+        return [name for name in modules if name not in (TASK_OWNERSHIP, TASK_MIGRATION)] + [
+            TASK_OWNERSHIP + '.OwnershipTests', TASK_OWNERSHIP + '.ExplicitStopTests',
+        ]
+    if shard not in ARM_INSTALLER_SHARDS:
+        raise ValueError('unknown installer shard: ' + shard)
+    return list(ARM_INSTALLER_SHARDS[shard])
 
 
 def installer_scope(paths):
@@ -308,8 +337,13 @@ def installer_scope(paths):
 
 
 def main(argv):
-    if '--installer-tests' in argv:
-        print(' '.join(installer_tests()))
+    if argv[:1] == ['--installer-tests'] and len(argv) <= 2:
+        try:
+            names = installer_tests(shard=argv[1] if len(argv) == 2 else 'all')
+        except ValueError as error:
+            print(error, file=sys.stderr)
+            return 2
+        print(' '.join(names))
         return 0
     if '--installer' in argv:
         paths = [line.strip() for line in sys.stdin if line.strip()]

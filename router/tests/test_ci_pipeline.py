@@ -9,6 +9,7 @@ import unittest
 from pathlib import Path
 
 from tests.test_workflows import run_block
+from tests.test_ci_scope import scope_module
 
 CHECK = Path(__file__).resolve().parents[2] / '.github/workflows/check.yml'
 DIAGNOSTIC = CHECK.parent / 'windows-ci-benchmark.yml'
@@ -29,7 +30,7 @@ class AcceptancePipelineTests(unittest.TestCase):
                    '--run --workers 2 --report "$RUNNER_TEMP/unit-results.json"')
         self.assertIn(command, suite)
         self.assertIn('fetch-depth: 0', suite)
-        self.assertIn('VERIFICATION_BASE: ${{ github.event.pull_request.base.sha }}', suite)
+        self.assertIn("VERIFICATION_BASE: ${{ github.event.pull_request.base.sha || 'origin/main' }}", suite)
         self.assertIn("SCG_RUN_INSTALLER_TESTS: '1'", suite)
         self.assertEqual(sum(command in job for job in pipeline.values()), 1)
 
@@ -51,6 +52,21 @@ class AcceptancePipelineTests(unittest.TestCase):
         self.assertIn('-Suite ${{ matrix.suite }}', job)
         self.assertIn('runs-on: windows-latest', job)
         self.assertIn('windows-standard', pipeline['test'])
+
+    def test_arm64_installer_shards_use_separate_runners_and_all_reach_the_gate(self):
+        pipeline = jobs()
+        job = pipeline['installer-windows']
+        rows = re.findall(r'- \{runner: ([\w.-]+), shard: ([\w-]+), timeout: \d+\}', job)
+        self.assertCountEqual(rows, [('windows-latest', 'all')] + [
+            ('windows-11-arm', shard) for shard in ('general', *scope_module().ARM_INSTALLER_SHARDS)
+        ])
+        self.assertIn('fail-fast: false', job)
+        self.assertIn('runs-on: ${{ matrix.runner }}', job)
+        self.assertIn('INSTALLER_SHARD: ${{ matrix.shard }}', job)
+        self.assertIn('--installer-tests "$INSTALLER_SHARD"', job)
+        self.assertIn('python -m unittest -v "${tests[@]}"', job)
+        self.assertEqual(job.count("if: matrix.shard == 'all' || matrix.shard == 'general'"), 3)
+        self.assertIn('installer-windows', pipeline['test'])
 
     @unittest.skipUnless(os.name == 'posix' and shutil.which('bash'), 'gate runs on Ubuntu')
     def test_failed_prerequisite_guard_runs_before_checkout_in_an_empty_workspace(self):
