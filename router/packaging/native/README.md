@@ -24,8 +24,13 @@ prove who made a download. The router's existing signed update feed remains
 the authority for later online updates.
 
 Run the normal build on the target operating system. macOS needs `hdiutil`,
-`sips`, and `iconutil`. Windows needs Inno Setup's `ISCC.exe`. Linux needs a
-Zenity executable, `libgdk-pixbuf2.0-bin`, an AppImage builder, and a matching
+`sips`, and `iconutil`. Windows needs Inno Setup's `ISCC.exe`. For Windows
+ARM64, use Inno Setup 6.3 or newer and a .NET SDK that can target .NET 10.
+The Inno installer uses Inno Setup 6's x86 launch stub. It installs
+ARM64 Python and a self-contained ARM64 menu helper. The user does not need a
+separate .NET installation. The ARM64 package ends in `-Windows-arm64.exe`.
+
+Linux needs a Zenity executable, `libgdk-pixbuf2.0-bin`, an AppImage builder, and a matching
 uruntime file. Pass
 SHA-256 digests for the Linux builder and uruntime. The builder checks both
 files before it runs either one. It embeds uruntime with automatic extraction

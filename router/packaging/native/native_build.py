@@ -78,11 +78,14 @@ def mac(resources, out, version, cpu):
     return final
 
 
-def windows(resources, out, version, *, iscc='ISCC.exe'):
+def windows(resources, out, version, cpu='x86_64', *, iscc='ISCC.exe'):
     if sys.platform != 'win32':
         raise ValueError('Windows EXE build requires Windows')
     out = Path(out)
-    name = f'SCG-Router-Installer-{version}-Windows.exe'
+    if cpu not in ('x86_64', 'arm64'):
+        raise ValueError('unsupported Windows architecture')
+    suffix = '-arm64' if cpu == 'arm64' else ''
+    name = f'SCG-Router-Installer-{version}-Windows{suffix}.exe'
     final = _new_output(out, name)
     _make_ico(resources / 'router/packaging/assets/router-icon.png', resources / 'router-icon.ico')
     with tempfile.TemporaryDirectory(dir=out) as tmp:
@@ -93,6 +96,8 @@ def windows(resources, out, version, *, iscc='ISCC.exe'):
             '@RESOURCES@': str(resources.resolve()),
             '@OUTPUT@': str(tmp.resolve()),
             '@VERSION@': version,
+            '@SUFFIX@': suffix,
+            '@ARCHITECTURES@': 'ArchitecturesAllowed=arm64' if cpu == 'arm64' else '',
             '@ICON@': str((resources / 'router-icon.ico').resolve()),
             '@TERMS@': str((HERE / 'windows-runtime-terms.txt').resolve()),
             **repeat_files,

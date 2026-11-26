@@ -156,7 +156,6 @@
     "packaging/desktop_startup.py": 1,
     "packaging/install.py": 1,
     "packaging/native/native_build.py": 3,
-    "packaging/native/native_menu_build.py": 3,
     "packaging/native_dialog.py": 8,
     "packaging/native_setup.py": 3,
     "packaging/native_shortcuts.py": 4,

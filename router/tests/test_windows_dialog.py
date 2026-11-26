@@ -28,6 +28,13 @@ class WindowsDialogTests(unittest.TestCase):
         (self.source / 'installer.json').write_text(json.dumps(metadata))
         (self.home / 'setup-current').write_text('fixture')
         self.dialog = module('windows_dialog')
+        load = self.dialog._load
+        payload = load('native_payload')
+        self.enterContext(mock.patch.object(
+            self.dialog, '_load',
+            side_effect=lambda name: payload if name == 'native_payload' else load(name)))
+        self.enterContext(mock.patch.object(payload, 'target', return_value='windows/x86_64'))
+        self.enterContext(mock.patch.object(payload, 'windows_helper_env', return_value={}))
 
     def test_confirm_and_cancel_are_native_quiet_and_preserve_unicode(self):
         for code, marker, want in ((0, 'accept', True), (1, 'cancel', False)):
@@ -156,6 +163,20 @@ class WindowsDialogTests(unittest.TestCase):
         self.assertEqual(popen.call_args.args[0], [str(self.helper), '--progress', str(self.icon)])
         self.assertEqual(popen.call_args.kwargs['creationflags'], 0x08000000)
         self.assertEqual(json.loads(child.stdin.write.call_args.args[0])['labels'], ['Cancel'])
+
+    def test_arm_extraction_failure_uses_styled_dialog_and_progress(self):
+        payload = self.dialog._load('native_payload')
+        run = mock.Mock(return_value=SimpleNamespace(returncode=1,
+            stdout='SCG_ROUTER_DIALOG_RESULT=cancel'))
+        child = mock.Mock()
+        with mock.patch.object(payload, 'windows_helper_env', side_effect=OSError('unavailable')), \
+                mock.patch.object(self.dialog.subprocess, 'Popen', return_value=child) as popen:
+            self.assertFalse(self.dialog.show('Switch Codex?', self.home, True, run))
+            self.assertIs(self.dialog.progress(self.home, 'Waiting', 'Cancel'), child)
+        self.assertEqual(run.call_args.args[0][0], self.dialog._dialog._shell.executable())
+        self.assertEqual(popen.call_args.args[0][0], self.dialog._dialog._shell.executable())
+        self.assertNotIn('env', run.call_args.kwargs)
+        self.assertNotIn('env', popen.call_args.kwargs)
 
     def test_blocked_helper_falls_back_to_the_styled_script(self):
         for code, marker, want in ((0, 'accept', True), (1, 'cancel', False)):

@@ -15,7 +15,7 @@ FAILED = ('Codex could not restart automatically. Finish active work, then quit 
 def command(home):
     """Use retained code and Python: the updater's extraction is disposable."""
     resources = load('native_resources').current(home)
-    doc = metadata(resources, 'windows/x86_64')
+    doc = metadata(resources)
     worker = resources / 'router/packaging/notice_windows.py'
     if not worker.is_file():
         raise OSError('The restart notice is unavailable')

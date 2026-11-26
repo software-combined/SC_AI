@@ -17,7 +17,7 @@ from tests.loading import load
 
 ROOT = Path(__file__).resolve().parents[1]
 SUPPORTED = ('darwin/arm64', 'darwin/x86_64', 'linux/arm64', 'linux/x86_64',
-             'windows/x86_64')
+             'windows/x86_64', 'windows/arm64')
 
 
 def _load():

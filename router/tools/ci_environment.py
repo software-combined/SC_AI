@@ -18,7 +18,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--pwsh-executable', default='pwsh')
     parser.add_argument('--desktop-target', choices=('darwin/arm64', 'darwin/x86_64',
-                        'windows/x86_64', 'linux/arm64', 'linux/x86_64'))
+                        'windows/arm64', 'windows/x86_64', 'linux/arm64', 'linux/x86_64'))
     args = parser.parse_args()
 
     def git(revision):
@@ -37,8 +37,11 @@ def main():
     if sys.platform == 'darwin':
         compilers['swift'] = version(['xcrun', 'swiftc', '--version'])
     elif sys.platform == 'win32':
-        compiler = Path(os.environ['WINDIR']) / 'Microsoft.NET/Framework64/v4.0.30319/csc.exe'
-        compilers['csharp_sha256'] = hashlib.sha256(compiler.read_bytes()).hexdigest()
+        if args.desktop_target == 'windows/arm64':
+            compilers['dotnet'] = version(['dotnet', '--version'])
+        else:
+            compiler = Path(os.environ['WINDIR']) / 'Microsoft.NET/Framework64/v4.0.30319/csc.exe'
+            compilers['csharp_sha256'] = hashlib.sha256(compiler.read_bytes()).hexdigest()
     elif args.desktop_target:
         compilers['rust'] = version(['rustup', 'run', '1.90.0', 'rustc', '--version', '--verbose'])
     shells = {}

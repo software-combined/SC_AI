@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <RuntimeIdentifier>win-arm64</RuntimeIdentifier>
+    <SelfContained>true</SelfContained>
+    <PublishSingleFile>true</PublishSingleFile>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <AssemblyName>scg-router-menu</AssemblyName>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="windows.cs" />
+    <Compile Include="windows_repeat.cs" />
+  </ItemGroup>
+</Project>

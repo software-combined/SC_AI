@@ -1,6 +1,6 @@
 # Bootstrap runtime licences
 
-On 14 October 2026, all five exact install-only CPython 3.14.7 archives in
+On 14 October 2026, five exact install-only CPython 3.14.7 archives in
 `packaging/runtime.lock` were downloaded from their pinned upstream URLs.
 Their byte counts and SHA-256 hashes matched. Each contained the required
 interpreter and licence member. Every regular install-only file was also
@@ -13,10 +13,20 @@ compared with the corresponding full upstream archive; all bytes matched.
 | Linux x86_64 | 123,986,414 | 3,521 |
 | Linux arm64 | 95,970,257 | 3,521 |
 | Windows x86_64 | 49,587,410 | 2,132 |
+| Windows arm64 | 46,380,638 | 2,132 |
+
+On 25 November 2026, the Windows ARM64 install-only and full archives were
+verified against their pinned SHA-256 hashes. Every regular install-only file
+matched its counterpart in the full archive; both `python.exe` and `pythonw.exe`
+have ARM64 PE machine type. Full-build metadata identifies the native
+components and their licence paths. The recorded full-archive notice texts match
+the retained notice sections after line-ending normalization; the absent
+Zstandard notice is covered by the existing pinned-source record. This is a
+technical inventory, not a new legal approval.
 
 [The install-only inventory](../../router/packaging/runtime-notices.json) records the
-42 licence/notice files retained by each archive. Those files mainly cover
-Python and pip's bundled libraries. They do not include the native dependency
+42 licence and notice files retained by each original archive and 43 for Windows
+ARM64. These files mainly cover Python and pip's bundled libraries. They do not include the native dependency
 notice directory from the full build. Preserve all original notices.
 
 [The native inventory](../../router/packaging/runtime-components.json) records full
@@ -49,7 +59,7 @@ distribution change; local preparation does not repair them.
 
 ## Windows runtime basis
 
-The Windows archive contains `vcruntime140.dll` and `vcruntime140_1.dll`, both
+Both Windows archives contain `vcruntime140.dll` and `vcruntime140_1.dll`, each
 version 14.44.35211.0. The Python-free application bundle contains neither DLL;
 the setup script, its runtime mirror and the Windows installer carry them
 inside the pinned runtime.
@@ -99,6 +109,14 @@ This is the owner's acceptance, not legal review. If the router stops being
 OSI-licensed, or legal advice differs, stop
 redistributing the DLLs: ship the runtime without them and have setup install
 Microsoft's Visual C++ Redistributable from Microsoft instead.
+
+## Windows ARM64 menu helper
+
+The Windows ARM64 installer also includes a self-contained .NET 10 Windows Forms
+menu helper. Its build retains the licence and third-party notices from the
+Microsoft .NET and Windows Desktop ARM64 runtime packages under
+`control/dotnet-notices/` in the staged resources. These files travel with the
+helper in both the installer and the update resources.
 
 The inventory and supplied notices close the technical inspection gap. They
 do not assert universal legal clearance, ownership of earlier removed text,

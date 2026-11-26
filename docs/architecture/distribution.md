@@ -32,7 +32,7 @@ Closing the shell never stops routing. Polling is silent and makes no model call
 It verifies archive size, checksum and matching core identity before retention.
 Installation owns its lock. Windows repairs missing controls through required cohort
 completion, including unchanged checks. Mac and Linux retain independent controls delivery.
-`native_resources_publish.py` validates all five archives before `publish_feed.py`
+`native_resources_publish.py` validates all supported target archives before `publish_feed.py`
 uploads immutable resources and signs the channel document containing their map.
 
 `infra/` owns the update feed as code (repository-only templates, deployed from a checkout): the certificate stack, the private

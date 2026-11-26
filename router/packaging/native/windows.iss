@@ -7,12 +7,13 @@ AppId=SCG.Router.Installer
 AppName=SCG Router
 AppVersion={#ProductVersion}
 ; Old installer files must not enter a new version's retained payload.
-DefaultDirName={localappdata}\Programs\SCG Router Installer\{#ProductVersion}
+DefaultDirName={localappdata}\Programs\SCG Router Installer\{#ProductVersion}@SUFFIX@
 UsePreviousAppDir=no
 DefaultGroupName=SCG Router
 PrivilegesRequired=lowest
 OutputDir={#OutputDir}
-OutputBaseFilename=SCG-Router-Installer-{#ProductVersion}-Windows
+OutputBaseFilename=SCG-Router-Installer-{#ProductVersion}-Windows@SUFFIX@
+@ARCHITECTURES@
 Compression=lzma2
 SolidCompression=yes
 WizardStyle=modern
@@ -40,10 +41,13 @@ Name: "{group}\Install SCG Router"; Filename: "{app}\runtime\python\pythonw.exe"
 Filename: "{app}\runtime\python\pythonw.exe"; Parameters: """{app}\router\packaging\native_setup.py"" --resources ""{app}"" --action install"; Description: "Set up SCG Router"; Flags: postinstall skipifsilent
 
 [Code]
+function SetEnvironmentVariable(lpName, lpValue: String): Boolean;
+  external 'SetEnvironmentVariableW@kernel32.dll stdcall';
+
 function InitializeSetup: Boolean;
 var
   Code: Integer;
-  Folder: String;
+  Folder, PreviousExtract: String;
 begin
   Result := True;
   if WizardSilent or (ParamCount > 0) then
@@ -53,9 +57,16 @@ begin
     ExtractTemporaryFile('repeat-files.txt');
     ExtractTemporaryFile('repeat-icon.png');
     Folder := ExpandConstant('{tmp}');
-    if Exec(Folder + '\repeat-menu.exe', '--repeat "' + Folder + '\repeat-files.txt" "' +
-      Folder + '\repeat-icon.png"', Folder, SW_SHOWNORMAL, ewWaitUntilTerminated, Code) then
-      Result := Code <> 0;
+    PreviousExtract := GetEnv('DOTNET_BUNDLE_EXTRACT_BASE_DIR');
+    if not SetEnvironmentVariable('DOTNET_BUNDLE_EXTRACT_BASE_DIR', Folder) then
+      Exit;
+    try
+      if Exec(Folder + '\repeat-menu.exe', '--repeat "' + Folder + '\repeat-files.txt" "' +
+        Folder + '\repeat-icon.png"', Folder, SW_SHOWNORMAL, ewWaitUntilTerminated, Code) then
+        Result := Code <> 0;
+    finally
+      SetEnvironmentVariable('DOTNET_BUNDLE_EXTRACT_BASE_DIR', PreviousExtract);
+    end;
   except
     Log('SCG Router repeat check was unavailable.');
   end;

@@ -40,7 +40,7 @@ commit, so a tag on a commit made before this acceptance check existed can
 still publish without it. Stopping those older copies from publishing is a
 separate step.
 
-Beta GitHub prereleases also carry the five native installers from the selected
+Beta GitHub prereleases also carry the six native installers from the selected
 core bundle, plus SHA256SUMS and SHA256SUMS.sig. The workflow checks every
 receipt, filename and body hash before it publishes the beta feed. The full
 native publication gate must pass. The checksum signature uses the existing

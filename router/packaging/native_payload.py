@@ -10,6 +10,7 @@ import platform
 import re
 import shutil
 import sys
+import sysconfig
 import tempfile
 import uuid
 from pathlib import Path
@@ -56,8 +57,9 @@ def read_json(path):
 def target():
     system = {'Darwin': 'darwin', 'Windows': 'windows', 'Linux': 'linux'}.get(
         platform.system())
-    cpu = {'AMD64': 'x86_64', 'aarch64': 'arm64'}.get(
-        platform.machine(), platform.machine())
+    machine = (sysconfig.get_platform().removeprefix('win-') if system == 'windows'
+               else platform.machine()).lower()
+    cpu = {'amd64': 'x86_64', 'aarch64': 'arm64'}.get(machine, machine)
     return '%s/%s' % (system, cpu)
 
 
@@ -93,6 +95,29 @@ def metadata(resources, expected_target=None):
                 or hashlib.sha256(helper.read_bytes()).hexdigest() != doc['menu_sha256']):
             raise ValueError('The menu files did not pass verification.')
     return doc
+
+
+def windows_helper_env(home, resources, doc=None):
+    """Use an owner-only extraction directory for the verified ARM helper."""
+    if (doc['target'] if doc else target()) != 'windows/arm64':
+        return None
+    try:
+        doc = doc or metadata(resources)
+        if not doc.get('menu_sha256'):
+            raise ValueError('Missing verified menu')
+        home = Path(home)
+        directory = home / 'dotnet-bundle'
+        if any(path.is_symlink() or path.is_junction() for path in (home, directory)):
+            raise ValueError('Unsafe menu folder')
+        service = load('service')
+        platforms = loader.load(Path(__file__).parent / 'platforms' / '__init__.py')
+        backend = platforms.select(os.sys.platform, service, service.run)
+        backend.protect_secret(home)
+        directory.mkdir(mode=0o700, exist_ok=True)
+        backend.protect_secret(directory)
+        return {**os.environ, 'DOTNET_BUNDLE_EXTRACT_BASE_DIR': str(directory.resolve())}
+    except (OSError, ValueError, SystemExit) as exc:
+        raise OSError('The menu is unavailable.') from exc
 
 
 def retained(resources, home, expected_target=None, *, repair=False):

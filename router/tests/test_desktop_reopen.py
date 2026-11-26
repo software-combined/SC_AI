@@ -60,6 +60,7 @@ class DesktopReopenTests(unittest.TestCase):
                 queue.put({'closed': True})
             with mock.patch.object(menu, '_events', side_effect=events), \
                     mock.patch.object(menu, '_control', return_value=dict(status='Running', clients=[])), \
+                    mock.patch.object(menu.load('native_payload'), 'windows_helper_env', return_value=None), \
                     mock.patch.object(menu.subprocess, 'Popen', return_value=shell):
                 self.assertEqual(menu.run_menu(home, home, autostart=True), 74)
             self.assertEqual(sum(bool(doc.get('open_menu')) for doc in documents), 1)
@@ -83,6 +84,7 @@ class DesktopReopenTests(unittest.TestCase):
             with mock.patch.object(menu.time, 'time', return_value=request.stat().st_mtime + 10), \
                     mock.patch.object(menu, '_events', side_effect=lambda stream, queue: queue.put({'closed': True})), \
                     mock.patch.object(menu, '_control', return_value=dict(status='Running', clients=[])), \
+                    mock.patch.object(menu.load('native_payload'), 'windows_helper_env', return_value=None), \
                     mock.patch.object(menu.subprocess, 'Popen', return_value=shell):
                 self.assertEqual(menu.run_menu(home, home, autostart=True), 74)
             self.assertFalse(any(doc.get('open_menu') for doc in documents))
