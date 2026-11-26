@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## 1.5.4
+
+- Ship scg-review 0.7.7 with reusable review receipts for clean prepared merges.
+
 ## 1.5.3
 
 - Refresh enabled Claude Code plugins when Router applies a release.
