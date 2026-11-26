@@ -70,11 +70,16 @@ jobs:
         run: python -m unittest -v $(python tools/ci_scope.py --installer-tests)
 
   installer-windows:
-    name: Installer (Windows)
+    name: Installer (Windows, ${{ matrix.runner }})
     needs: changes
     if: needs.changes.outputs.installer == 'true'
-    runs-on: windows-latest
-    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [windows-latest, windows-11-arm]
+    runs-on: ${{ matrix.runner }}
+    # Each real Task Scheduler operation starts a fresh PowerShell process.
+    timeout-minutes: ${{ matrix.runner == 'windows-11-arm' && 90 || 15 }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
@@ -237,6 +242,7 @@ jobs:
           - {target: darwin/arm64, runner: macos-15}
           - {target: darwin/x86_64, runner: macos-15-intel}
           - {target: windows/x86_64, runner: windows-2025}
+          - {target: windows/arm64, runner: windows-11-arm}
           - {target: linux/x86_64, runner: ubuntu-24.04}
           - {target: linux/arm64, runner: ubuntu-24.04-arm}
     runs-on: ${{ matrix.runner }}

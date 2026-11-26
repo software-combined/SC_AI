@@ -42,7 +42,7 @@ touches GitHub and supplies no token.
 The first-install assets are published by
 `tools/publish_first_install.py`: it reads `packaging/runtime.lock`,
 downloads each pinned CPython build (macOS arm64/x86_64, Linux x86_64 and
-arm64 on glibc, Windows x64), verifies its sha256 before anything is
+arm64 on glibc, Windows x64 and ARM64), verifies its SHA-256 before anything is
 uploaded, and publishes the wrappers only after the runtimes and the
 `runtimes.json` table they read. Re-run it after a runtime-lock change;
 identical runtime artifacts are skipped and different bytes under a

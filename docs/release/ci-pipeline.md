@@ -10,6 +10,9 @@ that run (see [releasing](releasing.md)).
 Title and body edits cannot create a successful required `Test` check.
 No push to a branch publishes a router release; publication requires a tag.
 
+The installer and desktop menu checks cover both Windows x64 and ARM64.
+The ARM64 release package is also built on a native Windows ARM64 runner.
+
 ## Windows standard-user acceptance
 
 Windows acceptance uses four selections: `core-first`, `core-second`,
@@ -32,6 +35,13 @@ Diagnostic runs cannot produce the required `Test` check. The production
 matrix needs no diagnostic native aggregate: the matrix dependency makes `Test`
 wait for all four selections.
 
+Both Windows installer runners run the real Task Scheduler checks. On ARM64,
+successive PowerShell calls can outlast the x64 job budget and the test child's
+watchdog. The ARM64 job has a longer budget, and the tests release each child
+through a gate file after checking its process state.
+The Windows notice tests check that a held worker lock prevents a second
+dialog. The live process-ID reuse check covers the macOS and Linux path.
+
 ## Why overlap these jobs
 
 The offline suite and the native checks consume no shared generated output,
@@ -42,7 +52,8 @@ individual tests.
 ## Diagnostic source comparisons
 
 `ci-source-benchmark.yml` compares a baseline source commit with the current
-layout through `windows-ci-benchmark.yml`. The repository variable
+layout through `windows-ci-benchmark.yml`. The benchmark keeps its original
+target matrix so it can run against source from before Windows ARM64 support. The repository variable
 `HISTORICAL_SOURCE_REPOSITORY` must name the archive that holds the baseline
 commit; the job fails before checkout if it is missing. A private archive also
 needs authorised cross-repository read access, which the repository token does

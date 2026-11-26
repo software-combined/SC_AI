@@ -7,7 +7,7 @@ the existing public update path.
 
 ## Build and publish
 
-`Release` builds one canonical bundle, then creates five packages on native
+`Release` builds one canonical bundle, then creates six packages on native
 macOS, Windows and Ubuntu runners. Each build verifies its pinned Python archive.
 Linux bundles Zenity and GTK dependencies from Ubuntu 24.04, plus a pinned
 AppImage runtime with automatic extraction when FUSE is unavailable.
@@ -23,7 +23,7 @@ Runtime rollback preserves a newer working menu and its independent update contr
 These update resources do not change the first-install publication gates below.
 
 Each artifact receipt names its target, exact router bundle, runtime and package
-checksum. Publication requires all five targets from one exact bundle.
+checksum. Publication requires all six targets from one exact bundle.
 The publisher uploads immutable packages and signed `SHA256SUMS` first.
 It changes the channel's download list last. It refuses a distribution without
 public access for both installer files and download lists.
@@ -53,7 +53,7 @@ options fail explicitly. Building a release removes any stale generated
 its hourly model refresh to the updater.
 
 With the repository variable `NATIVE_INSTALLERS_ACCEPTED` set to `true`, every stable
-release publishes all five installers and switches the download page to them, so
+release publishes all six installers and switches the download page to them, so
 the page always offers the current release. The variable is set to `true`; the
 device checks in the native acceptance matrix still apply to each release.
 Without it, the page says the installers are not ready and keeps the setup
@@ -63,10 +63,12 @@ the Mac arm64 stable package while the other native packages remain private.
 This platform-specific publication does not assert acceptance of the other
 platforms or the complete matrix. Beta update feeds remain separate from the
 stable-only download page. Full native publication requires the
-existing five-platform checks. The Windows runtime's Visual C++ files follow
+existing six-target checks. The Windows runtime's Visual C++ files follow
 the basis recorded in [runtime licences](../legal/runtime-licenses.md).
 Use a new release version when adding native platforms to a published version.
-Its signed checksum inventory is immutable.
+Its signed checksum inventory is immutable. A release with a new runtime target
+also needs the [first-install assets](../operations/updates.md) published for
+that target so the IT setup script finds its pinned runtime.
 
 The download page follows Softcom Hub's light canvas, SC Pink, near-black text
 and Space Grotesk/Inter font stacks. The corporate icon is the existing bundled
@@ -126,7 +128,7 @@ setup pending. Keep the saved key and choose **Check setup** in SCG Router to fi
 
 ## Acceptance matrix
 
-Complete this matrix for Windows x64, macOS arm64 and Intel, and Ubuntu
+Complete this matrix for Windows x64 and ARM64, macOS arm64 and Intel, and Ubuntu
 24.04/26.04 GNOME on x64 and arm64. Existing client compatibility records remain
 separate from native-package acceptance.
 

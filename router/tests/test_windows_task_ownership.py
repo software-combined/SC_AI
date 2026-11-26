@@ -16,6 +16,10 @@ from tests.test_windows_backend import _backend, _install, _query, _state_file, 
 from tests.test_windows_task_state import _CurrentInstallerFixture
 from tests.windows_native_fixture import NativeChild, cleanup, task_diagnostics, write_launcher
 
+# Tests release children with their gate files. The watchdog allows for many
+# real PowerShell calls on ARM64 and stays within the updater's 30-minute limit.
+FIXTURE_LIFETIME = 1500
+
 
 class OwnershipTests(unittest.TestCase):
     def test_foreign_or_inaccessible_tasks_refuse_install_and_uninstall(self):
@@ -82,7 +86,7 @@ class NativeTaskTests(unittest.TestCase):
             home = Path(tmp)
             _state_file(home)
             children = []
-            gate, heartbeat = write_launcher(home, 'router_launch.py', 40)
+            gate, heartbeat = write_launcher(home, 'router_launch.py', FIXTURE_LIFETIME)
             service.install_task_launcher(home, Path(__file__).resolve().parents[1])
             arguments = backend._arguments(home, 'router_launch.py', backend.ROUTER_LOG)
             xml = backend.render_router_xml(sys.executable, home, sid).replace(
@@ -197,9 +201,8 @@ $s = New-Object -ComObject Schedule.Service; $s.Connect()
 $d = $s.NewTask(0); $d.XmlText = $r.xml; $d.Settings.Enabled = $false
 $null = $s.GetFolder('\').RegisterTaskDefinition($r.name, $d, 4, $r.sid, $null, 3, $null)
 '''
-                obj._call(['powershell', '-NoProfile', '-NonInteractive', '-Command', replace],
-                          input=json.dumps(dict(name=name, sid=sid, xml=foreign)), text=True,
-                          capture_output=True, timeout=20, check=True)
+                backend._shell.run_json(replace, dict(name=name, sid=sid, xml=foreign),
+                                        obj._call, timeout=60, check=True)
                 for operation in ('query', 'register', 'handover', 'run', 'complete', 'stop', 'delete'):
                     with self.assertRaises(backend._tasks.OwnershipError):
                         call(operation)
@@ -220,8 +223,7 @@ $null = $s.GetFolder('\').RegisterTaskDefinition($r.name, $d, 4, $r.sid, $null, 
             _state_file(home)
             children = []
             for script in ('router_launch.py', 'update_launch.py', 'express_launch.py'):
-                # Fresh PowerShell processes can make the migration exceed three minutes.
-                write_launcher(home, script, 600)
+                write_launcher(home, script, FIXTURE_LIFETIME)
             service.install_task_launcher(home, Path(__file__).resolve().parents[1])
             def task(name, operation='query', **kwargs):
                 return obj._task_state(name, home, operation, **kwargs)

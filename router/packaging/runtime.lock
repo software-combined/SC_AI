@@ -70,6 +70,19 @@
       "licences": [
         "python/LICENSE.txt"
       ]
+    },
+    {
+      "os": "windows",
+      "cpu": "arm64",
+      "triple": "cpython-3.14.7+20260814-aarch64-pc-windows-msvc-install_only.tar.gz",
+      "url": "https://github.com/astral-sh/python-build-standalone/releases/download/20260814/cpython-3.14.7+20260814-aarch64-pc-windows-msvc-install_only.tar.gz",
+      "mirror": "runtimes/cpython-3.14.7+20260814-aarch64-pc-windows-msvc-install_only.tar.gz",
+      "format": "tar.gz",
+      "sha256": "727ed4a64b21921847b913550f2b33e408ba9eb112a6802c6ec3735ee1aaa92c",
+      "exec": "python/python.exe",
+      "licences": [
+        "python/LICENSE.txt"
+      ]
     }
   ]
 }

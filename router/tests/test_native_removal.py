@@ -67,6 +67,7 @@ class RemovedMenuTests(unittest.TestCase):
                                     wait=lambda **kwargs: 0)
             with mock.patch.object(menu, '_events'), \
                     mock.patch.object(menu, '_control', return_value=dict(status='Running', clients=[])), \
+                    mock.patch.object(menu.load('native_payload'), 'windows_helper_env', return_value=None), \
                     mock.patch.object(menu.subprocess, 'Popen', return_value=shell) as popen:
                 self.assertEqual(menu.run_menu(home, home), 0)
                 self.assertEqual(closed, [True])

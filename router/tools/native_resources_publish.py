@@ -41,5 +41,5 @@ def records(directory, latest):
         result[target] = {key: doc[key] for key in ('version', 'bundle_sha256', 'sha256', 'size')}
         result[target]['url'] = ORIGIN + '/bundles/' + name
     if set(result) != set(stage.TARGETS):
-        raise ValueError('Native Resources require all five matching targets')
+        raise ValueError('Native Resources require all six matching targets')
     return result

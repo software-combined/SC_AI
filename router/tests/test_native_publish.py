@@ -68,7 +68,7 @@ class NativePublishTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, 'checksum'):
                 publish.packages(root, 'stable')
             first.with_suffix(first.suffix + '.json').unlink()
-            with self.assertRaisesRegex(ValueError, 'five packages'):
+            with self.assertRaisesRegex(ValueError, 'six packages'):
                 publish.packages(root, 'stable')
 
     def test_beta_cannot_be_published_as_a_public_native_download(self):
@@ -112,7 +112,7 @@ class NativePublishTests(unittest.TestCase):
                 self.assertEqual(publish.publish(args), 0)
             self.assertEqual(writes[-1], 'install/stable.json')
             base = 'installers/1.2.3.4/'
-            self.assertEqual(len([name for name in writes if name.endswith('.dmg')]), 5)
+            self.assertEqual(len([name for name in writes if name.endswith('.dmg')]), 6)
             self.assertTrue(publish.verify.verify_hex(public, contents[base + 'SHA256SUMS'],
                                                      contents[base + 'SHA256SUMS.sig'].decode().strip()))
             writes.clear()

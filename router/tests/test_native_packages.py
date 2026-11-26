@@ -106,8 +106,9 @@ class NativePackageTests(unittest.TestCase):
         import functools, http.server, threading
         feed = self.root / 'feed'
         feed.mkdir()
-        (feed / 'runtimes.json').write_text(json.dumps({'targets': {'windows/x86_64': {
-            'mirror': 'runtimes/x.tar.gz', 'exec': 'python/python.exe', 'sha256': '0' * 64}}}))
+        (feed / 'runtimes.json').write_text(json.dumps({'targets': {target: {
+            'mirror': 'runtimes/x.tar.gz', 'exec': 'python/python.exe', 'sha256': '0' * 64}
+            for target in ('windows/x86_64', 'windows/arm64')}}))
         requested = []
         class Feed(http.server.SimpleHTTPRequestHandler):
             def log_message(self, *args):
@@ -194,6 +195,23 @@ class NativePackageTests(unittest.TestCase):
         self.assertTrue(exe.is_file())
         self.assertEqual([command[0] for command in commands],
                          ['hdiutil', 'ISCC.exe'])
+
+    def test_windows_arm64_installer_has_separate_name_and_os_constraint(self):
+        out = self.root / 'arm-output'
+        out.mkdir()
+        def fake_inno(argv, **_):
+            script = Path(argv[-1]).read_text()
+            self.assertIn('ArchitecturesAllowed=arm64', script)
+            self.assertIn(r'SCG Router Installer\{#ProductVersion}-arm64', script)
+            self.assertIn('DOTNET_BUNDLE_EXTRACT_BASE_DIR', script)
+            self.assertIn("SetEnvironmentVariable('DOTNET_BUNDLE_EXTRACT_BASE_DIR', PreviousExtract)", script)
+            output = Path(re.search(r'#define OutputDir "([^"]+)"', script)[1])
+            (output / 'SCG-Router-Installer-1.2.3.4-Windows-arm64.exe').write_bytes(b'exe')
+        with mock.patch.object(build.sys, 'platform', 'win32'), \
+                mock.patch.object(build, 'run', fake_inno), \
+                mock.patch.object(build, '_make_ico'):
+            artifact = build.windows(self.resources, out, '1.2.3.4', 'arm64')
+        self.assertEqual(artifact.name, 'SCG-Router-Installer-1.2.3.4-Windows-arm64.exe')
 
     def test_linux_build_pins_tools_and_uses_uruntime(self):
         out = self.root / 'out'

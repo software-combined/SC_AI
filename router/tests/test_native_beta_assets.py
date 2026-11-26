@@ -1,4 +1,4 @@
-"""Beta assets bind five native bodies to the selected core and trusted signer."""
+"""Beta assets bind six native bodies to the selected core and trusted signer."""
 import hashlib
 import json
 import os
@@ -14,6 +14,7 @@ NATIVE_NAMES = {
     'darwin/arm64': 'SCG-Router-Installer-1.2.3.4-macOS-arm64.dmg',
     'darwin/x86_64': 'SCG-Router-Installer-1.2.3.4-macOS-x86_64.dmg',
     'windows/x86_64': 'SCG-Router-Installer-1.2.3.4-Windows.exe',
+    'windows/arm64': 'SCG-Router-Installer-1.2.3.4-Windows-arm64.exe',
     'linux/arm64': 'SCG-Router-Installer-1.2.3.4-Linux-aarch64.AppImage',
     'linux/x86_64': 'SCG-Router-Installer-1.2.3.4-Linux-x86_64.AppImage'}
 
@@ -44,7 +45,7 @@ def beta_artifacts(root):
 
 
 class BetaAssetTests(unittest.TestCase):
-    def test_cli_stages_only_five_bodies_and_trusted_signed_inventory_without_aws(self):
+    def test_cli_stages_only_six_bodies_and_trusted_signed_inventory_without_aws(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             args, public, bodies = beta_artifacts(root)
@@ -61,9 +62,9 @@ class BetaAssetTests(unittest.TestCase):
                              set(bodies) | {'SHA256SUMS', 'SHA256SUMS.sig'})
             checksums = (args.stage_beta / 'SHA256SUMS').read_bytes()
             rows = checksums.decode().splitlines()
-            self.assertEqual(len(rows), 5)
+            self.assertEqual(len(rows), 6)
             order = ('darwin/arm64', 'darwin/x86_64', 'linux/arm64',
-                     'linux/x86_64', 'windows/x86_64')
+                     'linux/x86_64', 'windows/arm64', 'windows/x86_64')
             self.assertEqual([row.split('  ', 1)[1] for row in rows],
                              [NATIVE_NAMES[target] for target in order])
             self.assertEqual(dict(row.split('  ', 1)[::-1] for row in rows),
@@ -75,7 +76,7 @@ class BetaAssetTests(unittest.TestCase):
                 self.assertEqual((args.artifacts / name).read_bytes(), body)
 
     def test_incomplete_tampered_foreign_or_misnamed_cohorts_never_create_assets(self):
-        for case in ('missing', 'duplicate', 'tampered', 'channel', 'mixed_version',
+        for case in ('missing', 'missing_arm64', 'duplicate', 'tampered', 'channel', 'mixed_version',
                      'foreign_version', 'foreign_core', 'filename', 'selected_channel',
                      'selected_core', 'partial_platforms', 'requested_channel', 'dry_run'):
             with self.subTest(case=case), tempfile.TemporaryDirectory() as temporary:
@@ -85,6 +86,8 @@ class BetaAssetTests(unittest.TestCase):
                 doc = json.loads(first.read_text())
                 if case == 'missing':
                     first.unlink()
+                elif case == 'missing_arm64':
+                    (args.artifacts / (NATIVE_NAMES['windows/arm64'] + '.json')).unlink()
                 elif case == 'duplicate':
                     (args.artifacts / 'duplicate.json').write_text(first.read_text())
                 elif case == 'tampered':

@@ -49,6 +49,7 @@ class PluginLayoutTests(unittest.TestCase):
                        json.dumps({'name': 'scg-example', 'version': '0.1.0'}))
         self.write('skills/example/SKILL.md', '# Example\n')
         self.write('scripts/setup.py', '# retained helper\n')
+        self.write('scripts/measure.py', '# retained skill helper\n')
         self.write('scripts/updater.py', '# retired updater\n')
         self.write('scripts/scheduling.py', '# retired scheduler\n')
 
@@ -73,7 +74,7 @@ class PluginLayoutTests(unittest.TestCase):
         prefix = 'plugins/development/scg-example/'
         self.assertEqual(set(release.plugin_files(self.root)), {
             prefix + '.codex-plugin/plugin.json', prefix + '.claude-plugin/plugin.json',
-            prefix + 'skills/example/SKILL.md', prefix + 'scripts/setup.py',
+            prefix + 'skills/example/SKILL.md', prefix + 'scripts/setup.py', prefix + 'scripts/measure.py',
         })
 
     def test_duplicate_names_are_refused_before_a_marketplace_is_written(self):
