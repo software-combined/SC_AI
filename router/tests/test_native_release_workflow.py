@@ -185,7 +185,10 @@ class NativeReleaseWorkflowTests(unittest.TestCase):
                 ('Native ACL contract (PowerShell)', 'python -m unittest tests.test_windows_acl_native')):
             with self.subTest(step=name):
                 verbose = run.replace('python -m unittest ', 'python -m unittest -v ', 1)
-                self.assertEqual(steps.get(name), ['        shell: pwsh', '        run: ' + verbose])
+                self.assertEqual(steps.get(name), [
+                    "        if: matrix.shard == 'all' || matrix.shard == 'general'",
+                    '        shell: pwsh', '        run: ' + verbose,
+                ])
 
     def test_native_ci_and_release_cover_the_published_targets(self):
         for path in (WORKFLOW, WORKFLOW.with_name('check.yml')):
@@ -194,7 +197,9 @@ class NativeReleaseWorkflowTests(unittest.TestCase):
                 self.assertCountEqual([target for target, _ in rows], NATIVE_NAMES.keys())
                 self.assertEqual(dict(rows)['windows/arm64'], 'windows-11-arm')
         windows = WORKFLOW.with_name('check.yml').read_text().split('  installer-windows:\n', 1)[1]
-        self.assertIn('runner: [windows-latest, windows-11-arm]', windows.split('  windows-standard:', 1)[0])
+        windows = windows.split('  windows-standard:', 1)[0]
+        self.assertIn('runner: windows-latest, shard: all', windows)
+        self.assertIn('runner: windows-11-arm, shard: general', windows)
 
     def test_native_builds_stay_out_of_public_actions_artifacts(self):
         text = WORKFLOW.read_text()

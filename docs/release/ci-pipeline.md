@@ -35,10 +35,14 @@ Diagnostic runs cannot produce the required `Test` check. The production
 matrix needs no diagnostic native aggregate: the matrix dependency makes `Test`
 wait for all four selections.
 
-Both Windows installer runners run the real Task Scheduler checks. On ARM64,
-successive PowerShell calls can outlast the x64 job budget and the test child's
-watchdog. The ARM64 job has a longer budget, and the tests release each child
-through a gate file after checking its process state.
+Both Windows architectures run the real Task Scheduler checks. Windows x64
+runs the full installer selection in one job. Windows ARM64 runs five jobs
+in parallel. The general job runs the remaining installer tests and PowerShell
+contracts. Four jobs cover ownership, restart, migration recovery and migration
+retry. Each uses its own runner, task names and child processes.
+The tests release each child through a gate file after checking its process state.
+The required `Test` check waits for all five jobs. The selector's test compares
+the ARM64 selections with the complete Windows installer inventory.
 The Windows notice tests check that a held worker lock prevents a second
 dialog. The live process-ID reuse check covers the macOS and Linux path.
 
@@ -69,3 +73,8 @@ Use the actual main pull-request workflow to measure the result.
 Compare completed runs with equivalent source, coverage and runner classes.
 Record queue time, individual steps, aggregate runner time and failures separately.
 Timing from runs that are not equivalent does not prove a controlled improvement.
+
+A push to `cyril/windows-arm-ci-proof-*` runs the same job graph against
+`origin/main` for timing. The final job is named
+`Diagnostic acceptance (Windows ARM64)`. Stable publication still requires a
+successful pull-request acceptance run.

@@ -7,6 +7,9 @@ import subprocess
 import sys
 import time
 
+# Children exit through gate files. The watchdog fits the updater's 30-minute limit.
+FIXTURE_LIFETIME = 1500
+
 
 def create_shortcut(run, path, target, arguments):
     """Keep real shortcut creation bounded and report only fixed timeout phases."""
