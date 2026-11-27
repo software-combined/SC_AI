@@ -120,7 +120,7 @@
             {"level": 4, "text": "Written design rules exist and most screens use the shared theme and components, but the entry file does not route to the rules, or some one-off styles remain."},
             {"level": 5, "text": "One design rules document says how screens stay clear, consistent, aligned and simple for a non-technical user, and the entry file routes screen work to it. One theme holds the colours, spacing and type, shared components (buttons, dialogs, menus, page frame) are used everywhere, and a check stops hard-coded colours."}
           ],
-          "evidenceToLookFor": "The design rules document and whether AGENTS.md routes screen work to it, the theme or token files, hard-coded colours outside them (ui in measure.json), and three sampled screens: do they use the shared button, dialog, menu and page frame, or build their own? Not applicable for a repository with no screens.",
+          "evidenceToLookFor": "The design rules document and whether AGENTS.md routes screen work to it (open it: a document named for design that records product decisions, not how screens look and behave, does not count as design rules), the theme or token files, hard-coded colours outside them (ui in measure.json), and three sampled screens: do they use the shared button, dialog, menu and page frame, or build their own? Not applicable for a repository with no screens.",
           "naAllowed": true
         }
       ]
@@ -155,11 +155,11 @@
           "descriptors": [
             {"level": 1, "text": "Little or no documentation in the repository, or one very large README."},
             {"level": 2, "text": "Documents exist but are scattered across folders with no index. Long guides mix rules, design and operations."},
-            {"level": 3, "text": "Documents sit in one folder with some grouping, but not by domain and subdomain. Many are over 200 lines, or there is no index, or plans sit loose in one folder."},
-            {"level": 4, "text": "Documents are grouped by domain and subdomain with an index, and most have one responsibility. A few are over 200 lines, mix responsibilities, or use different domain names from the code. Plans are filed by domain, but some have no status, or there is no plans index or plan template."},
-            {"level": 5, "text": "Documents are grouped by domain and then subdomain, with the same names as the code. Each document has one responsibility, a short index lists them all, every document is 200 lines or fewer and a check enforces it. Plans sit under plans/<domain>/<subdomain> with a PLAN_RULES.md template, a status on every plan and an index."}
+            {"level": 3, "text": "Documents sit in one folder with some grouping, but not by domain and subdomain. Many are over 200 lines, or there is no index, or plans sit loose in one folder, or two or more core guides the repository needs are missing."},
+            {"level": 4, "text": "Documents are grouped by domain and subdomain with an index, and most have one responsibility. A few are over 200 lines, mix responsibilities, or use different domain names from the code. Plans are filed by domain, but some have no status, or there is no plans index or plan template. One core guide the repository needs is missing."},
+            {"level": 5, "text": "Documents are grouped by domain and then subdomain, with the same names as the code. Each document has one responsibility, a short index lists them all, every document is 200 lines or fewer and a check enforces it. Every core guide the repository needs exists: rules, architecture, patterns and testing always, and API, screen design, data and database guides when the repository has those parts. Plans sit under plans/<domain>/<subdomain> with a PLAN_RULES.md template, a status on every plan and an index."}
           ],
-          "evidenceToLookFor": "The documentation folder tree compared with the code's domain and subdomain folders, the index, documents that mix rules, design, testing and operations, line counts of every Markdown file, a doc size check, and guides that no index or other guide links to, and the plans folder: PLAN_RULES.md, its index, plans not filed by domain, plans without a status and other folders that hold plans (measure.json layout.plans).",
+          "evidenceToLookFor": "The documentation folder tree compared with the code's domain and subdomain folders, the index, documents that mix rules, design, testing and operations, line counts of every Markdown file, a doc size check, and guides that no index or other guide links to, and the plans folder: PLAN_RULES.md, its index, plans not filed by domain, plans without a status and other folders that hold plans (measure.json layout.plans). The core guides: list which exist under any name, which the repository needs (see the standard's core guides table) and which are missing; a guide the repository does not need is never a gap.",
           "naAllowed": false
         },
         {
