@@ -2,8 +2,17 @@
 
 This page records the client versions the router is checked against and the
 result of the latest release checks. After any Codex desktop or Claude Code
-upgrade, run the compatibility checks in the repository's `AGENTS.md`
-section 7 and replace the versions and results below.
+upgrade, follow the compatibility rule and replace the versions and results
+below.
+
+## Compatibility rule
+
+After any Codex desktop or Claude Code upgrade, and before publishing a
+release, run the paid probe from `tools/probe_codex_runtime.py` on one
+OpenRouter model and one OpenAI model. Also run one OpenRouter model and one
+subscription model through a real Claude Code session (see
+[Claude Code reference](../clients/claude-code-reference.md)). Record both
+client versions on this page.
 
 ## Current clients
 

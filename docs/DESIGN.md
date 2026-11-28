@@ -1,4 +1,7 @@
-# Design rules
+# Product decisions
+
+Standing product decisions the code keeps. Screen and dialog rules are in
+[UI and UX](UI-UX.md).
 
 The router has no request cap (`tools/check_policy_scans.py` keeps one from
 returning); request size limits still apply. Compaction runs through a billable

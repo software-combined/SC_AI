@@ -51,7 +51,7 @@ An old large file may stay on a baseline, but it cannot grow. A script in the re
 | `PATTERNS.md` | The recurring patterns and where each is described | Always |
 | `TESTING.md` | Which checks to run and where each test layer lives | Always |
 | `API.md` | Naming, errors, paging, idempotency and versioning | The repository defines an interface for other programs: an HTTP endpoint, a proxy, a command line or a file format |
-| `DESIGN.md` or `UX-UI.md` | How screens stay clear, consistent and simple | The repository has screens. A document about product decisions, not how screens look and behave, does not count |
+| `DESIGN.md` or `UI-UX.md` | How screens stay clear, consistent and simple | The repository has screens. A document about product decisions, not how screens look and behave, does not count |
 | `DATA.md` | The data the repository keeps or exchanges, its shape, where it lives and how long it is kept | The repository stores files, records, events or state, or exchanges data with other systems |
 | `DATABASE.md` | Schema ownership, migrations and how to change the schema safely | The repository owns a database or its migrations. A small database may be a section of `DATA.md` |
 

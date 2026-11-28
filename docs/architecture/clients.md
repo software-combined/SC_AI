@@ -22,7 +22,7 @@ spec-load it (`packaging/service.py::load`). Adding a client means:
 
 The genuinely hard case is a client that speaks neither protocol: it needs a
 new adapter class behind the definition table, never a branch in the request
-path (`AGENTS.md` section 3).
+path ([rules](../RULES.md), rule 3).
 
 ## Codex connection switching
 

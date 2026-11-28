@@ -1,7 +1,7 @@
 # Contributing
 
-Thanks for taking the time. This page covers the mechanics; `AGENTS.md` holds
-the same rules in the form coding agents read, and `docs/ARCHITECTURE.md`
+Thanks for taking the time. This page covers the mechanics; `AGENTS.md`
+routes coding agents to the guides in `docs/`, and `docs/ARCHITECTURE.md`
 says where new code belongs.
 
 ## Before you start
@@ -58,17 +58,26 @@ regressions explicitly disable UTF-8 mode to cover the default runtime.
   access also allows issue and pull-request management.
 - Commit subjects use `<type>: <short summary>` with type `feat`, `fix`,
   `refactor`, `test`, `chore` or `docs`.
-- Every user-visible Router change updates `router/CHANGELOG.md` and `router/packaging/VERSION`
-  (semver). Maintainers cut releases with the full `v<VERSION>` tag matching
-  `packaging/VERSION`, so `0.6.117` is tagged `v0.6.117`. Add `-beta`,
-  `-express`, or `-beta-express` when the release needs that channel or
-  urgency marker.
-- Keep the source limits: modules 250 lines soft and 400 hard, entrypoints
-  and tools 400/700, tests 300/500. `tools/check_source_limits.py` reports
-  the numbers.
+- Every user-visible Router change updates `router/CHANGELOG.md` and
+  `router/packaging/VERSION`. The rules are in
+  [versions and changelogs](docs/release/releasing.md#versions-and-changelogs).
+  Release tags are in [how to ship](docs/release/releasing.md#how-to-ship).
+- Keep the [source limits](docs/RULES.md#source-limits).
+  `tools/check_source_limits.py` reports the numbers.
 - A change to `ai_router/models.json` needs the
   `python3.14 -m ai_router.models check` output and a probe result in the
   pull request, or a deliberate `tier: preview`.
+
+### Agent sessions
+
+- Use one writable worktree per agent session, never the primary checkout.
+  Record its path, branch, owning task and integration target, and reuse it
+  for follow-ups. Clean it up after verified integration.
+- Base every branch on `development` and target every pull request at
+  `development`, except release pull requests from `development` to `main` and
+  the [scoped plugin release](docs/plugins/agent-plugins.md#scoped-plugin-release-to-main).
+  Never push directly to `main`.
+- Never run `git reset --hard` or `git checkout --` without explicit approval.
 
 ### Existing clones after the branch rename
 

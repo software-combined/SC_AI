@@ -142,7 +142,7 @@ class ModelRosterTests(unittest.TestCase):
                 self.assertIn('Anthropic', entries[slug]['description'])
 
     def test_roster_pins_exact_ids_and_retires_every_latest_alias(self):
-        # AGENTS.md section 8: no row is a tilde alias today; the retired
+        # docs/models/naming.md: no row is a tilde alias today; the retired
         # latest ids stay in RETIRED_SLUGS so upgrades drop them from the
         # picker, and a stale catalogue cannot bring them back.
         self.assertEqual([m.slug for m in MODELS if m.slug.startswith('~')], [])
