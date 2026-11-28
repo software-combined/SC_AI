@@ -1,4 +1,4 @@
-"""One style for every dialog the router shows (AGENTS.md section 4a).
+"""One style for every dialog the router shows (docs/UI-UX.md).
 
 `packaging/client_dialog.py` owns the title, the icon and each platform's
 dialog launch; this test pins that ownership and the shared vocabulary.

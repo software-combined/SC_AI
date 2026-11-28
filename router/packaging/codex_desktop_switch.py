@@ -35,7 +35,7 @@ SWITCHED, SWITCHED_SIGNED_IN, OPENROUTER, SWITCHED_BACK = (
     _blocks.SWITCHED, _blocks.SWITCHED_SIGNED_IN, _blocks.OPENROUTER, _blocks.SWITCHED_BACK)
 OPENROUTER_TOGGLE = 'openrouter_toggle'
 ROUTED_VARIANTS = _blocks.ROUTED_VARIANTS
-# Plain wording (AGENTS.md section 4a), naming the app as people see it.
+# Plain wording (docs/UI-UX.md), naming the app as people see it.
 PROMPTS = {
     OPENROUTER: ('Switch the ChatGPT app (Codex) to OpenRouter models? It will restart. '
                  'Your chats and projects stay in place. Send may still be blocked '

@@ -1,5 +1,10 @@
 # Changelog
 
+## scg-codebase-readiness 0.1.6 (2026-11-28)
+
+- The standard names the screen design guide `UI-UX.md`, the name that
+  `measure.py` recognises. It named `UX-UI.md`, which the measure misses.
+
 ## scg-codebase-readiness 0.1.5 (2026-11-28)
 
 - Question 3.2 now checks the core guides. Rules, architecture, patterns and

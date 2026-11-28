@@ -52,7 +52,7 @@ def message(twin=None):
         subject, pick = 'This model', 'Pick another model'
     else:
         label = provider_defs.label_for(twin.provider)
-        # A picker label reads `<Vendor>: <Model> · <Provider>` (AGENTS.md section 8).
+        # A picker label reads `<Vendor>: <Model> · <Provider>` (docs/models/naming.md).
         subject = twin.display_name.removesuffix(' · ' + label).removeprefix(twin.vendor + ': ')
         pick = f'Pick "{twin.display_name}" to use it through {label}'
     return (f'{subject} needs your {login}, which is unavailable on the '

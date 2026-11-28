@@ -21,7 +21,7 @@ from collections import Counter
 from pathlib import Path
 
 # packaging/ holds entrypoints (installer, service helpers), so it takes the
-# entrypoint budget from AGENTS.md rather than the module one.
+# entrypoint budget from docs/RULES.md rather than the module one.
 SOFT = {'ai_router': 250, 'tools': 400, 'tests': 300, 'packaging': 400}
 HARD = {'ai_router': 400, 'tools': 700, 'tests': 500, 'packaging': 700}
 LONG_LINE = 120

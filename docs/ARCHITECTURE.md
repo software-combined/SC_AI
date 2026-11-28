@@ -6,6 +6,8 @@ SC_AI groups the local Router and reusable agent plugins in one repository.
 plugin manifests retain the separate `scg-openrouter` setup identity.
 Shared guides live in `docs/`. Plugins define task instructions; provider
 adapters and transport stay in Router. Plugins have their own release versions.
+Place new modules within the boundaries below, and update this map when
+responsibilities change.
 
 The Router builder includes shared plugins, licences, and guides while keeping
 the installed flat layout. Source paths never become installed-state paths.
@@ -138,7 +140,7 @@ handler's injected `log_event`), and nothing else under `ai_router/` does.
   resumed request is rejected, using the same account and client version.
   Concurrent requests share the refresh; external routes never use it.
   `ai_router/catalogue.py` + `models.py` + `live_refresh.py` share client
-  projection duties through `model_metadata.py` (pure normalization) and
+  projection duties through `model_metadata.py` (pure normalisation) and
   `clients/` (capability projection, picker visibility); the served
   instruction text and its capped delegation roster live in the
   `model_instructions.py` leaf (Plan 154). Codex lists at most five

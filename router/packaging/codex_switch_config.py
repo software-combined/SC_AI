@@ -52,7 +52,7 @@ PROVIDER = 'scg_router'
 HEADER = 'x-scg-codex-route'
 ROUTED_LIST = 'routed-models.json'
 
-# Plain wording (AGENTS.md section 4a): Switch Codex shows these as they are.
+# Plain wording (docs/UI-UX.md): Switch Codex shows these as they are.
 SWITCHED_REFUSAL = ('Codex is switched to OpenRouter only. In the SCG Router menu, choose '
                     'Codex, then ChatGPT + OpenRouter, and try again.')
 NOT_CONNECTED = 'Codex is not connected to SCG Router. Run setup again.'

@@ -248,7 +248,7 @@ class RegistryTests(unittest.TestCase):
         # prefix always equals the row's vendor field, pinned rows keep any
         # version/snapshot token verbatim, and a tilde alias row (none in the
         # roster today) tracks with 'Latest' instead of a pinned snapshot
-        # (AGENTS.md section 8).
+        # (docs/models/naming.md).
         for model in MODELS:
             if model.provider != 'openrouter':
                 continue

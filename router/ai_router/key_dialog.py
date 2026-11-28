@@ -6,7 +6,7 @@ top of it. The key is written by the dialog tool to stdout; it is never
 passed in argv, the environment, a file or a log.
 
 The installer's dialog owner, `packaging/client_dialog.py`, supplies the
-title, icon and platform launch (AGENTS.md section 4a). It loads only when a
+title, icon and platform launch (docs/UI-UX.md). It loads only when a
 dialog is drawn, so the runtime never imports installer code at startup.
 """
 import functools

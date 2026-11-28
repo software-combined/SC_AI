@@ -1,4 +1,4 @@
-"""The restart dialog's wording and the models it names (AGENTS.md 4a).
+"""The restart dialog's wording and the models it names (docs/UI-UX.md).
 
 Both packaging modules are loaded from `packaging/` the way the installer
 surface loads them, so these checks pin the plain-language sentence, the cap
