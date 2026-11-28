@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## 1.5.5
+
+- Ship scg-codebase-readiness 0.1.5, which checks that a repository has the core guides it needs.
+
 ## 1.5.4
 
 - Ship scg-review 0.7.7 with reusable review receipts for clean prepared merges.

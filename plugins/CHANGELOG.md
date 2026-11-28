@@ -1,5 +1,16 @@
 # Changelog
 
+## scg-codebase-readiness 0.1.5 (2026-11-28)
+
+- Question 3.2 now checks the core guides. Rules, architecture, patterns and
+  testing guides are always needed. API, screen design, data and database
+  guides are needed only when the repository has those parts. The standard
+  lists each guide and when it is needed. The documentation lane records each
+  one as present, missing or not needed. A guide the repository does not need
+  is never a gap.
+- Question 2.4 no longer counts a document about product decisions, rather
+  than how screens look and behave, as screen design rules.
+
 ## scg-review 0.7.7 (2026-11-27)
 
 - Reuse current review receipts for a clean prepared merge when every incoming

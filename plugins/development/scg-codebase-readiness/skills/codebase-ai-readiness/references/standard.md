@@ -42,6 +42,19 @@ An old large file may stay on a baseline, but it cannot grow. A script in the re
 
 **Documents are structured like the code.** Guides sit in one documentation folder, grouped by domain and then subdomain, for example `Doc/payables/extraction/`. The folders use the same domain names as the code. Each document has one responsibility: rules, design, testing and operations are separate documents, not sections of one long guide. A short index lists every guide. Each Markdown document is 200 lines or fewer, and a longer guide is split by responsibility.
 
+**The core guides exist where they apply.** Every repository needs the guides marked "Always" in the table below, at the top of its documentation folder. Other guides are needed only when the repository has the part they describe. The names below are defaults. A guide with the same job under another name counts. A guide for a part the repository does not have is a cost and earns no credit.
+
+| Guide | What it covers | Needed when |
+|---|---|---|
+| `RULES.md` | Where code goes, naming, branches, tests and review | Always |
+| `ARCHITECTURE.md` | The domains, their owners and the allowed dependency direction | Always |
+| `PATTERNS.md` | The recurring patterns and where each is described | Always |
+| `TESTING.md` | Which checks to run and where each test layer lives | Always |
+| `API.md` | Naming, errors, paging, idempotency and versioning | The repository defines an interface for other programs: an HTTP endpoint, a proxy, a command line or a file format |
+| `DESIGN.md` or `UX-UI.md` | How screens stay clear, consistent and simple | The repository has screens. A document about product decisions, not how screens look and behave, does not count |
+| `DATA.md` | The data the repository keeps or exchanges, its shape, where it lives and how long it is kept | The repository stores files, records, events or state, or exchanges data with other systems |
+| `DATABASE.md` | Schema ownership, migrations and how to change the schema safely | The repository owns a database or its migrations. A small database may be a section of `DATA.md` |
+
 **Plans are filed like the code and show their status.** Plans sit under `plans/<domain>/<subdomain>/`, with the same domain names as the code. `plans/PLAN_RULES.md` gives one template with a status line (Proposed, In progress, Done or Dropped), and `plans/README.md` lists every plan with its status. A plan's status changes in the same pull request as the work, so anyone can see what is planned, under way or finished.
 
 **Documents are accurate and say each thing once.** Every local link resolves. Commands, paths and limits in the documents match the repository. Each decision has one owning guide; other guides link to it and do not repeat it. Stale text is revised or deleted, not left beside the new text.
