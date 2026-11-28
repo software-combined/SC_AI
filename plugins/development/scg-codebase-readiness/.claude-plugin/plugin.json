@@ -1,6 +1,6 @@
 {
   "name": "scg-codebase-readiness",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "description": "Audit a repository against the Software Combined standard for an AI-optimised codebase and build a plain-language report.",
   "author": {"name": "Software Combined"},
   "license": "Apache-2.0"

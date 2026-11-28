@@ -1,4 +1,4 @@
-"""Fast core suite by default; installer tests are opt-in (AGENTS.md 5)."""
+"""Fast core suite by default; installer tests are opt-in (docs/TESTING.md)."""
 import os
 import unittest
 from pathlib import Path

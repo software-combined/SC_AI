@@ -1,7 +1,10 @@
 # Rules
 
-These rules decide where new code goes and which way imports point.
-Paths are relative to `router/`. See the [architecture map](ARCHITECTURE.md).
+These rules decide where new code goes, which way imports point, how large
+files may grow and what may never enter this public repository. Paths are
+relative to `router/`. See the [architecture map](ARCHITECTURE.md).
+
+## Where code goes
 
 1. `provider_defs.py` owns every upstream fact (host, endpoint prefixes, key
    location, model catalogue, key-info endpoint, failure dialect) and imports
@@ -110,7 +113,7 @@ Paths are relative to `router/`. See the [architecture map](ARCHITECTURE.md).
 7. `tools/` holds checkout-run helpers (local probes, scans, key ceremonies)
    that are invoked by the developer or by CI, not by an installed router;
    `ci_unittest.py` owns bounded CI workers and their result reports, keeping
-   unittest discovery and fixtures separate from router runtime behavior.
+   unittest discovery and fixtures separate from router runtime behaviour.
    `plugin_verification.py` owns conservative suite selection for local and CI
    checks; unknown scope retains full discovery. Windows handoff waits for its
    child and propagates failure instead of relying on process replacement.
@@ -126,3 +129,43 @@ Paths are relative to `router/`. See the [architecture map](ARCHITECTURE.md).
    imports it. `packaging/release.py` includes only its named installed operator
    helpers from `tools/`; checkout verification tools stay outside the bundle.
    `tools/disable.py` is the installed-host remover that `packaging/install.py` runs.
+
+## Source limits
+
+Modules have a soft limit of 250 lines and a hard limit of 400. Entrypoints and
+tools use 400/700; tests use 300/500. Check these with
+`python3.14 tools/check_source_limits.py`. A file above the soft cap needs a
+baseline entry, which is a ceiling: the file may shrink freely and may not grow
+past the recorded count. Remove the entry once the file is back under the cap.
+
+The same check ratchets three counts per file in
+`config/source-ratchets-baseline.json`: lines with more than one statement,
+lines over 120 characters, and platform comparisons in `packaging/` outside
+`packaging/platforms/` and the seven self-contained `*_launch.py` launchers it
+names. New files start at zero; counts may only fall. Split by responsibility,
+never by packing lines. Keep router and provider modules small. No provider
+host, key name or catalogue URL literal belongs anywhere under `ai_router/`
+except `provider_defs.py` (rule 3).
+
+## Public repository and security
+
+This repository is public. Treat tracked files, pull-request content and
+release artifacts as public disclosure, and sanitise content before adding it.
+
+- Never include secrets, credentials, bearer tokens, personal contact details,
+  private customer or company information, account or tenant identifiers,
+  internal URLs, local user paths or private operational configuration.
+- Use synthetic names and values in examples, fixtures and benchmarks. Public
+  product names and public source links are acceptable.
+- Apply this to source, instructions, documentation, tests, screenshots,
+  generated files and metadata. Keep private configuration and raw evidence
+  outside the repository.
+- Check the complete intended diff before each commit, push, pull request and
+  release. Run the required secret and public-content checks; a passing scan
+  does not replace reading the content for sensitive data.
+- Never commit state, activation receipts, catalogues, logs, keys or bearer
+  tokens. Never log request or tool content.
+- Bind only to loopback addresses; the path token is unique to each
+  installation ([API](API.md)). Subscription traffic stays on OpenAI or
+  Anthropic, and external providers use separate credentials: never send
+  subscription headers to external providers.

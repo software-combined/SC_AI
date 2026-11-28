@@ -11,11 +11,13 @@ models and billing. These pages go deeper.
 | Page | Use it for |
 |---|---|
 | [Architecture](ARCHITECTURE.md) | Module ownership and the allowed dependency direction |
-| [Rules](RULES.md) | Where new code goes and which way imports point |
-| [Design rules](DESIGN.md) | Standing product decisions the code keeps |
+| [Rules](RULES.md) | Where new code goes, import direction, source limits and public-repository rules |
+| [API](API.md) | Routes, sign-in token, error shape and the rules for changing them |
+| [UI and UX](UI-UX.md) | Screen and dialog rules for people who are not technical |
+| [Product decisions](DESIGN.md) | Standing product decisions the code keeps |
 | [Data](DATA.md) | Files the router keeps in its home and the records it writes |
 | [Patterns](PATTERNS.md) | Recurring code patterns and where each is described |
-| [Testing](TESTING.md) | Which checks to run and where each test layer is described |
+| [Testing](TESTING.md) | Checks before every commit, CI, test layers and live probes |
 | [Glossary](GLOSSARY.md) | Terms these pages use |
 
 ## Start
@@ -43,6 +45,7 @@ models and billing. These pages go deeper.
 | Page | Use it for |
 |---|---|
 | [Adding a model](models/adding-a-model.md) | Adding, probing and promoting a registry row |
+| [Model naming](models/naming.md) | Picker labels, pinned rows and tilde aliases |
 | [Media generation](models/media-generation.md) | Preview image and video routes, client prerequisites and bounded verification |
 
 ## Operations
@@ -68,11 +71,11 @@ models and billing. These pages go deeper.
 
 | Page | Use it for |
 |---|---|
-| [Releasing](release/releasing.md) | Branches, tags, the release workflow and tests before a tag |
+| [Releasing](release/releasing.md) | Branches, tags, the release workflow, tests before a tag, versions and changelogs |
 | [Feed publishing](release/feed-publishing.md) | Feed infrastructure, publication reporting and bad-release recovery |
 | [Native installers](release/native-installers.md) | DMG, EXE and AppImage builds, staff downloads, migration and acceptance |
 | [Verification pipeline](release/ci-pipeline.md) | Parallel main acceptance, required checks and diagnostic comparisons |
-| [Compatibility](release/compatibility.md) | Current client versions, latest release checks, their limits and the Codex upgrade check |
+| [Compatibility](release/compatibility.md) | The compatibility rule, current client versions, latest release checks and the Codex upgrade check |
 | [Installed runtime files](release/runtime-files.md) | What the release bundle contains |
 | [Changelog archive](changelog-archive.md) | Older Router release notes kept outside the active changelog |
 
@@ -93,7 +96,7 @@ models and billing. These pages go deeper.
 
 | Page | Use it for |
 |---|---|
-| [Agent plugins](plugins/agent-plugins.md) | The bundled tools, standalone setup and their release rules |
+| [Agent plugins](plugins/agent-plugins.md) | The bundled tools, standalone setup, plugin rules and the scoped release |
 | [Provenance](legal/provenance.md) | Where the code came from |
 | [Publication](legal/publication.md) | Integration scope, safeguards and owner decisions |
 | [Runtime licences](legal/runtime-licenses.md) | Pinned archive and notice verification |

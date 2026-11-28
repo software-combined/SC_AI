@@ -68,7 +68,7 @@ including repair, retry and compaction summaries. Each request is limited to 512
 output tokens; an uncapped request is refused before sending. Claude also has
 a $0.25 client budget. These are probe limits, not production request limits.
 
-Evidence binds the normalized capability row and Python runtime contents to
+Evidence binds the normalised capability row and Python runtime contents to
 the actual client versions. It records requested effort, exposed serving
 identity and its source, and attempt counts including summary helpers.
 Counts reserve the budget before dispatch, so an unsent connection failure can
@@ -95,7 +95,7 @@ The offline conformance gate enumerates every registry row and each protocol
 its provider serves, including preview and hidden rows. Run
 `python3.14 -m unittest tests.test_model_route_conformance` after changing a
 row. The real handler checks preparation, credentials, outcomes, recovery and
-cleanup against simulated upstreams. These checks prove shared route behavior;
+cleanup against simulated upstreams. These checks prove shared route behaviour;
 they do not establish live acceptance for each model.
 
 `observed_item_types` records extra Responses input shapes that a bounded wire
@@ -170,7 +170,7 @@ request's tools are all client-run. Whether a row keeps `web_search` decides rep
 the prepared tools, not through the row's name; a row that needs different
 stream behaviour is a code change, not a quirk.
 
-Picker labels follow the naming convention in `AGENTS.md` section 8
+Picker labels follow the [naming convention](naming.md)
 (`<Vendor>: <Model> <Version?>`); `models add` and `live_refresh` produce
 conforming rows automatically. A hyphenated upstream version
 (`MiMo-V2.6-Flash`) is stored with spaces (`MiMo V2.6 Flash`).

@@ -2,8 +2,8 @@
 
 `docs/release/acceptance-ledger.json` holds one object per cell run (Plan 185). The
 newest clients are the highest versions `docs/release/compatibility.md` names in the
-backticked forms Codex desktop `X` and Claude Code `X`, where AGENTS.md
-section 7 records both after every client upgrade. A cell is stale when its
+backticked forms Codex desktop `X` and Claude Code `X`, where its
+compatibility rule records both after every client upgrade. A cell is stale when its
 latest pass ran on an older version of either client, and missing when it has
 no run. Newer failures or conflicting tied runs supersede a pass.
 Exit 1 when any P1 cell (C1-C4) is stale, failed or missing, or when either

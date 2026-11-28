@@ -48,9 +48,8 @@ Installing the router later moves that Codex registration to the router's own
 copy. Router updates refresh enabled plugins in both clients. A plugin you
 turned off in Codex or Claude Code stays off.
 
-Plugin releases ride `plugin.json` versions plus `plugins/CHANGELOG.md`,
-separate from the router tag train (`packaging/VERSION` never moves for a
-plugin-only change). See [repository instructions](../../AGENTS.md#9-agent-plugins) for the plugin rules.
+Router hosts receive a plugin change with the next Router release
+([versions and changelogs](../release/releasing.md#versions-and-changelogs)).
 
 Small skill and reference updates use the shared
 [`plugin_verification.py`](../../router/tools/plugin_verification.py) entry point locally
@@ -62,4 +61,54 @@ secret scans and independent reviews remain required.
 Executable plugin changes and uncertain or mixed scope retain full Router tests.
 Changes to the selector or its workflow wiring also require full verification;
 the policy cannot exempt its own update. See
-[verification before commit](../../AGENTS.md#5-verification-before-commit) for commands.
+[testing](../TESTING.md#before-every-commit) for commands.
+
+## Plugin rules
+
+Author under `plugins/<domain>/<name>` and link skills from their
+[domain page](../../plugins/README.md). The root `scg-openrouter` plugin stays
+outside the marketplace. Keep the marketplace name and plugin names stable.
+
+Before coding or reviewing code, read the installed
+[`scg-ponytail:ponytail` skill](../../plugins/development/scg-ponytail/skills/ponytail/SKILL.md)
+in full. Resolve its current absolute path from the active client's skill
+catalogue or plugin inventory; never pin a cache version. Ponytail owns
+solution simplicity; the repository rules and the review skill keep all
+verification gates.
+
+- Every plugin works in Codex and Claude Code: ship both `.codex-plugin` and
+  `.claude-plugin` manifests at the same version, keep skill content
+  client-agnostic, and read system state through whichever MCP or connector
+  tools the active client exposes.
+- Shipped plugins carry no updater of their own. Keep the retained
+  `scripts/updater.py` and `scheduling.py` byte-identical across the plugins
+  (tests pin it); the release bundle withholds them. Link every skill to its
+  shared update guide.
+- Release a plugin by bumping both manifests' version and adding a
+  `plugins/CHANGELOG.md` entry. Validate Claude manifests and skills with
+  `claude plugin validate --strict`, run the installed skill-creator's
+  `scripts/quick_validate.py` for a new or changed skill, and run the plugin
+  test modules for paired Codex/Claude manifests and package contracts.
+  Require actual Codex installation and skill availability in a new session
+  before claiming local delivery.
+
+## Scoped plugin release to main
+
+Integrate plugin fixes through `development` first. If `development` contains
+unrelated unreleased Router changes, reuse the owned worktree for a release
+branch based on current `main` and cherry-pick only the reviewed plugin
+commits. The release pull request targets `main`. Its diff may contain only
+`plugins/`, directly related plugin verification tests, marketplace
+registration in `.agents/plugins/marketplace.json`, the README's agent-plugin
+documentation, and directly related plugin-release instructions on this page.
+
+Plugin verification-policy updates may also promote only
+`tools/plugin_verification.py`, `.github/workflows/check.yml`, their regression
+tests, `CONTRIBUTING.md`, `docs/ARCHITECTURE.md` and this page through this
+scoped procedure. These policy changes require full verification.
+
+Verify the complete diff against current `main`, run all required checks and
+reviews on that exact candidate, and use the normal pull-request gates. Do not
+include Router code, `packaging/VERSION`, Router tags or release-workflow
+changes. Reconcile the release into `development` afterwards without
+discarding either side.

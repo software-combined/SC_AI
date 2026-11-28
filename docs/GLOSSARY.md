@@ -5,14 +5,14 @@ Terms these pages use, with the page that defines each one.
 | Term | Meaning |
 |---|---|
 | Router home | The router's state directory, `~/.codex/mixed-model-router` by default; `ROUTER_HOME` overrides it. See [data](DATA.md). |
-| Path token | The token in the path of the router's loopback URL. It is unique to each installation. See AGENTS.md section 4. |
+| Path token | The token in the path of the router's loopback URL. It is unique to each installation. See [API](API.md). |
 | Responses protocol | The wire protocol Codex uses. See [architecture](ARCHITECTURE.md). |
 | Messages protocol | The wire protocol Claude uses. See [architecture](ARCHITECTURE.md). |
-| Registry | The model rows. Live model metadata refreshes weekly into it. See [design rules](DESIGN.md). |
-| Catalogue | A generated snapshot from the registry that the client's model picker reads. See [design rules](DESIGN.md). |
-| Picker | The client's model list. Labels read `<Vendor>: <Model> <Version?>`. See AGENTS.md section 8. |
-| Subscription row | A picker row served by the person's ChatGPT or Claude subscription. See [design rules](DESIGN.md). |
-| OpenRouter twin | The OpenRouter-billed row listed beside a subscription row. See [design rules](DESIGN.md). |
+| Registry | The model rows. Live model metadata refreshes weekly into it. See [product decisions](DESIGN.md). |
+| Catalogue | A generated snapshot from the registry that the client's model picker reads. See [product decisions](DESIGN.md). |
+| Picker | The client's model list. Labels read `<Vendor>: <Model> <Version?>`. See [model naming](models/naming.md). |
+| Subscription row | A picker row served by the person's ChatGPT or Claude subscription. See [product decisions](DESIGN.md). |
+| OpenRouter twin | The OpenRouter-billed row listed beside a subscription row. See [product decisions](DESIGN.md). |
 | Preview tier | A new model row lands as `tier: preview` and `listed: false` until its probe passes. See [adding a model](models/adding-a-model.md). |
 | Receipt | The record of what setup attached and the original values it replaced, kept in `activation.json`. See [installation ownership](architecture/installation.md) and [data](DATA.md). |
 | Switch Codex | Changes Codex between its ChatGPT connection and an OpenRouter connection through the router. See [Codex](clients/codex.md#switch-codex). |

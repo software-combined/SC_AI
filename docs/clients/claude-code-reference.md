@@ -147,10 +147,11 @@ login instead of the router under test. The client also runs with an empty
 per-run config folder, so none of the owner's instructions, skills, plugins,
 hooks, permissions or login apply, and it sends a synthetic bearer that
 `PROBE_AUTH_TOKEN` can replace. The probe therefore covers routed rows; the
-subscription leg of the AGENTS.md section 7 check runs as a real Claude Code
-session with the owner's own login and settings, started from a terminal
-rather than from inside another Claude Code session. `--deferred` adds the leg an attached client
-actually runs: a synthetic MCP server advertising 700 stub tools. A pass requires
+subscription leg of the [compatibility rule](../release/compatibility.md#compatibility-rule)
+check runs as a real Claude Code session with the owner's own login and settings,
+started from a terminal rather than from inside another Claude Code session.
+`--deferred` adds the leg an attached client actually runs: a synthetic MCP server
+advertising 700 stub tools. A pass requires
 ToolSearch followed by the released tool, matching result IDs, no tool errors,
 and the returned marker. An answer that only echoes the marker fails.
 `--candidate <slug>` boots an isolated router from this working tree with a shared

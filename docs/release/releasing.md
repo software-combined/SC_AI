@@ -92,3 +92,25 @@ flags unchanged until their desktop evidence is complete. After publication,
 verify anonymous downloads through [the install page](https://hub.softwarecombined.com/install)
 and both channel feeds. Distribute the notice in [recovery](../start/repair.md) only
 after those checks. Older blocked updaters still need that one external action.
+
+## Versions and changelogs
+
+Every user-visible Router change updates `router/CHANGELOG.md` and
+`router/packaging/VERSION` (semantic versioning). `router/pyproject.toml` and
+the root `scg-openrouter` manifests (`.codex-plugin/plugin.json` and
+`.claude-plugin/plugin.json`) carry the same version; tests pin all four.
+New entries go under `## Unreleased`. The release commit moves them under the
+version heading before the tag is cut. Entries older than the current minor
+series are removed from `router/CHANGELOG.md`; Git history keeps them.
+
+A plugin change bumps only its own two manifests and adds a
+`plugins/CHANGELOG.md` entry. By itself it never moves `packaging/VERSION`
+or triggers a Router tag. The root `scg-openrouter` plugin is the exception:
+its manifests follow the Router version.
+Router hosts receive plugins only inside a Router release, because the release
+bundle carries the plugin trees. To deliver plugin changes to them, cut a
+Router patch release. Bump the Router version as above. Add one
+`router/CHANGELOG.md` line that names each plugin version the release ships,
+for example "Ship scg-review 0.7.7 ...". Plugin changes can wait on `development` for the
+next Router release. Hosts that install plugins from the Git marketplace get
+them when they reach `main`.
